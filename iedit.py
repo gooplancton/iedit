@@ -69,6 +69,9 @@ class InlineFileEditor:
         """Get a single character from stdin without requiring Enter"""
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
+        old_flags = termios.tcgetattr(fd)
+        old_flags[0] &= ~termios.IXON  # Disable flow control
+        termios.tcsetattr(fd, termios.TCSANOW, old_flags)
         try:
             tty.setcbreak(fd)
             if select.select([sys.stdin], [], [], 0.1)[0]:
