@@ -21,6 +21,8 @@ impl Editor {
         let max_y = self.file_lines.len();
         let max_x = self.file_lines[self.state.cursor_file_row].len();
 
+        self.state.cursor_pos_x = max(0, self.state.cursor_pos_x);
+        self.state.cursor_pos_y = max(0, self.state.cursor_pos_y);
         self.state.cursor_file_row = min(max_y, self.state.cursor_file_row);
         self.state.cursor_file_col = min(max_x, self.state.cursor_file_col);
     }

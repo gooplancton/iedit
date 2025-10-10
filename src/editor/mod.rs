@@ -93,22 +93,10 @@ impl Editor {
             let prev_y = self.state.cursor_vel_y;
             match input_char as char {
                 'q' => break,
-                'j' => {
-                    self.state.cursor_pos_y += 1;
-                    self.state.cursor_file_row += 1;
-                }
-                'k' => {
-                    self.state.cursor_pos_y -= 1;
-                    self.state.cursor_file_row = self.state.cursor_file_row.saturating_sub(1);
-                }
-                'l' => {
-                    self.state.cursor_pos_x += 1;
-                    self.state.cursor_file_col += 1;
-                }
-                'h' => {
-                    self.state.cursor_pos_x -= 1;
-                    self.state.cursor_file_col = self.state.cursor_file_col.saturating_sub(1);
-                }
+                'j' => self.move_cursor_down(),
+                'k' => self.move_cursor_up(),
+                'l' => self.move_cursor_right(),
+                'h' => self.move_cursor_left(),
                 _ => continue,
             }
 
