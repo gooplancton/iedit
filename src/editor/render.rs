@@ -73,17 +73,14 @@ impl Editor {
     }
 
     fn render_status(&mut self) -> std::io::Result<()> {
-        let total_lines = self.file_lines.len();
-        let current_line_len = self.file_lines[self.state.cursor_file_row].len();
-
         self.term.write_all(CLEAR_LINE.as_bytes())?;
         self.term.write_all(self.horizontal_bar.as_bytes())?;
         self.term.write_all(CURSOR_DOWN1.as_bytes())?;
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
 
         self.term.write_fmt(format_args!(
-            "Line {}/{}, Col: {}/{}",
-            self.state.cursor_file_row, total_lines, self.state.cursor_file_col, current_line_len,
+            "{:0>4}:{:0>4}",
+            self.state.cursor_file_row, self.state.cursor_file_col,
         ))?;
         self.term.write_all(CURSOR_DOWN1.as_bytes())?;
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
@@ -101,7 +98,7 @@ impl Editor {
     }
 
     fn compute_y_frame(&self) -> (usize, usize, isize) {
-        let snap_y_low = 0;
+        let snap_y_low = 0usize;
         let snap_y_high = self.file_lines.len();
 
         let frame_y_low = self
@@ -111,12 +108,9 @@ impl Editor {
         let frame_y_high = min(frame_y_low + self.config.n_lines as usize, snap_y_high);
 
         let wiggle_y_low = frame_y_low - snap_y_low;
-        let wiggle_y_high = snap_y_high - frame_y_low;
+        let wiggle_y_high = snap_y_high - frame_y_high;
 
-        let pos_y = max(
-            frame_y_low,
-            min(frame_y_high, self.state.cursor_pos_y as usize),
-        );
+        let pos_y = max(frame_y_low, min(frame_y_high, self.state.cursor_file_row));
         let mut scroll_y: isize = 0;
 
         let distance_to_y_start = pos_y - frame_y_low;
@@ -128,40 +122,34 @@ impl Editor {
             scroll_y = min(margin_y - distance_to_y_end, wiggle_y_high) as isize;
         } else if self.state.cursor_vel_y < 0 && distance_to_y_start < margin_y && wiggle_y_low > 0
         {
-            scroll_y = max(
-                0isize - (margin_y - distance_to_y_start) as isize,
-                0isize - wiggle_y_low as isize,
-            );
+            scroll_y = -(min(margin_y - distance_to_y_start, wiggle_y_low) as isize);
         }
 
-        (
-            frame_y_low + scroll_y as usize,
-            frame_y_high + scroll_y as usize,
-            scroll_y,
-        )
+        let frame_y_low = max(snap_y_low as isize, (frame_y_low as isize) + scroll_y) as usize;
+        let frame_y_high = min(snap_y_high as isize, (frame_y_high as isize) + scroll_y) as usize;
+
+        (frame_y_low, frame_y_high, scroll_y)
     }
 
     fn compute_x_frame(&self, line_len: usize, term_width: usize) -> (usize, usize, isize) {
-        let snap_x_low = 0;
+        let snap_x_low = 0usize;
         let snap_x_high = line_len;
 
         let frame_x_low = self
             .state
             .cursor_file_col
             .saturating_sub(self.state.cursor_pos_x as usize);
-        let frame_x_high = min(frame_x_low + term_width, snap_x_high);
 
-        let wiggle_x_low = frame_x_low - snap_x_low;
-        let wiggle_x_high = snap_x_high - frame_x_low;
+        let frame_x_high = min(frame_x_low.saturating_add(term_width), snap_x_high);
 
-        let pos_x = max(
-            frame_x_low,
-            min(frame_x_high, self.state.cursor_pos_x as usize),
-        );
+        let wiggle_x_low = frame_x_low.saturating_sub(snap_x_low);
+        let wiggle_x_high = snap_x_high.saturating_sub(frame_x_high);
+
+        let pos_x = max(frame_x_low, min(frame_x_high, self.state.cursor_file_col));
         let mut scroll_x: isize = 0;
 
-        let distance_to_x_start = pos_x - frame_x_low;
-        let distance_to_x_end = frame_x_high - pos_x;
+        let distance_to_x_start = pos_x.saturating_sub(frame_x_low);
+        let distance_to_x_end = frame_x_high.saturating_sub(pos_x);
 
         let margin_x = self.config.horizontal_margin as usize;
 
@@ -169,17 +157,12 @@ impl Editor {
             scroll_x = min(margin_x - distance_to_x_end, wiggle_x_high) as isize;
         } else if self.state.cursor_vel_x < 0 && distance_to_x_start < margin_x && wiggle_x_low > 0
         {
-            scroll_x = max(
-                0isize - (margin_x - distance_to_x_start) as isize,
-                0isize - wiggle_x_low as isize,
-            );
+            scroll_x = -(min(margin_x - distance_to_x_start, wiggle_x_low) as isize);
         }
 
-        (
-            frame_x_low + scroll_x as usize,
-            frame_x_high + scroll_x as usize,
-            scroll_x,
-        )
+        let frame_x_low = max(snap_x_low as isize, (frame_x_low as isize) + scroll_x) as usize;
+        let frame_x_high = min(snap_x_high as isize, (frame_x_high as isize) + scroll_x) as usize;
+
+        (frame_x_low, frame_x_high, scroll_x)
     }
 }
-
