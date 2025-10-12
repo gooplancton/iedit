@@ -9,6 +9,7 @@ pub struct EditorState {
     pub viewport: Viewport,
     pub cursor_pos_x: usize,
     pub cursor_pos_y: usize,
+    pub ideal_cursor_pos_x: usize,
     pub cursor_vel_x: isize,
     pub cursor_vel_y: isize,
 

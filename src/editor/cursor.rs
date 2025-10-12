@@ -18,9 +18,11 @@ impl Editor {
     }
     pub fn move_cursor_left(&mut self) {
         self.state.cursor_pos_x = self.state.cursor_pos_x.saturating_sub(1);
+        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x
     }
     pub fn move_cursor_right(&mut self) {
         self.state.cursor_pos_x += 1;
+        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x
     }
 
     pub fn clamp_cursor(&mut self) {
@@ -28,8 +30,9 @@ impl Editor {
         self.state.cursor_pos_y = max(0, min(max_y, self.state.cursor_pos_y));
 
         let max_x = self.file_lines[self.state.cursor_pos_y].len();
-        self.state.cursor_pos_x = max(0, min(max_x, self.state.cursor_pos_x));
+        self.state.cursor_pos_x = max(0, min(self.state.ideal_cursor_pos_x, max_x));
     }
 
     // others (eg. go to line, etc..)
 }
+
