@@ -4,10 +4,6 @@ impl Editor {
     pub fn insert_char(&mut self, c: char) {
         let mut y = self.state.cursor_pos_y;
         let x = self.state.cursor_pos_x;
-        if c == '\n' {
-            self.insert_newline();
-            return;
-        }
 
         let line = &mut self.file_lines[y];
         if x > line.len() {
@@ -46,7 +42,7 @@ impl Editor {
         self.state.is_file_modified = true;
     }
 
-    fn insert_newline(&mut self) {
+    pub fn insert_newline(&mut self) {
         let mut y = self.state.cursor_pos_y;
         let x = self.state.cursor_pos_x;
         let current_line = if x < self.file_lines[y].len() {
