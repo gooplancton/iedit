@@ -1,29 +1,31 @@
 use std::cmp::{max, min};
 
+use crate::editor::viewport::Viewport;
+
 use super::Editor;
 
 #[derive(Default)]
 pub struct EditorState {
-    pub status_text: String,
+    pub viewport: Viewport,
+    pub cursor_pos_x: usize,
+    pub cursor_pos_y: usize,
+    pub cursor_vel_x: isize,
+    pub cursor_vel_y: isize,
 
-    pub cursor_file_row: usize,
-    pub cursor_file_col: usize,
-    pub cursor_pos_x: i16,
-    pub cursor_pos_y: i16,
-    pub cursor_vel_x: i16,
-    pub cursor_vel_y: i16,
+    pub is_file_modified: bool,
 
     pub is_selecting: bool,
 }
 
 impl Editor {
-    pub fn clamp_cursor(&mut self) {
-        let max_y = self.file_lines.len();
-        let max_x = self.file_lines[self.state.cursor_file_row].len();
-
-        self.state.cursor_pos_x = max(0, self.state.cursor_pos_x);
-        self.state.cursor_pos_y = max(0, self.state.cursor_pos_y);
-        self.state.cursor_file_row = min(max_y, self.state.cursor_file_row);
-        self.state.cursor_file_col = min(max_x, self.state.cursor_file_col);
+    pub fn get_status_text(&self) -> String {
+        let line = self.state.cursor_pos_y + 1;
+        let col = self.state.cursor_pos_x + 1;
+        let modified = if self.state.is_file_modified { "*" } else { "" };
+        let total_lines = self.file_lines.len();
+        format!(
+            "{}{} | Ln {}, Col {} | {} lines",
+            self.file_name, modified, line, col, total_lines
+        )
     }
 }

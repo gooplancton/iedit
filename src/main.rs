@@ -5,6 +5,8 @@ mod editor;
 mod terminal;
 
 fn main() {
-    let mut editor = Editor::new("iedit.py").expect("file not found");
+    let path = std::env::args().nth(1).expect("no file given");
+    let mut editor = Editor::new(path).expect("file not found");
+
     editor.run().unwrap();
 }
