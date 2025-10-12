@@ -1,7 +1,10 @@
+#![allow(warnings)]
+
 use std::{
-    fs::File,
-    io::{BufRead, BufReader, BufWriter, Read, Stdout, stdin},
+    fs::{File, OpenOptions},
+    io::{BufRead, BufReader, BufWriter, Read, Stdout, Write, stdin},
     path::Path,
+    process::exit,
 };
 
 use config::EditorConfig;
@@ -12,18 +15,24 @@ use termion::{
     terminal_size,
 };
 
-use crate::terminal::H_BAR;
+use crate::{
+    editor::input::{EditorInput, InputReader},
+    terminal::{CURSOR_DOWN1, H_BAR},
+};
 
 mod command;
 mod config;
+mod cursor;
+mod edit;
 mod input;
 mod io;
-mod movement;
 mod render;
 mod state;
+mod viewport;
 
 pub struct Editor {
-    file_writer: BufWriter<File>,
+    file: File,
+    file_name: String,
     file_lines: Vec<String>,
     state: EditorState,
     config: EditorConfig,
@@ -36,8 +45,21 @@ pub struct Editor {
 
 impl Editor {
     pub fn new(path: impl AsRef<Path>) -> std::io::Result<Self> {
-        let file = File::open(path)?;
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .append(false)
+            .create(true)
+            .open(path.as_ref())?;
 
+        if file.metadata()?.is_dir() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Provided path is a directory",
+            ));
+        }
+
+        let file_name = path.as_ref().components().last().unwrap().as_os_str();
         let mut file_lines = Vec::<String>::new();
         let mut file_reader = BufReader::new(file);
         let mut file_line = String::default();
@@ -46,64 +68,68 @@ impl Editor {
             file_line.truncate(0);
         }
 
-        let file = file_reader.into_inner();
-        let file_writer = BufWriter::new(file);
-
-        let state = EditorState::default();
-        let mut config = EditorConfig {
-            show_line_numbers: true,
-            ..Default::default()
-        };
-
-        config.show_line_numbers = true;
-
-        let (term_width, term_height) = terminal_size()?;
-
-        if config.n_lines == 0 {
-            config.n_lines = term_height / 2;
+        if file_lines.is_empty() {
+            file_lines.push(String::new());
         }
 
-        let mut term = HideCursor::from(std::io::stdout().into_raw_mode()?);
+        let file = file_reader.into_inner();
+        let mut state = EditorState::default();
 
-        let ui_start = term.cursor_pos()?;
-        let reset_cursor_seq = Goto(ui_start.0, ui_start.1);
+        let (term_width, term_height) = terminal_size()?;
+        let mut term = HideCursor::from(std::io::stdout().into_raw_mode()?);
+        let mut ui_start = term.cursor_pos()?;
+
+        let mut config = EditorConfig::default();
+        if config.n_lines == 0 {
+            let offset = config.set_default_n_lines(&mut term, ui_start.1)?;
+            ui_start.1 = ui_start.1.saturating_sub(offset);
+        }
+
+        state.viewport.bottom_line = config.n_lines as usize;
+        state.viewport.right_col = (term_width as usize) - (config.show_line_numbers as usize * 7);
 
         let horizontal_bar = str::repeat(H_BAR, term_width as usize);
 
         Ok(Self {
-            file_writer,
+            file,
+            file_name: file_name.to_string_lossy().to_string(),
             file_lines,
             state,
             config,
             term,
             term_width,
-            reset_cursor_seq,
+            reset_cursor_seq: Goto(ui_start.0, ui_start.1),
             horizontal_bar,
         })
     }
 
+    pub fn quit(&mut self) -> std::io::Result<()> {
+        self.cleanup()?;
+
+        exit(0);
+    }
+
     pub fn run(&mut self) -> std::io::Result<()> {
         self.render()?;
+
         let mut stdin = stdin();
-        let mut input_buf = [0_u8];
         loop {
-            let _ = stdin.read_exact(&mut input_buf);
-            let input_char = input_buf[0];
-            let prev_x = self.state.cursor_pos_x;
-            let prev_y = self.state.cursor_vel_y;
-            match input_char as char {
-                'q' => break,
-                'j' => self.move_cursor_down(),
-                'k' => self.move_cursor_up(),
-                'l' => self.move_cursor_right(),
-                'h' => self.move_cursor_left(),
-                _ => continue,
+            let prev_x = self.state.cursor_pos_x as isize;
+            let prev_y = self.state.cursor_pos_y as isize;
+
+            let input = stdin.get_input()?;
+            if input.should_quit() {
+                break;
             }
+
+            self.process_input(input)?;
 
             self.clamp_cursor();
 
-            self.state.cursor_vel_x = self.state.cursor_pos_x - prev_x;
-            self.state.cursor_vel_y = self.state.cursor_pos_y - prev_y;
+            self.state.cursor_vel_x = self.state.cursor_pos_x as isize - prev_x;
+            self.state.cursor_vel_y = self.state.cursor_pos_y as isize - prev_y;
+
+            self.adjust_viewport();
 
             self.render()?;
         }

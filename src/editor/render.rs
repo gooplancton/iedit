@@ -23,23 +23,19 @@ impl Editor {
 
     fn render_line(&mut self, line_idx: usize) -> std::io::Result<()> {
         let line = &self.file_lines[line_idx];
-        let cursor_col = self.state.cursor_file_col;
-        let mut term_width = self.term_width;
+        let cursor_col = self.state.cursor_pos_x;
 
         self.term.write_all(CLEAR_LINE.as_bytes())?;
         if self.config.show_line_numbers {
             self.term
                 .write_fmt(format_args!("{: >5} {}", line_idx + 1, V_BAR))?;
-            term_width -= 7;
         }
 
-        let (range_start, range_end, scroll_x) =
-            self.compute_x_frame(line.len(), term_width as usize);
-
-        self.state.cursor_pos_x -= scroll_x as i16;
+        let range_start = self.state.viewport.left_col;
+        let range_end = self.state.viewport.right_col.min(line.len());
 
         let content = line.get(range_start..range_end).unwrap_or_default();
-        let is_current_line = line_idx == self.state.cursor_file_row;
+        let is_current_line = line_idx == self.state.cursor_pos_y;
         if is_current_line {
             let cursor_display_pos = min(content.len(), cursor_col.saturating_sub(range_start));
 
@@ -58,13 +54,30 @@ impl Editor {
         Ok(())
     }
 
-    fn render_content(&mut self) -> std::io::Result<()> {
-        let (row_span_low, row_span_high, scroll_y) = self.compute_y_frame();
+    fn render_empty_line(&mut self) -> std::io::Result<()> {
+        self.term.write_all(CLEAR_LINE.as_bytes())?;
+        if self.config.show_line_numbers {
+            self.term
+                .write_fmt(format_args!("{: >5} {}", " ", V_BAR))?;
+        }
+        self.term.write_all("~".as_bytes())?;
 
-        self.state.cursor_pos_y -= scroll_y as i16;
+        Ok(())
+    }
+
+    fn render_content(&mut self) -> std::io::Result<()> {
+        let row_span_low = self.state.viewport.top_line;
+        let row_span_high = self.state.viewport.bottom_line.min(self.file_lines.len());
 
         for line_idx in row_span_low..row_span_high {
             self.render_line(line_idx)?;
+            self.term.write_all(CURSOR_DOWN1.as_bytes())?;
+            self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
+        }
+
+        let empty_lines = self.config.n_lines as usize - (row_span_high - row_span_low);
+        for _ in 0..empty_lines {
+            self.render_empty_line()?;
             self.term.write_all(CURSOR_DOWN1.as_bytes())?;
             self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
         }
@@ -78,12 +91,12 @@ impl Editor {
         self.term.write_all(CURSOR_DOWN1.as_bytes())?;
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
 
-        self.term.write_fmt(format_args!(
-            "{:0>4}:{:0>4}",
-            self.state.cursor_file_row, self.state.cursor_file_col,
-        ))?;
+        self.term
+            .write_fmt(format_args!("{}", self.get_status_text()))?;
         self.term.write_all(CURSOR_DOWN1.as_bytes())?;
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
+
+        self.term.write_all(CLEAR_LINE.as_bytes())?;
 
         Ok(())
     }
@@ -95,74 +108,5 @@ impl Editor {
             .write_all(terminal::CLEAR_BELOW_CURSOR.as_bytes())?;
 
         Ok(())
-    }
-
-    fn compute_y_frame(&self) -> (usize, usize, isize) {
-        let snap_y_low = 0usize;
-        let snap_y_high = self.file_lines.len();
-
-        let frame_y_low = self
-            .state
-            .cursor_file_row
-            .saturating_sub(self.state.cursor_pos_y as usize);
-        let frame_y_high = min(frame_y_low + self.config.n_lines as usize, snap_y_high);
-
-        let wiggle_y_low = frame_y_low - snap_y_low;
-        let wiggle_y_high = snap_y_high - frame_y_high;
-
-        let pos_y = max(frame_y_low, min(frame_y_high, self.state.cursor_file_row));
-        let mut scroll_y: isize = 0;
-
-        let distance_to_y_start = pos_y - frame_y_low;
-        let distance_to_y_end = frame_y_high - pos_y;
-
-        let margin_y = self.config.vertical_margin as usize;
-
-        if self.state.cursor_vel_y > 0 && distance_to_y_end < margin_y && wiggle_y_high > 0 {
-            scroll_y = min(margin_y - distance_to_y_end, wiggle_y_high) as isize;
-        } else if self.state.cursor_vel_y < 0 && distance_to_y_start < margin_y && wiggle_y_low > 0
-        {
-            scroll_y = -(min(margin_y - distance_to_y_start, wiggle_y_low) as isize);
-        }
-
-        let frame_y_low = max(snap_y_low as isize, (frame_y_low as isize) + scroll_y) as usize;
-        let frame_y_high = min(snap_y_high as isize, (frame_y_high as isize) + scroll_y) as usize;
-
-        (frame_y_low, frame_y_high, scroll_y)
-    }
-
-    fn compute_x_frame(&self, line_len: usize, term_width: usize) -> (usize, usize, isize) {
-        let snap_x_low = 0usize;
-        let snap_x_high = line_len;
-
-        let frame_x_low = self
-            .state
-            .cursor_file_col
-            .saturating_sub(self.state.cursor_pos_x as usize);
-
-        let frame_x_high = min(frame_x_low.saturating_add(term_width), snap_x_high);
-
-        let wiggle_x_low = frame_x_low.saturating_sub(snap_x_low);
-        let wiggle_x_high = snap_x_high.saturating_sub(frame_x_high);
-
-        let pos_x = max(frame_x_low, min(frame_x_high, self.state.cursor_file_col));
-        let mut scroll_x: isize = 0;
-
-        let distance_to_x_start = pos_x.saturating_sub(frame_x_low);
-        let distance_to_x_end = frame_x_high.saturating_sub(pos_x);
-
-        let margin_x = self.config.horizontal_margin as usize;
-
-        if self.state.cursor_vel_x > 0 && distance_to_x_end < margin_x && wiggle_x_high > 0 {
-            scroll_x = min(margin_x - distance_to_x_end, wiggle_x_high) as isize;
-        } else if self.state.cursor_vel_x < 0 && distance_to_x_start < margin_x && wiggle_x_low > 0
-        {
-            scroll_x = -(min(margin_x - distance_to_x_start, wiggle_x_low) as isize);
-        }
-
-        let frame_x_low = max(snap_x_low as isize, (frame_x_low as isize) + scroll_x) as usize;
-        let frame_x_high = min(snap_x_high as isize, (frame_x_high as isize) + scroll_x) as usize;
-
-        (frame_x_low, frame_x_high, scroll_x)
     }
 }
