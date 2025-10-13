@@ -79,7 +79,13 @@ impl Editor {
         let mut term = HideCursor::from(std::io::stdout().into_raw_mode()?);
         let mut ui_start = term.cursor_pos()?;
 
-        let mut config = EditorConfig::default();
+        let mut config = if let Some(mut path) = std::env::home_dir() {
+            path.push(".iedit.conf");
+            EditorConfig::from_file(path).unwrap_or_default()
+        } else {
+            EditorConfig::default()
+        };
+
         if config.n_lines == 0 {
             let offset = config.set_default_n_lines(&mut term, ui_start.1)?;
             ui_start.1 = ui_start.1.saturating_sub(offset);

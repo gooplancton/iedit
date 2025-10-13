@@ -85,15 +85,13 @@ impl Editor {
     }
 
     fn render_status(&mut self) -> std::io::Result<()> {
-        self.update_status_text();
-
         self.term.write_all(CLEAR_LINE.as_bytes())?;
         self.term.write_all(self.horizontal_bar.as_bytes())?;
         self.term.write_all(CURSOR_DOWN1.as_bytes())?;
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
 
-        self.term.write_all(CLEAR_LINE.as_bytes())?;
-        self.term.write_all(self.state.status_text.as_bytes())?;
+        self.term
+            .write_fmt(format_args!("{}", self.get_status_text()))?;
         self.term.write_all(CURSOR_DOWN1.as_bytes())?;
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
 
