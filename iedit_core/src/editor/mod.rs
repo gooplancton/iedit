@@ -86,7 +86,8 @@ impl Editor {
             EditorConfig::default()
         };
 
-        if config.n_lines == 0 {
+        let real_estate = term_height.saturating_sub(ui_start.1);
+        if config.n_lines == 0 || real_estate < config.n_lines {
             let offset = config.set_default_n_lines(&mut term, ui_start.1)?;
             ui_start.1 = ui_start.1.saturating_sub(offset);
         }
