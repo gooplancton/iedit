@@ -4,6 +4,10 @@ impl Editor {
     pub fn insert_char(&mut self, c: char) {
         let mut y = self.state.cursor_pos_y;
         let x = self.state.cursor_pos_x;
+        if c == '\n' {
+            self.insert_newline();
+            return;
+        }
 
         let line = &mut self.file_lines[y];
         if x > line.len() {
@@ -12,7 +16,6 @@ impl Editor {
             line.insert(x, c);
         }
         self.state.cursor_pos_x += 1;
-        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
         self.state.is_file_modified = true;
     }
 
@@ -36,13 +39,12 @@ impl Editor {
             self.file_lines[y - 1].push_str(&current_line);
             self.state.cursor_pos_y -= 1;
             self.state.cursor_pos_x = prev_line_len;
-            self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
         }
 
         self.state.is_file_modified = true;
     }
 
-    pub fn insert_newline(&mut self) {
+    fn insert_newline(&mut self) {
         let mut y = self.state.cursor_pos_y;
         let x = self.state.cursor_pos_x;
         let current_line = if x < self.file_lines[y].len() {
@@ -53,7 +55,6 @@ impl Editor {
         self.file_lines.insert(y + 1, current_line);
         self.state.cursor_pos_y += 1;
         self.state.cursor_pos_x = 0;
-        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
         self.state.is_file_modified = true;
     }
 }

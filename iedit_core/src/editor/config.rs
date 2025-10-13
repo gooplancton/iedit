@@ -9,7 +9,9 @@ use termion::{
 };
 
 use crate::editor::Editor;
+use iedit_macros::ConfigParse;
 
+#[derive(ConfigParse)]
 pub struct EditorConfig {
     pub n_lines: u16,
     pub min_real_estate: u16,
