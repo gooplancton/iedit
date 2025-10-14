@@ -1,95 +1,129 @@
 use std::io::{self, Read};
+use termion::event::Key;
+use termion::input::TermRead;
 
 use super::{Editor, cursor::MovementDirection};
 
-pub enum EditorCommand {
+pub enum EditorInput {
+    NoOp,
+    CharInsertion(char),
+    NewlineInsertion,
+    CharDeletion,
+    BasicMovement(MovementDirection),
+    SelectionMovement(MovementDirection),
+    WordMovement(MovementDirection),
     Save,
     Quit,
     ToggleLineNumbers,
-    // StartSelection,
-    // ExitSelection,
 }
 
-pub enum EditorInput {
-    CharInsertion(char),
-    CharDeletion,
-    BasicMovement(MovementDirection),
-    Command(EditorCommand),
-}
-
-pub trait InputReader: Read {
+pub trait InputReader {
     fn get_input(&mut self) -> io::Result<EditorInput>;
 }
 
 impl InputReader for io::Stdin {
     fn get_input(&mut self) -> io::Result<EditorInput> {
-        let mut buf = [0_u8; 1];
-        self.read_exact(&mut buf)?;
+        use EditorInput::*;
+        use MovementDirection::*;
+        // Use termion's keys() iterator which properly handles all escape sequences
+        if let Some(key) = io::stdin().keys().next() {
+            match key? {
+                // Arrow keys
+                Key::Up => Ok(BasicMovement(Up)),
+                Key::Down => Ok(BasicMovement(Down)),
+                Key::Left => Ok(BasicMovement(Left)),
+                Key::Right => Ok(BasicMovement(Right)),
 
-        match buf[0] {
-            b'\x1B' => {
-                // Possible arrow key escape sequence: ESC [ A/B/C/D
-                let mut seq = [0_u8; 2];
-                // Read the next two bytes; this will succeed for typical arrow key sequences.
-                self.read_exact(&mut seq)?;
-                if seq[0] == b'[' {
-                    let input = match seq[1] {
-                        b'A' => EditorInput::BasicMovement(MovementDirection::Up),
-                        b'B' => EditorInput::BasicMovement(MovementDirection::Down),
-                        b'D' => EditorInput::BasicMovement(MovementDirection::Left),
-                        b'C' => EditorInput::BasicMovement(MovementDirection::Right),
-                        _ => EditorInput::CharInsertion('\x1B'),
-                    };
-                    Ok(input)
-                } else {
-                    // Not an arrow sequence; fall back to treating ESC as a char
-                    Ok(EditorInput::CharInsertion('\x1B'))
-                }
+                // Ctrl + Arrow keys for word movement
+                Key::CtrlRight => Ok(WordMovement(Right)),
+                Key::CtrlLeft => Ok(WordMovement(Left)),
+
+                // Shift + Arrow keys for selection movement
+                Key::ShiftUp => Ok(SelectionMovement(Up)),
+                Key::ShiftDown => Ok(SelectionMovement(Down)),
+                Key::ShiftLeft => Ok(SelectionMovement(Left)),
+                Key::ShiftRight => Ok(SelectionMovement(Right)),
+
+                // MacOS specific word movement keys
+                Key::Alt('f') => Ok(WordMovement(Right)),
+                Key::Alt('b') => Ok(WordMovement(Left)),
+
+                // Control keys
+                Key::Ctrl('q') => Ok(Quit),
+                Key::Ctrl('s') => Ok(Save),
+                Key::Ctrl('l') => Ok(ToggleLineNumbers),
+
+                // Backspace/Delete
+                Key::Backspace | Key::Delete => Ok(CharDeletion),
+
+                // Enter
+                Key::Char('\n') | Key::Char('\r') => Ok(NewlineInsertion),
+
+                // ASCII characters
+                Key::Char(c) if c.is_ascii() => Ok(CharInsertion(c)),
+
+                // TODO: support utf-8 chars
+
+                // Ignore other keys
+                _ => Ok(NoOp),
             }
-            // Ctrl-Q (0x11) -> Quit
-            b'\x11' => Ok(EditorInput::Command(EditorCommand::Quit)),
-            // Ctrl-S (0x13) -> Save
-            b'\x13' => Ok(EditorInput::Command(EditorCommand::Save)),
-            // Ctrl-L (0x0C) -> Toggle Line Numbers
-            b'\x0C' => Ok(EditorInput::Command(EditorCommand::ToggleLineNumbers)),
-            // Backspace or Delete
-            8 | 127 => Ok(EditorInput::CharDeletion),
-            // Enter
-            b'\n' | b'\r' => Ok(EditorInput::CharInsertion('\n')),
-            c => Ok(EditorInput::CharInsertion(c as char)),
-        } //  ////  //
+        } else {
+            // No input available
+            Ok(EditorInput::NoOp)
+        }
     }
 }
 
+// Your Editor implementation remains largely the same
 impl Editor {
     pub fn process_input(&mut self, input: EditorInput) -> std::io::Result<()> {
         let prev_x = self.state.cursor_pos_x as isize;
         let prev_y = self.state.cursor_pos_y as isize;
 
         match input {
-            EditorInput::CharInsertion(c) => {
-                self.insert_char(c);
+            EditorInput::CharInsertion(c) => self.insert_char(c),
+            EditorInput::NewlineInsertion => self.insert_newline(),
+            EditorInput::CharDeletion => self.delete_char(),
+            EditorInput::SelectionMovement(dir) => {
+                if self.state.selection_anchor.is_none() {
+                    self.state.selection_anchor =
+                        Some((self.state.cursor_pos_x, self.state.cursor_pos_y));
+                }
+                match dir {
+                    MovementDirection::Up => self.move_cursor_up(),
+                    MovementDirection::Down => self.move_cursor_down(),
+                    MovementDirection::Left => self.move_cursor_left(),
+                    MovementDirection::Right => self.move_cursor_right(),
+                }
             }
-            EditorInput::CharDeletion => {
-                self.delete_char();
+            EditorInput::BasicMovement(dir) => {
+                self.state.selection_anchor = None;
+                match dir {
+                    MovementDirection::Up => self.move_cursor_up(),
+                    MovementDirection::Down => self.move_cursor_down(),
+                    MovementDirection::Left => self.move_cursor_left(),
+                    MovementDirection::Right => self.move_cursor_right(),
+                }
             }
-            EditorInput::BasicMovement(dir) => match dir {
-                MovementDirection::Up => self.move_cursor_up(),
-                MovementDirection::Down => self.move_cursor_down(),
-                MovementDirection::Left => self.move_cursor_left(),
-                MovementDirection::Right => self.move_cursor_right(),
-            },
-            EditorInput::Command(cmd) => match cmd {
-                EditorCommand::Save => {
-                    self.save_file()?;
+            EditorInput::WordMovement(dir) => {
+                self.state.selection_anchor = None;
+                match dir {
+                    MovementDirection::Up => self.move_cursor_up(),
+                    MovementDirection::Down => self.move_cursor_down(),
+                    MovementDirection::Left => self.move_cursor_word_left(),
+                    MovementDirection::Right => self.move_cursor_word_right(),
                 }
-                EditorCommand::Quit => {
-                    unreachable!()
-                }
-                EditorCommand::ToggleLineNumbers => {
-                    self.config.show_line_numbers = !self.config.show_line_numbers;
-                }
-            },
+            }
+            EditorInput::Save => {
+                self.save_file()?;
+            }
+            EditorInput::Quit => {
+                unreachable!()
+            }
+            EditorInput::ToggleLineNumbers => {
+                self.config.show_line_numbers = !self.config.show_line_numbers;
+            }
+            EditorInput::NoOp => {}
         }
 
         self.clamp_cursor();
@@ -106,6 +140,6 @@ impl Editor {
 
 impl EditorInput {
     pub fn should_quit(&self) -> bool {
-        matches!(self, EditorInput::Command(EditorCommand::Quit))
+        matches!(self, EditorInput::Quit)
     }
 }
