@@ -26,10 +26,13 @@ impl Editor {
     }
 
     pub fn clamp_cursor(&mut self) {
-        let max_y = self.file_lines.len() - 1;
+        let max_y = self.file_lines.len();
         self.state.cursor_pos_y = max(0, min(max_y, self.state.cursor_pos_y));
 
-        let max_x = self.file_lines[self.state.cursor_pos_y].len();
+        let max_x = self
+            .file_lines
+            .get(self.state.cursor_pos_y)
+            .map_or(0, |line| line.len());
         self.state.cursor_pos_x = max(0, min(self.state.ideal_cursor_pos_x, max_x));
     }
 

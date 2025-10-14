@@ -19,5 +19,6 @@ pub static SHOW_CURSOR: &str = "\x1b[?25h";
 pub static CLEAR_SCREEN: &str = "\x1b[2J";
 pub static HIGHLIGHT_START: &str = "\x1b[7m";
 pub static HIGHLIGHT_END: &str = "\x1b[0m";
+pub static EMPTY_CURSOR: &str = "\x1b[7m \x1b[0m";
 pub static H_BAR: &str = "─";
 pub static V_BAR: char = '│';
