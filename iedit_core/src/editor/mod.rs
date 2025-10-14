@@ -29,6 +29,7 @@ mod io;
 mod render;
 mod state;
 mod viewport;
+mod selection;
 
 pub struct Editor {
     file: File,

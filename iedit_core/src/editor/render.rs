@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    HIGHLIGHT,
+    editor::selection::{HighlightedStringChunks, SelectionHighlight},
     terminal::{self, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, V_BAR},
 };
 
@@ -23,7 +23,6 @@ impl Editor {
 
     fn render_line(&mut self, line_idx: usize) -> std::io::Result<()> {
         let line = &self.file_lines[line_idx];
-        let cursor_col = self.state.cursor_pos_x;
 
         self.term.write_all(CLEAR_LINE.as_bytes())?;
         if self.config.show_line_numbers {
@@ -35,20 +34,19 @@ impl Editor {
         let range_end = self.state.viewport.right_col.min(line.len());
 
         let content = line.get(range_start..range_end).unwrap_or_default();
-        let is_current_line = line_idx == self.state.cursor_pos_y;
-        if is_current_line {
-            let cursor_display_pos = min(content.len(), cursor_col.saturating_sub(range_start));
+        let highlighted_range = self.get_highlighted_range();
+        let selection_highlight =
+            SelectionHighlight::from_line_idx_and_selection_range(line_idx, &highlighted_range);
 
-            let before_cursor = content.get(..cursor_display_pos).unwrap_or_default();
-            self.term.write_all(before_cursor.as_bytes())?;
+        HighlightedStringChunks::from(content, &selection_highlight).write_to(&mut self.term)?;
 
-            let at_cursor = content.chars().nth(cursor_display_pos).unwrap_or(' ');
-            self.term.write_fmt(HIGHLIGHT!(at_cursor))?;
+        let is_cursor_at_end_of_line =
+            self.state.cursor_pos_y == line_idx && self.state.cursor_pos_x == line.len();
 
-            let after_cursor = content.get((cursor_display_pos + 1)..).unwrap_or_default();
-            self.term.write_all(after_cursor.as_bytes())?;
-        } else {
-            self.term.write_all(content.as_bytes())?;
+        if is_cursor_at_end_of_line {
+            self.term.write_all(terminal::HIGHLIGHT_START.as_bytes())?;
+            self.term.write_all(" ".as_bytes())?;
+            self.term.write_all(terminal::HIGHLIGHT_END.as_bytes())?;
         }
 
         Ok(())
@@ -85,13 +83,15 @@ impl Editor {
     }
 
     fn render_status(&mut self) -> std::io::Result<()> {
+        self.update_status_text();
+
         self.term.write_all(CLEAR_LINE.as_bytes())?;
         self.term.write_all(self.horizontal_bar.as_bytes())?;
         self.term.write_all(CURSOR_DOWN1.as_bytes())?;
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
 
-        self.term
-            .write_fmt(format_args!("{}", self.get_status_text()))?;
+        self.term.write_all(CLEAR_LINE.as_bytes())?;
+        self.term.write_all(self.state.status_text.as_bytes())?;
         self.term.write_all(CURSOR_DOWN1.as_bytes())?;
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
 
