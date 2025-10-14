@@ -8,7 +8,7 @@ pub enum EditorInput {
     NoOp,
     CharInsertion(char),
     NewlineInsertion,
-    CharDeletion,
+    Deletion,
     BasicMovement(MovementDirection),
     SelectionMovement(MovementDirection),
     WordMovement(MovementDirection),
@@ -54,7 +54,7 @@ impl InputReader for io::Stdin {
                 Key::Ctrl('l') => Ok(ToggleLineNumbers),
 
                 // Backspace/Delete
-                Key::Backspace | Key::Delete => Ok(CharDeletion),
+                Key::Backspace | Key::Delete => Ok(Deletion),
 
                 // Enter
                 Key::Char('\n') | Key::Char('\r') => Ok(NewlineInsertion),
@@ -74,16 +74,28 @@ impl InputReader for io::Stdin {
     }
 }
 
-// Your Editor implementation remains largely the same
 impl Editor {
     pub fn process_input(&mut self, input: EditorInput) -> std::io::Result<()> {
         let prev_x = self.state.cursor_pos_x as isize;
         let prev_y = self.state.cursor_pos_y as isize;
 
         match input {
-            EditorInput::CharInsertion(c) => self.insert_char(c),
+            EditorInput::CharInsertion(c) => {
+                if self.state.selection_anchor.is_some() {
+                    self.delete_selection();
+                    self.state.selection_anchor = None;
+                }
+                self.insert_char(c)
+            },
             EditorInput::NewlineInsertion => self.insert_newline(),
-            EditorInput::CharDeletion => self.delete_char(),
+            EditorInput::Deletion => {
+                if self.state.selection_anchor.is_some() {
+                    self.delete_selection();
+                    self.state.selection_anchor = None;
+                } else {
+                    self.delete_char();
+                }
+            },
             EditorInput::SelectionMovement(dir) => {
                 if self.state.selection_anchor.is_none() {
                     self.state.selection_anchor =
