@@ -69,10 +69,6 @@ impl Editor {
             file_line.truncate(0);
         }
 
-        if file_lines.is_empty() {
-            file_lines.push(String::new());
-        }
-
         let file = file_reader.into_inner();
         let mut state = EditorState::default();
 

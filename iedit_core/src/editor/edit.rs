@@ -5,6 +5,10 @@ impl Editor {
         let mut y = self.state.cursor_pos_y;
         let x = self.state.cursor_pos_x;
 
+        if y == self.file_lines.len() {
+            self.file_lines.push(String::new());
+        }
+
         let line = &mut self.file_lines[y];
         if x > line.len() {
             line.push(c);

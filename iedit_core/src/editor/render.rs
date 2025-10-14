@@ -43,21 +43,24 @@ impl Editor {
         let is_cursor_at_end_of_line =
             self.state.cursor_pos_y == line_idx && self.state.cursor_pos_x == line.len();
 
-        if is_cursor_at_end_of_line {
-            self.term.write_all(terminal::HIGHLIGHT_START.as_bytes())?;
-            self.term.write_all(" ".as_bytes())?;
-            self.term.write_all(terminal::HIGHLIGHT_END.as_bytes())?;
+        if is_cursor_at_end_of_line && self.state.selection_anchor.is_none() {
+            self.term.write_all(terminal::EMPTY_CURSOR.as_bytes())?;
         }
 
         Ok(())
     }
 
-    fn render_empty_line(&mut self) -> std::io::Result<()> {
+    fn render_empty_line(&mut self, with_cursor: bool) -> std::io::Result<()> {
         self.term.write_all(CLEAR_LINE.as_bytes())?;
         if self.config.show_line_numbers {
             self.term.write_fmt(format_args!("{: >5} {}", " ", V_BAR))?;
         }
-        self.term.write_all("~".as_bytes())?;
+        let content = if with_cursor {
+            terminal::EMPTY_CURSOR
+        } else {
+            "~"
+        };
+        self.term.write_all(content.as_bytes())?;
 
         Ok(())
     }
@@ -73,8 +76,9 @@ impl Editor {
         }
 
         let empty_lines = self.config.n_lines as usize - (row_span_high - row_span_low);
-        for _ in 0..empty_lines {
-            self.render_empty_line()?;
+        for empty_line_idx in 0..empty_lines {
+            let with_cursor = empty_line_idx == 0 && self.state.cursor_pos_y >= self.file_lines.len();
+            self.render_empty_line(with_cursor)?;
             self.term.write_all(CURSOR_DOWN1.as_bytes())?;
             self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
         }
