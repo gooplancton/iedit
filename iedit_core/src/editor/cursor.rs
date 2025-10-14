@@ -47,9 +47,8 @@ impl Editor {
             let mut new_x = self.state.cursor_pos_x - 1;
             let is_current_char_whitespace = |x| {
                 current_line
-                    .chars()
-                    .nth(x)
-                    .map_or(false, char::is_whitespace)
+                    .get(x)
+                    .map_or(false, |c: &char| c.is_whitespace())
             };
 
             // Skip whitespace
@@ -81,9 +80,8 @@ impl Editor {
             let mut new_x = self.state.cursor_pos_x;
             let is_current_char_whitespace = |x| {
                 current_line
-                    .chars()
-                    .nth(x)
-                    .map_or(false, char::is_whitespace)
+                    .get(x)
+                    .map_or(false, |c: &char| c.is_whitespace())
             };
 
             // Skip current word

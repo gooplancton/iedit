@@ -19,7 +19,7 @@ pub struct EditorState {
 }
 
 impl Editor {
-    pub fn get_current_line(&self) -> &str {
+    pub fn get_current_line(&self) -> &[char] {
         &self.file_lines[self.state.cursor_pos_y]
     }
 

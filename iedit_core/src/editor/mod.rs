@@ -27,14 +27,14 @@ mod edit;
 mod input;
 mod io;
 mod render;
+mod selection;
 mod state;
 mod viewport;
-mod selection;
 
 pub struct Editor {
     file: File,
     file_name: String,
-    file_lines: Vec<String>,
+    file_lines: Vec<Vec<char>>,
     state: EditorState,
     config: EditorConfig,
     term: HideCursor<RawTerminal<Stdout>>,
@@ -61,11 +61,11 @@ impl Editor {
         }
 
         let file_name = path.as_ref().components().last().unwrap().as_os_str();
-        let mut file_lines = Vec::<String>::new();
+        let mut file_lines = Vec::<Vec<char>>::new();
         let mut file_reader = BufReader::new(file);
         let mut file_line = String::default();
         while file_reader.read_line(&mut file_line)? > 0 {
-            file_lines.push(file_line.trim_end_matches("\n").to_string());
+            file_lines.push(file_line.trim_end_matches("\n").chars().collect());
             file_line.truncate(0);
         }
 

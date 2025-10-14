@@ -60,7 +60,7 @@ impl InputReader for io::Stdin {
                 Key::Char('\n') | Key::Char('\r') => Ok(NewlineInsertion),
 
                 // ASCII characters
-                Key::Char(c) if c.is_ascii() => Ok(CharInsertion(c)),
+                Key::Char(c) => Ok(CharInsertion(c)),
 
                 // TODO: support utf-8 chars
 

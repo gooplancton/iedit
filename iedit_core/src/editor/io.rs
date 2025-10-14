@@ -12,12 +12,16 @@ impl Editor {
         self.file_lines
             .iter()
             .enumerate()
-            .try_for_each(|(i, line)| {
-                if i == self.file_lines.len() - 1 {
-                    write!(file_writer, "{}", line)
-                } else {
-                    writeln!(file_writer, "{}", line)
-                }
+            .try_for_each(|(line_idx, line)| {
+                line.iter()
+                    .try_for_each(|char| write!(file_writer, "{}", char))
+                    .and_then(|_| {
+                        if line_idx != self.file_lines.len() - 1 {
+                            write!(file_writer, "\n")
+                        } else {
+                            Ok(())
+                        }
+                    })
             })?;
 
         file_writer.flush()?;

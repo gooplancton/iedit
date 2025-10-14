@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::{
-    editor::selection::{HighlightedStringChunks, SelectionHighlight},
-    terminal::{self, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, V_BAR},
+    editor::selection::SelectionHighlight,
+    terminal::{self, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, HIGHLIGHT_END, V_BAR},
 };
 
 use super::Editor;
@@ -25,6 +25,7 @@ impl Editor {
         let line = &self.file_lines[line_idx];
 
         self.term.write_all(CLEAR_LINE.as_bytes())?;
+        self.term.write_all(HIGHLIGHT_END.as_bytes())?;
         if self.config.show_line_numbers {
             self.term
                 .write_fmt(format_args!("{: >5} {}", line_idx + 1, V_BAR))?;
@@ -37,8 +38,9 @@ impl Editor {
         let highlighted_range = self.get_highlighted_range();
         let selection_highlight =
             SelectionHighlight::from_line_idx_and_selection_range(line_idx, &highlighted_range);
+        let highlighted_content = selection_highlight.highlight_chars(content);
 
-        HighlightedStringChunks::from(content, &selection_highlight).write_to(&mut self.term)?;
+        self.term.write_all(highlighted_content.as_str().as_bytes());
 
         let is_cursor_at_end_of_line =
             self.state.cursor_pos_y == line_idx && self.state.cursor_pos_x == line.len();
@@ -52,6 +54,8 @@ impl Editor {
 
     fn render_empty_line(&mut self, with_cursor: bool) -> std::io::Result<()> {
         self.term.write_all(CLEAR_LINE.as_bytes())?;
+        self.term.write_all(HIGHLIGHT_END.as_bytes())?;
+
         if self.config.show_line_numbers {
             self.term.write_fmt(format_args!("{: >5} {}", " ", V_BAR))?;
         }
@@ -77,7 +81,8 @@ impl Editor {
 
         let empty_lines = self.config.n_lines as usize - (row_span_high - row_span_low);
         for empty_line_idx in 0..empty_lines {
-            let with_cursor = empty_line_idx == 0 && self.state.cursor_pos_y >= self.file_lines.len();
+            let with_cursor =
+                empty_line_idx == 0 && self.state.cursor_pos_y >= self.file_lines.len();
             self.render_empty_line(with_cursor)?;
             self.term.write_all(CURSOR_DOWN1.as_bytes())?;
             self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
