@@ -29,74 +29,58 @@ impl SelectionHighlight {
             SelectionHighlight::None
         }
     }
-}
 
-pub struct HighlightedStringChunks<'a>([Option<&'a str>; 5]);
+    pub fn highlight_chars(&self, chars: &[char]) -> String {
+        let mut result = String::new();
+        result.reserve(chars.len());
 
-impl<'a> HighlightedStringChunks<'a> {
-    pub fn from(string: &'a str, selection_highlight: &'a SelectionHighlight) -> Self {
-        let chunks = match selection_highlight {
-            SelectionHighlight::None => [Some(string), None, None, None, None],
-            SelectionHighlight::WholeLine => [
-                Some(HIGHLIGHT_START),
-                Some(string),
-                Some(HIGHLIGHT_END),
-                None,
-                None,
-            ],
+        match self {
+            SelectionHighlight::None => {
+                chars.iter().for_each(|ch| result.push(*ch));
+            }
+            SelectionHighlight::WholeLine => {
+                let mut line_str = chars.iter().collect::<String>();
+
+                result.push_str(HIGHLIGHT_START);
+                chars.iter().for_each(|ch| result.push(*ch));
+                result.push_str(HIGHLIGHT_END);
+            }
             SelectionHighlight::Before(highlight_x) => {
-                let x = min(*highlight_x, string.len());
-                let (highlighted, unhighlighted) = string.split_at(x);
-                [
-                    Some(HIGHLIGHT_START),
-                    Some(highlighted),
-                    Some(HIGHLIGHT_END),
-                    Some(unhighlighted),
-                    None,
-                ]
+                let x = min(*highlight_x, chars.len());
+                let (highlighted, unhighlighted) = chars.split_at(x);
+
+                result.push_str(HIGHLIGHT_START);
+                highlighted.iter().for_each(|ch| result.push(*ch));
+                result.push_str(HIGHLIGHT_END);
+                unhighlighted.iter().for_each(|ch| result.push(*ch));
             }
             SelectionHighlight::After(highlight_x) => {
-                let x = min(*highlight_x, string.len());
-                let (unhighlighted, highlighted) = string.split_at(x);
-                [
-                    Some(unhighlighted),
-                    Some(HIGHLIGHT_START),
-                    Some(highlighted),
-                    Some(HIGHLIGHT_END),
-                    None,
-                ]
+                let x = min(*highlight_x, chars.len());
+                let (unhighlighted, highlighted) = chars.split_at(x);
+
+                result.push_str(HIGHLIGHT_END);
+                unhighlighted.iter().for_each(|ch| result.push(*ch));
+                result.push_str(HIGHLIGHT_START);
+                highlighted.iter().for_each(|ch| result.push(*ch));
             }
             SelectionHighlight::Range(highlight_start_x, highlight_end_x) => {
-                let x1 = min(*highlight_start_x, string.len());
-                let (unhighlighted1, rest) = string.split_at(x1);
+                let x1 = min(*highlight_start_x, chars.len());
+                let (unhighlighted1, rest) = chars.split_at(x1);
 
                 let x2 = min(
                     highlight_end_x.saturating_sub(unhighlighted1.len()),
                     rest.len(),
                 );
                 let (highlighted, unhighlighted2) = rest.split_at(x2);
-                [
-                    Some(unhighlighted1),
-                    Some(HIGHLIGHT_START),
-                    Some(highlighted),
-                    Some(HIGHLIGHT_END),
-                    Some(unhighlighted2),
-                ]
+
+                unhighlighted1.iter().for_each(|ch| result.push(*ch));
+                result.push_str(HIGHLIGHT_START);
+                highlighted.iter().for_each(|ch| result.push(*ch));
+                result.push_str(HIGHLIGHT_END);
+                unhighlighted2.iter().for_each(|ch| result.push(*ch));
             }
         };
 
-        Self(chunks)
-    }
-
-    pub fn write_to(&self, mut target: impl Write) -> std::io::Result<()> {
-        for chunk in self.0 {
-            if chunk.is_none() {
-                return Ok(());
-            }
-
-            target.write_all(chunk.unwrap().as_bytes())?
-        }
-
-        Ok(())
+        result
     }
 }

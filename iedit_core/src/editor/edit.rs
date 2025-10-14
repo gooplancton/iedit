@@ -6,11 +6,11 @@ impl Editor {
         let x = self.state.cursor_pos_x;
 
         if y == self.file_lines.len() {
-            self.file_lines.push(String::new());
+            self.file_lines.push(Vec::new());
         }
 
         let line = &mut self.file_lines[y];
-        if x > line.len() {
+        if x >= line.len() {
             line.push(c);
         } else {
             line.insert(x, c);
@@ -36,8 +36,8 @@ impl Editor {
         } else if x == 0 && y > 0 {
             // Merge with previous line
             let prev_line_len = self.file_lines[y - 1].len();
-            let current_line = self.file_lines.remove(y);
-            self.file_lines[y - 1].push_str(&current_line);
+            let mut current_line = self.file_lines.remove(y);
+            self.file_lines[y - 1].append(&mut current_line);
             self.state.cursor_pos_y -= 1;
             self.state.cursor_pos_x = prev_line_len;
         }
@@ -57,14 +57,14 @@ impl Editor {
             let line = &mut self.file_lines[start_y];
             line.drain(start_x..end_x);
         } else {
-            let after_end_len = self.file_lines[end_y].len() - end_x;
-            let after_end = &self.file_lines[end_y][end_x..].as_ptr();
-            self.file_lines[start_y].drain(start_x..);
-            // SAFETY: after_end is valid for after_end_len bytes as it is a slice of a String
-            let after_end_str = unsafe {
-                std::str::from_utf8_unchecked(std::slice::from_raw_parts(*after_end, after_end_len))
-            };
-            self.file_lines[start_y].push_str(after_end_str);
+            let (before_last_line, last_line) = self.file_lines.split_at_mut(end_y);
+            before_last_line[start_y].drain(start_x..);
+
+            let mut after_end = &mut last_line[0];
+            after_end.drain(..end_x);
+
+            before_last_line[start_y].append(&mut after_end);
+
             self.file_lines.drain(start_y + 1..=end_y);
         }
 
@@ -80,12 +80,12 @@ impl Editor {
         let x = self.state.cursor_pos_x;
 
         if y == self.file_lines.len() {
-            self.file_lines.push(String::new());
+            self.file_lines.push(Vec::new());
         }
         let current_line = if x < self.file_lines[y].len() {
             self.file_lines[y].split_off(x)
         } else {
-            String::new()
+            Vec::new()
         };
         self.file_lines.insert(y + 1, current_line);
         self.state.cursor_pos_y += 1;
