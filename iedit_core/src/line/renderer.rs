@@ -84,12 +84,21 @@ impl<'line, TextLine: EditorLine> LineRenderer<'line, TextLine> {
                 );
                 let (highlighted, unhighlighted2) = rest.split_chars_at(x2);
 
-                for segment in [unhighlighted1, highlighted, unhighlighted2] {
-                    segment
-                        .iter_chars()
-                        .try_for_each(|ch| write!(writer, "{}", ch))?;
-                    writer.write_all(HIGHLIGHT_START.as_bytes())?;
-                }
+                unhighlighted1
+                    .iter_chars()
+                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+
+                writer.write_all(HIGHLIGHT_START.as_bytes())?;
+
+                highlighted
+                    .iter_chars()
+                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+
+                writer.write_all(HIGHLIGHT_END.as_bytes())?;
+
+                unhighlighted2
+                    .iter_chars()
+                    .try_for_each(|ch| write!(writer, "{}", ch))?;
             }
         };
 
