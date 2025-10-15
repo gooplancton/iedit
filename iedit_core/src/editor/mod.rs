@@ -17,6 +17,7 @@ use termion::{
 
 use crate::{
     editor::input::{EditorInput, InputReader},
+    line::EditorLine,
     terminal::{CURSOR_DOWN1, H_BAR},
 };
 
@@ -27,14 +28,13 @@ mod edit;
 mod input;
 mod io;
 mod render;
-mod selection;
 mod state;
 mod viewport;
 
-pub struct Editor {
+pub struct Editor<TextLine: EditorLine> {
     file: File,
     file_name: String,
-    file_lines: Vec<Vec<char>>,
+    file_lines: Vec<TextLine>,
     state: EditorState,
     config: EditorConfig,
     term: HideCursor<RawTerminal<Stdout>>,
@@ -44,7 +44,7 @@ pub struct Editor {
     horizontal_bar: String,
 }
 
-impl Editor {
+impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn new(path: impl AsRef<Path>) -> std::io::Result<Self> {
         let file = OpenOptions::new()
             .read(true)
@@ -61,11 +61,11 @@ impl Editor {
         }
 
         let file_name = path.as_ref().components().last().unwrap().as_os_str();
-        let mut file_lines = Vec::<Vec<char>>::new();
+        let mut file_lines = Vec::<TextLine>::new();
         let mut file_reader = BufReader::new(file);
         let mut file_line = String::default();
         while file_reader.read_line(&mut file_line)? > 0 {
-            file_lines.push(file_line.trim_end_matches("\n").chars().collect());
+            file_lines.push(TextLine::from_str(&file_line));
             file_line.truncate(0);
         }
 

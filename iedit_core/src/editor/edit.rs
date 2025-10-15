@@ -1,19 +1,19 @@
-use crate::editor::Editor;
+use crate::{editor::Editor, line::EditorLine};
 
-impl Editor {
+impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn insert_char(&mut self, c: char) {
         let mut y = self.state.cursor_pos_y;
         let x = self.state.cursor_pos_x;
 
         if y == self.file_lines.len() {
-            self.file_lines.push(Vec::new());
+            self.file_lines.push(TextLine::new());
         }
 
         let line = &mut self.file_lines[y];
         if x >= line.len() {
-            line.push(c);
+            line.push_char(c);
         } else {
-            line.insert(x, c);
+            line.insert_char_at(c, x);
         }
         self.state.cursor_pos_x += 1;
         self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
@@ -31,13 +31,13 @@ impl Editor {
         let line = &mut self.file_lines[y];
 
         if x > 0 && x <= line.len() {
-            line.remove(x - 1);
+            line.remove_char_at(x - 1);
             self.state.cursor_pos_x -= 1;
         } else if x == 0 && y > 0 {
             // Merge with previous line
             let prev_line_len = self.file_lines[y - 1].len();
             let mut current_line = self.file_lines.remove(y);
-            self.file_lines[y - 1].append(&mut current_line);
+            self.file_lines[y - 1].merge_at_end(&mut current_line);
             self.state.cursor_pos_y -= 1;
             self.state.cursor_pos_x = prev_line_len;
         }
@@ -55,15 +55,15 @@ impl Editor {
 
         if start_y == end_y {
             let line = &mut self.file_lines[start_y];
-            line.drain(start_x..end_x);
+            line.delete_chars(start_x..end_x);
         } else {
             let (before_last_line, last_line) = self.file_lines.split_at_mut(end_y);
-            before_last_line[start_y].drain(start_x..);
+            before_last_line[start_y].delete_chars(start_x..);
 
             let mut after_end = &mut last_line[0];
-            after_end.drain(..end_x);
+            after_end.delete_chars(..end_x);
 
-            before_last_line[start_y].append(&mut after_end);
+            before_last_line[start_y].merge_at_end(&mut after_end);
 
             self.file_lines.drain(start_y + 1..=end_y);
         }
@@ -80,12 +80,12 @@ impl Editor {
         let x = self.state.cursor_pos_x;
 
         if y == self.file_lines.len() {
-            self.file_lines.push(Vec::new());
+            self.file_lines.push(TextLine::new());
         }
         let current_line = if x < self.file_lines[y].len() {
-            self.file_lines[y].split_off(x)
+            self.file_lines[y].split_chars_off_at(x)
         } else {
-            Vec::new()
+            TextLine::new()
         };
         self.file_lines.insert(y + 1, current_line);
         self.state.cursor_pos_y += 1;

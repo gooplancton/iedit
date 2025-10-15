@@ -4,13 +4,13 @@ use std::{
 };
 
 use crate::{
-    editor::selection::SelectionHighlight,
+    line::{EditorLine, LineRenderer, SelectionHighlight},
     terminal::{self, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, HIGHLIGHT_END, V_BAR},
 };
 
 use super::Editor;
 
-impl Editor {
+impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn render(&mut self) -> std::io::Result<()> {
         self.term
             .write_fmt(format_args!("{}", self.reset_cursor_seq))?;
@@ -31,20 +31,18 @@ impl Editor {
                 .write_fmt(format_args!("{: >5} {}", line_idx + 1, V_BAR))?;
         }
 
-        let range_start = self.state.viewport.left_col;
-        let range_end = self.state.viewport.right_col.min(line.len());
-
-        let content = line.get(range_start..range_end).unwrap_or_default();
+        let display_start = self.state.viewport.left_col;
+        let display_end = self.state.viewport.right_col.min(line.len());
         let highlighted_range = self.get_highlighted_range();
-        let selection_highlight =
-            SelectionHighlight::from_line_idx_and_selection_range(line_idx, &highlighted_range);
-        let highlighted_content = selection_highlight.highlight_chars(content);
+        let selection_highlight = SelectionHighlight::new(line_idx, &highlighted_range);
 
-        self.term.write_all(highlighted_content.as_str().as_bytes());
+        LineRenderer::new(line)
+            .with_display_range(display_start..display_end)
+            .with_selection_highlight(selection_highlight)
+            .render_to(&mut self.term)?;
 
         let is_cursor_at_end_of_line =
             self.state.cursor_pos_y == line_idx && self.state.cursor_pos_x == line.len();
-
         if is_cursor_at_end_of_line && self.state.selection_anchor.is_none() {
             self.term.write_all(terminal::EMPTY_CURSOR.as_bytes())?;
         }
