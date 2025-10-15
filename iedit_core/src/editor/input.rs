@@ -2,6 +2,8 @@ use std::io::{self, Read};
 use termion::event::Key;
 use termion::input::TermRead;
 
+use crate::line::EditorLine;
+
 use super::{Editor, cursor::MovementDirection};
 
 pub enum EditorInput {
@@ -74,7 +76,7 @@ impl InputReader for io::Stdin {
     }
 }
 
-impl Editor {
+impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn process_input(&mut self, input: EditorInput) -> std::io::Result<()> {
         let prev_x = self.state.cursor_pos_x as isize;
         let prev_y = self.state.cursor_pos_y as isize;
@@ -86,7 +88,7 @@ impl Editor {
                     self.state.selection_anchor = None;
                 }
                 self.insert_char(c)
-            },
+            }
             EditorInput::NewlineInsertion => self.insert_newline(),
             EditorInput::Deletion => {
                 if self.state.selection_anchor.is_some() {
@@ -95,7 +97,7 @@ impl Editor {
                 } else {
                     self.delete_char();
                 }
-            },
+            }
             EditorInput::SelectionMovement(dir) => {
                 if self.state.selection_anchor.is_none() {
                     self.state.selection_anchor =

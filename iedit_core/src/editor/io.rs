@@ -1,8 +1,10 @@
 use std::io::{Seek, SeekFrom, Write};
 
+use crate::line::EditorLine;
+
 use super::Editor;
 
-impl Editor {
+impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn save_file(&mut self) -> std::io::Result<()> {
         // naive implemetation for now, in the future we can keep track of
         // lines that have been modified and only write them
@@ -13,15 +15,12 @@ impl Editor {
             .iter()
             .enumerate()
             .try_for_each(|(line_idx, line)| {
-                line.iter()
-                    .try_for_each(|char| write!(file_writer, "{}", char))
-                    .and_then(|_| {
-                        if line_idx != self.file_lines.len() - 1 {
-                            write!(file_writer, "\n")
-                        } else {
-                            Ok(())
-                        }
-                    })
+                write!(file_writer, "{}", line.to_string())?;
+                if line_idx != self.file_lines.len() - 1 {
+                    write!(file_writer, "\n")
+                } else {
+                    Ok(())
+                }
             })?;
 
         file_writer.flush()?;

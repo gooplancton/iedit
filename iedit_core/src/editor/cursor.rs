@@ -1,5 +1,7 @@
 use std::cmp::{max, min};
 
+use crate::line::EditorLine;
+
 use super::Editor;
 
 pub enum MovementDirection {
@@ -9,7 +11,7 @@ pub enum MovementDirection {
     Right,
 }
 
-impl Editor {
+impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn move_cursor_up(&mut self) {
         self.state.cursor_pos_y = self.state.cursor_pos_y.saturating_sub(1);
     }
@@ -47,7 +49,7 @@ impl Editor {
             let mut new_x = self.state.cursor_pos_x - 1;
             let is_current_char_whitespace = |x| {
                 current_line
-                    .get(x)
+                    .get_nth_char(x)
                     .map_or(false, |c: &char| c.is_whitespace())
             };
 
@@ -80,7 +82,7 @@ impl Editor {
             let mut new_x = self.state.cursor_pos_x;
             let is_current_char_whitespace = |x| {
                 current_line
-                    .get(x)
+                    .get_nth_char(x)
                     .map_or(false, |c: &char| c.is_whitespace())
             };
 

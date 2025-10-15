@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-use crate::editor::viewport::Viewport;
+use crate::editor::{EditorLine, viewport::Viewport};
 
 use super::Editor;
 
@@ -18,8 +18,8 @@ pub struct EditorState {
     pub is_file_modified: bool,
 }
 
-impl Editor {
-    pub fn get_current_line(&self) -> &[char] {
+impl<TextLine: EditorLine> Editor<TextLine> {
+    pub fn get_current_line(&self) -> &TextLine {
         &self.file_lines[self.state.cursor_pos_y]
     }
 

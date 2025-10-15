@@ -1,4 +1,4 @@
-use crate::editor::Editor;
+use crate::editor::{EditorLine, Editor};
 
 pub struct Viewport {
     pub top_line: usize,
@@ -18,7 +18,7 @@ impl Default for Viewport {
     }
 }
 
-impl Editor {
+impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn adjust_viewport(&mut self) {
         let n_lines = self.config.n_lines as usize;
         let n_cols = (self.term_width as usize) - self.config.show_line_numbers as usize * 7;
@@ -50,8 +50,11 @@ impl Editor {
 
         if self.state.cursor_pos_x < left_limit && self.state.cursor_vel_x < 0 {
             let horizontal_scroll = left_limit.saturating_sub(self.state.cursor_pos_x);
-            self.state.viewport.left_col =
-                self.state.viewport.left_col.saturating_sub(horizontal_scroll);
+            self.state.viewport.left_col = self
+                .state
+                .viewport
+                .left_col
+                .saturating_sub(horizontal_scroll);
             self.state.viewport.right_col = self.state.viewport.left_col + n_cols;
         } else if self.state.cursor_pos_x > right_limit && self.state.cursor_vel_x > 0 {
             let horizontal_scroll = self.state.cursor_pos_x.saturating_sub(right_limit);
