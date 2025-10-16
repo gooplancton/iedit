@@ -47,19 +47,19 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         } else {
             let current_line = self.get_current_line();
             let mut new_x = self.state.cursor_pos_x - 1;
-            let is_current_char_whitespace = |x| {
+            let is_current_char_alphanum = |x| {
                 current_line
                     .get_nth_char(x)
-                    .map_or(false, |c: &char| c.is_whitespace())
+                    .map_or(false, |c: char| c.is_alphanumeric())
             };
 
             // Skip whitespace
-            while new_x > 0 && is_current_char_whitespace(new_x) {
+            while new_x > 0 && !is_current_char_alphanum(new_x) {
                 new_x -= 1;
             }
 
             // Skip current word
-            while new_x > 0 && !is_current_char_whitespace(new_x) {
+            while new_x > 0 && is_current_char_alphanum(new_x) {
                 new_x -= 1;
             }
 
@@ -80,19 +80,19 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             }
         } else {
             let mut new_x = self.state.cursor_pos_x;
-            let is_current_char_whitespace = |x| {
+            let is_current_char_alphanum = |x| {
                 current_line
                     .get_nth_char(x)
-                    .map_or(false, |c: &char| c.is_whitespace())
+                    .map_or(false, |c: char| c.is_alphanumeric())
             };
 
             // Skip current word
-            while new_x < line_len && !is_current_char_whitespace(new_x) {
+            while new_x < line_len && is_current_char_alphanum(new_x) {
                 new_x += 1;
             }
 
             // Skip whitespace
-            while new_x < line_len && is_current_char_whitespace(new_x) {
+            while new_x < line_len && !is_current_char_alphanum(new_x) {
                 new_x += 1;
             }
 

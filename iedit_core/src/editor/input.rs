@@ -10,7 +10,9 @@ pub enum EditorInput {
     NoOp,
     CharInsertion(char),
     NewlineInsertion,
+    TabInsertion,
     Deletion,
+    WordDeletion,
     BasicMovement(MovementDirection),
     SelectionMovement(MovementDirection),
     WordMovement(MovementDirection),
@@ -55,13 +57,15 @@ impl InputReader for io::Stdin {
                 Key::Ctrl('s') => Ok(Save),
                 Key::Ctrl('l') => Ok(ToggleLineNumbers),
 
+                // Ctrl + Backspace for deleting the previous word
+                Key::Ctrl('\x7F') => Ok(WordDeletion),
+                Key::Ctrl('h') => Ok(WordDeletion),
+
                 // Backspace/Delete
                 Key::Backspace | Key::Delete => Ok(Deletion),
 
-                // Enter
                 Key::Char('\n') | Key::Char('\r') => Ok(NewlineInsertion),
-
-                // ASCII characters
+                Key::Char('\t') => Ok(TabInsertion),
                 Key::Char(c) => Ok(CharInsertion(c)),
 
                 // TODO: support utf-8 chars
@@ -90,12 +94,21 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 self.insert_char(c)
             }
             EditorInput::NewlineInsertion => self.insert_newline(),
+            EditorInput::TabInsertion => self.insert_tab(),
             EditorInput::Deletion => {
                 if self.state.selection_anchor.is_some() {
                     self.delete_selection();
                     self.state.selection_anchor = None;
                 } else {
                     self.delete_char();
+                }
+            }
+            EditorInput::WordDeletion => {
+                if self.state.selection_anchor.is_some() {
+                    self.delete_selection();
+                    self.state.selection_anchor = None;
+                } else {
+                    self.delete_word();
                 }
             }
             EditorInput::SelectionMovement(dir) => {

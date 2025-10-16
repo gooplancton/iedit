@@ -1,4 +1,3 @@
-use core::slice;
 use std::ops::{Range, RangeBounds};
 
 use crate::line::{CharacterEditable, EditorLine};
@@ -22,8 +21,8 @@ impl EditorLine for Vec<char> {
         self.iter().collect()
     }
 
-    fn iter_chars(&self) -> impl Iterator<Item = &char> {
-        self.iter()
+    fn iter_chars(&self) -> impl Iterator<Item = char> {
+        self.iter().map(|char| *char)
     }
 
     fn split_chars_off_at(&mut self, idx: usize) -> Self {
@@ -54,8 +53,8 @@ impl EditorLine for Vec<char> {
         self.get(range).unwrap_or_default()
     }
 
-    fn get_nth_char(&self, idx: usize) -> Option<&char> {
-        self.get(idx)
+    fn get_nth_char(&self, idx: usize) -> Option<char> {
+        self.get(idx).copied()
     }
 
     fn is_empty(&self) -> bool {
@@ -68,8 +67,8 @@ impl CharacterEditable for [char] {
         self.len()
     }
 
-    fn iter_chars(&self) -> impl Iterator<Item = &char> {
-        self.iter()
+    fn iter_chars(&self) -> impl Iterator<Item = char> {
+        self.iter().map(|char| *char)
     }
 
     fn split_chars_at(&self, idx: usize) -> (&Self, &Self) {

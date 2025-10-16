@@ -20,6 +20,12 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         self.state.is_file_modified = true;
     }
 
+    pub fn insert_tab(&mut self) {
+        for _ in 0..self.config.tab_size {
+            self.insert_char(' ');
+        }
+    }
+
     pub fn delete_char(&mut self) {
         let y = self.state.cursor_pos_y;
         let x = self.state.cursor_pos_x;
@@ -73,6 +79,40 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
         self.state.selection_anchor = None;
         self.state.is_file_modified = true;
+    }
+
+    pub fn delete_word(&mut self) {
+        let current_line = self.get_current_line();
+        let x = self.state.cursor_pos_x;
+
+        if x == 0 && self.state.cursor_pos_y == 0 {
+            return;
+        }
+
+        let mut new_x = x;
+        let is_current_char_alphanum = |x| {
+            current_line
+                .get_nth_char(x)
+                .map_or(false, |c: char| c.is_whitespace())
+        };
+
+        // Skip whitespace
+        while new_x > 0 && !is_current_char_alphanum(new_x - 1) {
+            new_x -= 1;
+        }
+
+        // Skip current word
+        while new_x > 0 && is_current_char_alphanum(new_x - 1) {
+            new_x -= 1;
+        }
+
+        if new_x < x {
+            let line = &mut self.file_lines[self.state.cursor_pos_y];
+            line.delete_chars(new_x..x);
+            self.state.cursor_pos_x = new_x;
+            self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
+            self.state.is_file_modified = true;
+        }
     }
 
     pub fn insert_newline(&mut self) {
