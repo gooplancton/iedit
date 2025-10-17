@@ -2,6 +2,9 @@ use crate::{Editor, line::EditorLine};
 
 pub enum EditorCommand {
     GotoLine(usize),
+    WriteAndQuit,
+    Write,
+    Quit,
     Invalid,
 }
 
@@ -22,7 +25,10 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 } else {
                     EditorCommand::Invalid
                 }
-            }
+            },
+            ["w"] | ["write"] => EditorCommand::Write,
+            ["q"] | ["quit"] => EditorCommand::Quit,
+            ["wq"] => EditorCommand::WriteAndQuit,
             _ => EditorCommand::Invalid,
         }
     }
@@ -34,6 +40,16 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             EditorCommand::GotoLine(idx) => {
                 self.goto_line(idx);
             }
+            EditorCommand::WriteAndQuit => {
+                self.save_file();
+                self.quit();
+            },
+            EditorCommand::Write => {
+                self.save_file();
+            },
+            EditorCommand::Quit => {
+                self.quit();
+            },
             EditorCommand::Invalid => {}
         };
 
@@ -45,9 +61,5 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         self.state.is_entering_command = true;
         self.state.command_text.push_str(prefix);
         self.state.cmd_cursor_pos_x = self.state.command_text.len();
-    }
-
-    pub fn goto_line(&mut self, idx: usize) {
-        self.state.cursor_pos_y = idx.saturating_sub(1);
     }
 }

@@ -20,7 +20,7 @@ pub enum EditorInput {
     Quit,
     ToggleLineNumbers,
     EnterCommandMode(&'static str),
-    ReturnToEditor,
+    ToggleCommandMode,
 }
 
 pub trait InputReader {
@@ -58,7 +58,6 @@ impl InputReader for io::Stdin {
                 Key::Ctrl('q') => Ok(Quit),
                 Key::Ctrl('s') => Ok(Save),
                 Key::Ctrl('l') => Ok(ToggleLineNumbers),
-                Key::Ctrl('p') => Ok(EnterCommandMode("")),
                 Key::Ctrl('g') => Ok(EnterCommandMode("goto ")),
 
                 // Ctrl + Backspace for deleting the previous word
@@ -72,7 +71,7 @@ impl InputReader for io::Stdin {
                 Key::Char('\t') => Ok(TabInsertion),
                 Key::Char(c) => Ok(CharInsertion(c)),
 
-                Key::Esc => Ok(ReturnToEditor),
+                Key::Esc => Ok(ToggleCommandMode),
 
                 // TODO: support utf-8 chars
 
@@ -157,7 +156,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 self.save_file()?;
             }
             EditorInput::Quit => {
-                unreachable!()
+                self.quit();
             }
             EditorInput::ToggleLineNumbers => {
                 self.config.show_line_numbers = !self.config.show_line_numbers;
@@ -165,8 +164,8 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             EditorInput::EnterCommandMode(prefix) => {
                 self.enter_command_mode(prefix);
             }
-            EditorInput::ReturnToEditor => {
-                self.state.is_entering_command = false;
+            EditorInput::ToggleCommandMode => {
+                self.state.is_entering_command = !self.state.is_entering_command;
             },
             EditorInput::NoOp => {}
         }
@@ -183,8 +182,3 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     }
 }
 
-impl EditorInput {
-    pub fn should_quit(&self) -> bool {
-        matches!(self, EditorInput::Quit)
-    }
-}
