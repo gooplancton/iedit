@@ -1,7 +1,4 @@
-use std::{
-    cmp::{max, min},
-    io::Write,
-};
+use std::io::Write;
 
 use crate::{
     line::{EditorLine, LineRenderer, SelectionHighlight},
@@ -113,7 +110,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             renderer = renderer.with_selection_highlight(selection_highlight);
         }
 
-        renderer.render_to(&mut self.term);
+        renderer.render_to(&mut self.term)?;
 
         let is_cursor_at_end_of_line = !self.state.is_editing_content()
             && self.state.cmd_cursor_pos_x == self.state.command_text.len();

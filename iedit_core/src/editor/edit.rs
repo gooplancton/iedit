@@ -4,7 +4,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn insert_char(&mut self, c: char) {
         let total_lines = self.file_lines.len();
         let (x, y) = self.state.get_cursor_pos_mut();
-        let x = x.clone();
+        let x = *x;
 
         if y.is_some_and(|y| *y == total_lines) {
             self.file_lines.push(TextLine::new());
@@ -67,10 +67,10 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             let (before_last_line, last_line) = self.file_lines.split_at_mut(end_y);
             before_last_line[start_y].delete_chars(start_x..);
 
-            let mut after_end = &mut last_line[0];
+            let after_end = &mut last_line[0];
             after_end.delete_chars(..end_x);
 
-            before_last_line[start_y].merge_at_end(&mut after_end);
+            before_last_line[start_y].merge_at_end(after_end);
 
             self.file_lines.drain(start_y + 1..=end_y);
         }
@@ -94,7 +94,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         let is_current_char_alphanum = |x| {
             current_line
                 .get_nth_char(x)
-                .map_or(false, |c: char| c.is_whitespace())
+                .is_some_and(char::is_alphanumeric)
         };
 
         // Skip whitespace
@@ -108,7 +108,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         }
 
         if new_x < x {
-            let old_x = x.clone();
+            let old_x = x;
             let line = match y {
                 Some(y) => &mut self.file_lines[y],
                 None => &mut self.state.command_text,
@@ -122,7 +122,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     }
 
     pub fn insert_newline(&mut self) {
-        let mut y = self.state.cursor_pos_y;
+        let y = self.state.cursor_pos_y;
         let x = self.state.cursor_pos_x;
 
         if y == self.file_lines.len() {

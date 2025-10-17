@@ -1,6 +1,7 @@
-use std::cmp::{max, min};
-
-use crate::{editor::{viewport::Viewport, EditorLine}, line::CharacterEditable};
+use crate::{
+    editor::{EditorLine, viewport::Viewport},
+    line::CharacterEditable,
+};
 
 use super::Editor;
 
@@ -33,6 +34,7 @@ pub struct EditorState<TextLine: EditorLine> {
     pub mode: EditorMode,
     pub is_file_modified: bool,
     pub should_quit: bool,
+    pub should_run_command: bool,
 }
 
 impl<TextLine: EditorLine> EditorState<TextLine> {
@@ -59,7 +61,6 @@ impl<TextLine: EditorLine> EditorState<TextLine> {
     pub fn is_editing_content(&self) -> bool {
         matches!(self.mode, EditorMode::Insert)
     }
-
 }
 
 impl<TextLine: EditorLine> Editor<TextLine> {
@@ -82,9 +83,15 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         let col = self.state.cursor_pos_x + 1;
         let modified = if self.state.is_file_modified { "*" } else { "" };
         let total_lines = self.file_lines.len();
+        let file_name = self
+            .canonicalized_file_path
+            .components()
+            .next_back()
+            .map(|f| f.as_os_str())
+            .unwrap_or_default();
         self.state.status_text = TextLine::from_str(&format!(
-            "{}{} | Ln {}, Col {} | {} lines",
-            self.file_name, modified, line, col, total_lines
+            "{:?}{} | Ln {}, Col {} | {} lines",
+            file_name, modified, line, col, total_lines
         ))
     }
 
