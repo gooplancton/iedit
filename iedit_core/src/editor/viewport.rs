@@ -1,4 +1,6 @@
-use crate::editor::{EditorLine, Editor};
+use std::cmp::min;
+
+use crate::editor::{Editor, EditorLine};
 
 pub struct Viewport {
     pub top_line: usize,
@@ -30,13 +32,24 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             .bottom_line
             .saturating_sub(self.config.vertical_margin as usize);
 
-        if self.state.cursor_pos_y < top_limit && self.state.cursor_vel_y < 0 {
+        let should_scroll_up = self.state.cursor_pos_y < top_limit && self.state.cursor_vel_y < 0;
+        let should_scroll_down =
+            self.state.cursor_pos_y > bottom_limit && self.state.cursor_vel_y > 0;
+        let lines_below_limit = self
+            .file_lines
+            .len()
+            .saturating_sub(self.state.viewport.top_line + (self.config.n_lines as usize) - 1);
+
+        if should_scroll_up {
             let vertical_scroll = top_limit.saturating_sub(self.state.cursor_pos_y);
             self.state.viewport.top_line =
                 self.state.viewport.top_line.saturating_sub(vertical_scroll);
             self.state.viewport.bottom_line = self.state.viewport.top_line + n_lines;
-        } else if self.state.cursor_pos_y > bottom_limit && self.state.cursor_vel_y > 0 {
-            let vertical_scroll = self.state.cursor_pos_y.saturating_sub(bottom_limit);
+        } else if should_scroll_down && lines_below_limit > 0 {
+            let vertical_scroll = min(
+                lines_below_limit,
+                self.state.cursor_pos_y.saturating_sub(bottom_limit),
+            );
             self.state.viewport.bottom_line += vertical_scroll;
             self.state.viewport.top_line = self.state.viewport.bottom_line.saturating_sub(n_lines);
         }

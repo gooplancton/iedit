@@ -19,6 +19,8 @@ pub enum EditorInput {
     Save,
     Quit,
     ToggleLineNumbers,
+    EnterCommandMode(&'static str),
+    ReturnToEditor,
 }
 
 pub trait InputReader {
@@ -56,6 +58,8 @@ impl InputReader for io::Stdin {
                 Key::Ctrl('q') => Ok(Quit),
                 Key::Ctrl('s') => Ok(Save),
                 Key::Ctrl('l') => Ok(ToggleLineNumbers),
+                Key::Ctrl('p') => Ok(EnterCommandMode("")),
+                Key::Ctrl('g') => Ok(EnterCommandMode("goto ")),
 
                 // Ctrl + Backspace for deleting the previous word
                 Key::Ctrl('\x7F') => Ok(WordDeletion),
@@ -67,6 +71,8 @@ impl InputReader for io::Stdin {
                 Key::Char('\n') | Key::Char('\r') => Ok(NewlineInsertion),
                 Key::Char('\t') => Ok(TabInsertion),
                 Key::Char(c) => Ok(CharInsertion(c)),
+
+                Key::Esc => Ok(ReturnToEditor),
 
                 // TODO: support utf-8 chars
 
@@ -93,7 +99,13 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 }
                 self.insert_char(c)
             }
-            EditorInput::NewlineInsertion => self.insert_newline(),
+            EditorInput::NewlineInsertion => {
+                if self.state.is_entering_command {
+                    self.run_command();
+                } else {
+                    self.insert_newline()
+                }
+            }
             EditorInput::TabInsertion => self.insert_tab(),
             EditorInput::Deletion => {
                 if self.state.selection_anchor.is_some() {
@@ -150,6 +162,12 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             EditorInput::ToggleLineNumbers => {
                 self.config.show_line_numbers = !self.config.show_line_numbers;
             }
+            EditorInput::EnterCommandMode(prefix) => {
+                self.enter_command_mode(prefix);
+            }
+            EditorInput::ReturnToEditor => {
+                self.state.is_entering_command = false;
+            },
             EditorInput::NoOp => {}
         }
 
