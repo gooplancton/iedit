@@ -176,4 +176,8 @@ impl EditorLine for String {
             self.truncate(char_idx);
         }
     }
+
+    fn find_term(&self, term: &str) -> Option<usize> {
+        self.find(term)
+    }
 }

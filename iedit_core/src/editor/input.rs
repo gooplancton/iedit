@@ -59,6 +59,7 @@ impl InputReader for io::Stdin {
                 Key::Ctrl('s') => Ok(Save),
                 Key::Ctrl('l') => Ok(ToggleLineNumbers),
                 Key::Ctrl('g') => Ok(EnterCommandMode("goto ")),
+                Key::Ctrl('f') => Ok(EnterCommandMode("find ")),
 
                 // Ctrl + Backspace for deleting the previous word
                 Key::Ctrl('\x7F') => Ok(WordDeletion),
@@ -164,8 +165,9 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             EditorInput::EnterCommandMode(prefix) => {
                 self.enter_command_mode(prefix);
             }
-            EditorInput::ToggleCommandMode => {
-                self.state.is_entering_command = !self.state.is_entering_command;
+            EditorInput::ToggleCommandMode => match self.state.is_entering_command {
+                true => self.state.is_entering_command = false,
+                false => self.enter_command_mode(""),
             },
             EditorInput::NoOp => {}
         }
@@ -181,4 +183,3 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         Ok(())
     }
 }
-
