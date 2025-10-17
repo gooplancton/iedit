@@ -19,6 +19,7 @@ pub struct EditorState<TextLine: EditorLine> {
 
     pub is_file_modified: bool,
     pub is_entering_command: bool,
+    pub should_quit: bool
 }
 
 impl<TextLine: EditorLine> EditorState<TextLine> {

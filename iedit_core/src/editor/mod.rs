@@ -108,9 +108,8 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     }
 
     pub fn quit(&mut self) -> std::io::Result<()> {
-        self.cleanup()?;
-
-        exit(0);
+        self.state.should_quit = true;
+        Ok(())
     }
 
     pub fn run(&mut self) -> std::io::Result<()> {
@@ -122,11 +121,11 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             let prev_y = self.state.cursor_pos_y as isize;
 
             let input = stdin.get_input()?;
-            if input.should_quit() {
+            self.process_input(input)?;
+
+            if self.state.should_quit {
                 break;
             }
-
-            self.process_input(input)?;
 
             self.clamp_cursor();
 

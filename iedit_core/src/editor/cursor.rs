@@ -44,6 +44,10 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         self.state.cursor_pos_x = max(0, min(self.state.ideal_cursor_pos_x, max_x));
     }
 
+    pub fn goto_line(&mut self, idx: usize) {
+        self.state.cursor_pos_y = idx.saturating_sub(1);
+    }
+
     pub fn move_cursor_word_left(&mut self) {
         let (x, y) = self.state.get_cursor_pos();
         if x == 0 && y.is_some_and(|y| y > 0) {
