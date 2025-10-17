@@ -1,4 +1,3 @@
-mod char_vec;
 mod string;
 mod highlight;
 mod renderer;
@@ -26,6 +25,7 @@ pub trait EditorLine: Default {
     fn is_empty(&self) -> bool;
     fn from_str(string: &impl AsRef<str>) -> Self;
     fn as_str(&self) -> &str;
+    fn find_term(&self, term: &str) -> Option<usize>;
     fn to_string(&self) -> String;
     fn iter_chars(&self) -> impl Iterator<Item = char>;
     fn merge_at_end(&mut self, other: &mut Self);
