@@ -8,9 +8,6 @@ resolver = "2"
 
 [workspace.dependencies]
 termion = "4.0"
-
-# Internal workspace dependencies
-iedit_core = { path = "./iedit_core" }
 iedit_macros = { path = "./iedit_macros" }
 
 # Proc macro dependencies (used by iedit_macros)

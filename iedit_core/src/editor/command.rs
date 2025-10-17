@@ -1,8 +1,12 @@
-use crate::{Editor, editor::state::EditorState, line::EditorLine};
+use crate::{
+    Editor,
+    editor::state::{EditorMode, EditorState},
+    line::{CharacterEditable, EditorLine},
+};
 
-pub enum EditorCommand<'a> {
+pub enum EditorCommand {
     GotoLine(usize),
-    Find(&'a str),
+    Find,
     WriteAndQuit,
     Write,
     Quit,
@@ -26,7 +30,7 @@ impl<TextLine: EditorLine> EditorState<TextLine> {
                     EditorCommand::NoOp
                 }
             }
-            ["find", term] => EditorCommand::Find(term),
+            ["find", ..] => EditorCommand::Find,
             ["w"] | ["write"] => EditorCommand::Write,
             ["q"] | ["quit"] => EditorCommand::Quit,
             ["wq"] => EditorCommand::WriteAndQuit,
@@ -39,32 +43,39 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn run_command(&mut self) {
         let command = self.state.parse_command();
 
-        let modify_state = match command {
+        let modify_state: Option<&dyn Fn(&mut EditorState<TextLine>)> = match command {
             EditorCommand::GotoLine(idx) => {
                 self.goto_line(idx);
-                None
+                Some(&move |state: &mut EditorState<TextLine>| {
+                    state.command_text.truncate_chars(0);
+                    state.mode = EditorMode::default();
+                })
+            }
+            EditorCommand::Write => {
+                self.save_file();
+                Some(&move |state: &mut EditorState<TextLine>| {
+                    state.command_text.truncate_chars(0);
+                    state.mode = EditorMode::default();
+                })
             }
             EditorCommand::WriteAndQuit => {
                 self.save_file();
                 self.quit();
                 None
             }
-            EditorCommand::Write => {
-                self.save_file();
-                None
-            }
             EditorCommand::Quit => {
                 self.quit();
                 None
             }
-            EditorCommand::Find(term) => {
-                if let Some((x, y)) = self.find_term(term) {
-                    let term_len = term.len();
-                    Some(move |state: &mut EditorState<TextLine>| {
+            EditorCommand::Find => {
+                if let Some((x, y)) = self.find_next_match() {
+                    let term_len = self.get_search_term().len();
+                    Some(&move |state: &mut EditorState<TextLine>| {
                         state.cursor_pos_x = x;
                         state.cursor_pos_y = y;
                         state.selection_anchor = Some((x + term_len, y));
                         state.set_ideal_cursor_pos_x();
+                        state.mode = EditorMode::Find((x + 1, y));
                     })
                 } else {
                     None
@@ -73,29 +84,35 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             EditorCommand::NoOp => None,
         };
 
-        self.state.is_entering_command = false;
-        self.state.command_text.truncate_chars(0);
-
         if let Some(modify_state) = modify_state {
             modify_state(&mut self.state);
         }
     }
 
     pub fn enter_command_mode(&mut self, prefix: &str) {
-        if self.state.is_entering_command {
-            return;
-        }
-
         self.state.selection_anchor = None;
-        self.state.is_entering_command = true;
+        self.state.mode = EditorMode::Command;
         self.state.command_text.push_str(prefix);
         self.state.cmd_cursor_pos_x = self.state.command_text.len();
     }
 
-    pub fn find_term(&self, term: &str) -> Option<(usize, usize)> {
-        for (y, line) in self.file_lines.iter().enumerate() {
-            if let Some(x) = line.find_term(term) {
-                return Some((x, y));
+    pub fn get_search_term(&self) -> &TextLine::SliceType {
+        self.state.command_text.get_chars(6..)
+    }
+
+    pub fn find_next_match(&self) -> Option<(usize, usize)> {
+        let (start_x, start_y) = if let EditorMode::Find((x, y)) = self.state.mode {
+            (x, y)
+        } else {
+            (0, 0)
+        };
+
+        let term = self.get_search_term();
+
+        for (y, line) in self.file_lines.iter().skip(start_y).enumerate() {
+            let offset = start_x * (y == 0) as usize;
+            if let Some(x) = line.get_chars(start_x..).find_term_from(term, offset) {
+                return Some((x + offset, y + start_y));
             }
         }
 

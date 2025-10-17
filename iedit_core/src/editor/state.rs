@@ -1,8 +1,21 @@
 use std::cmp::{max, min};
 
-use crate::editor::{EditorLine, viewport::Viewport};
+use crate::{editor::{viewport::Viewport, EditorLine}, line::CharacterEditable};
 
 use super::Editor;
+
+#[derive(PartialEq)]
+pub enum EditorMode {
+    Insert,
+    Command,
+    Find((usize, usize)),
+}
+
+impl Default for EditorMode {
+    fn default() -> Self {
+        Self::Insert
+    }
+}
 
 #[derive(Default)]
 pub struct EditorState<TextLine: EditorLine> {
@@ -17,49 +30,50 @@ pub struct EditorState<TextLine: EditorLine> {
     pub cursor_vel_y: isize,
     pub selection_anchor: Option<(usize, usize)>,
 
+    pub mode: EditorMode,
     pub is_file_modified: bool,
-    pub is_entering_command: bool,
-    pub should_quit: bool
+    pub should_quit: bool,
 }
 
 impl<TextLine: EditorLine> EditorState<TextLine> {
     pub fn get_cursor_pos(&mut self) -> (usize, Option<usize>) {
-        if self.is_entering_command {
-            (self.cmd_cursor_pos_x, None)
-        } else {
-            (self.cursor_pos_x, Some(self.cursor_pos_y))
+        match self.mode {
+            EditorMode::Insert => (self.cursor_pos_x, Some(self.cursor_pos_y)),
+            _ => (self.cmd_cursor_pos_x, None),
         }
     }
 
     pub fn get_cursor_pos_mut(&mut self) -> (&mut usize, Option<&mut usize>) {
-        if self.is_entering_command {
-            (&mut self.cmd_cursor_pos_x, None)
-        } else {
-            (&mut self.cursor_pos_x, Some(&mut self.cursor_pos_y))
+        match self.mode {
+            EditorMode::Insert => (&mut self.cursor_pos_x, Some(&mut self.cursor_pos_y)),
+            _ => (&mut self.cmd_cursor_pos_x, None),
         }
     }
 
     pub fn set_ideal_cursor_pos_x(&mut self) {
-        if !self.is_entering_command {
+        if self.mode == EditorMode::Insert {
             self.ideal_cursor_pos_x = self.cursor_pos_x;
         }
     }
+
+    pub fn is_editing_content(&self) -> bool {
+        matches!(self.mode, EditorMode::Insert)
+    }
+
 }
 
 impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn get_current_line(&self) -> &TextLine {
-        if self.state.is_entering_command {
-            &self.state.command_text
-        } else {
-            &self.file_lines[self.state.cursor_pos_y]
+        match self.state.mode {
+            EditorMode::Insert => &self.file_lines[self.state.cursor_pos_y],
+            _ => &self.state.command_text,
         }
     }
 
     pub fn get_current_line_mut(&mut self) -> &mut TextLine {
-        if self.state.is_entering_command {
-            &mut self.state.command_text
-        } else {
-            &mut self.file_lines[self.state.cursor_pos_y]
+        match self.state.mode {
+            EditorMode::Insert => &mut self.file_lines[self.state.cursor_pos_y],
+            _ => &mut self.state.command_text,
         }
     }
 
@@ -72,6 +86,17 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             "{}{} | Ln {}, Col {} | {} lines",
             self.file_name, modified, line, col, total_lines
         ))
+    }
+
+    pub fn goto_next_match(&mut self) {
+        if let Some((x, y)) = self.find_next_match() {
+            let term_len = self.get_search_term().len();
+            self.state.cursor_pos_x = x;
+            self.state.cursor_pos_y = y;
+            self.state.selection_anchor = Some((x + term_len, y));
+            self.state.set_ideal_cursor_pos_x();
+            self.state.mode = EditorMode::Find((x + 1, y))
+        }
     }
 
     pub fn get_highlighted_range(&self) -> ((usize, usize), (usize, usize)) {

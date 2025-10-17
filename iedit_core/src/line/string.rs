@@ -1,3 +1,5 @@
+use std::ops::RangeBounds;
+
 use crate::line::{CharacterEditable, EditorLine};
 
 impl CharacterEditable for str {
@@ -35,6 +37,16 @@ impl CharacterEditable for str {
 
     fn to_string(&self) -> String {
         self.to_owned()
+    }
+
+    fn find_term_from(&self, term: &str, pos: usize) -> Option<usize> {
+        let char_idx = self
+            .char_indices()
+            .nth(pos)
+            .map(|(i, _)| i)
+            .unwrap_or(self.len());
+
+        self.get(char_idx..).and_then(|string| string.find(term))
     }
 }
 
@@ -142,17 +154,33 @@ impl EditorLine for String {
         }
     }
 
-    fn get_chars(&self, range: std::ops::Range<usize>) -> &Self::SliceType {
-        let start = self
-            .char_indices()
-            .nth(range.start)
-            .map(|(i, _)| i)
-            .unwrap_or(self.len());
-        let end = self
-            .char_indices()
-            .nth(range.end)
-            .map(|(i, ch)| i + ch.len_utf8() - 1)
-            .unwrap_or(self.len());
+    fn get_chars(&self, range: impl RangeBounds<usize>) -> &Self::SliceType {
+        let start = match range.start_bound() {
+            std::ops::Bound::Included(&idx) => self
+                .char_indices()
+                .nth(idx)
+                .map(|(i, _)| i)
+                .unwrap_or(self.len()),
+            std::ops::Bound::Excluded(&idx) => self
+                .char_indices()
+                .nth(idx + 1)
+                .map(|(i, _)| i)
+                .unwrap_or(self.len()),
+            std::ops::Bound::Unbounded => 0,
+        };
+        let end = match range.end_bound() {
+            std::ops::Bound::Included(&idx) => self
+                .char_indices()
+                .nth(idx + 1)
+                .map(|(i, _)| i)
+                .unwrap_or(self.len()),
+            std::ops::Bound::Excluded(&idx) => self
+                .char_indices()
+                .nth(idx)
+                .map(|(i, _)| i)
+                .unwrap_or(self.len()),
+            std::ops::Bound::Unbounded => self.len(),
+        };
         &self[start..end]
     }
 
@@ -177,7 +205,13 @@ impl EditorLine for String {
         }
     }
 
-    fn find_term(&self, term: &str) -> Option<usize> {
-        self.find(term)
+    fn find_term_from(&self, term: &str, pos: usize) -> Option<usize> {
+        let char_idx = self
+            .char_indices()
+            .nth(pos)
+            .map(|(i, _)| i)
+            .unwrap_or(self.len());
+
+        self.get(char_idx..).and_then(|string| string.find(term))
     }
 }
