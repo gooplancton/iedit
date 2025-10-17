@@ -1,10 +1,10 @@
-use std::io::{self, Read};
+use std::io::{self};
 use termion::event::Key;
 use termion::input::TermRead;
 
 use crate::{
     editor::state::EditorMode,
-    line::{CharacterEditable, EditorLine},
+    line::EditorLine,
 };
 
 use super::{Editor, cursor::MovementDirection};
@@ -91,9 +91,6 @@ impl InputReader for io::Stdin {
 
 impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn process_input(&mut self, input: EditorInput) -> std::io::Result<()> {
-        let prev_x = self.state.cursor_pos_x as isize;
-        let prev_y = self.state.cursor_pos_y as isize;
-
         match input {
             EditorInput::CharInsertion(c) => {
                 if c == 'n' && matches!(self.state.mode, EditorMode::Find(_)) {
@@ -109,7 +106,9 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             }
             EditorInput::NewlineInsertion => match self.state.mode {
                 EditorMode::Insert => self.insert_newline(),
-                EditorMode::Command => self.run_command(),
+                EditorMode::Command => {
+                    self.state.should_run_command = true;
+                },
                 EditorMode::Find(_) => {
                     self.state.command_text.truncate_chars(0);
                     self.state.mode = EditorMode::Insert;
@@ -166,7 +165,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 self.save_file()?;
             }
             EditorInput::Quit => {
-                self.quit();
+                self.quit()?;
             }
             EditorInput::ToggleLineNumbers => {
                 self.config.show_line_numbers = !self.config.show_line_numbers;
@@ -183,14 +182,6 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             EditorInput::NoOp => {}
         }
 
-        self.clamp_cursor();
-
-        self.state.cursor_vel_x = self.state.cursor_pos_x as isize - prev_x;
-        self.state.cursor_vel_y = self.state.cursor_pos_y as isize - prev_y;
-
-        self.adjust_viewport();
-
-        self.render()?;
         Ok(())
     }
 }

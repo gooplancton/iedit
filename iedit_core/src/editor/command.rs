@@ -1,3 +1,5 @@
+use std::io;
+
 use crate::{
     Editor,
     editor::state::{EditorMode, EditorState},
@@ -39,11 +41,13 @@ impl<TextLine: EditorLine> EditorState<TextLine> {
     }
 }
 
+type ModifyStateFn<TextLine> = dyn Fn(&mut EditorState<TextLine>);
+
 impl<TextLine: EditorLine> Editor<TextLine> {
-    pub fn run_command(&mut self) {
+    pub fn run_command(&mut self) -> io::Result<()> {
         let command = self.state.parse_command();
 
-        let modify_state: Option<&dyn Fn(&mut EditorState<TextLine>)> = match command {
+        let modify_state: Option<&ModifyStateFn<TextLine>> = match command {
             EditorCommand::GotoLine(idx) => {
                 self.goto_line(idx);
                 Some(&move |state: &mut EditorState<TextLine>| {
@@ -52,19 +56,19 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 })
             }
             EditorCommand::Write => {
-                self.save_file();
+                self.save_file()?;
                 Some(&move |state: &mut EditorState<TextLine>| {
                     state.command_text.truncate_chars(0);
                     state.mode = EditorMode::default();
                 })
             }
             EditorCommand::WriteAndQuit => {
-                self.save_file();
-                self.quit();
+                self.save_file()?;
+                self.quit()?;
                 None
             }
             EditorCommand::Quit => {
-                self.quit();
+                self.quit()?;
                 None
             }
             EditorCommand::Find => {
@@ -87,6 +91,8 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         if let Some(modify_state) = modify_state {
             modify_state(&mut self.state);
         }
+
+        Ok(())
     }
 
     pub fn enter_command_mode(&mut self, prefix: &str) {

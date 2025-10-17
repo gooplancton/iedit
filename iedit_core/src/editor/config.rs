@@ -1,14 +1,12 @@
-use std::{
-    fs::OpenOptions,
-    io::{Stdout, Write},
-};
+use std::
+    io::{Stdout, Write}
+;
 
 use termion::{
     cursor::HideCursor,
-    raw::{IntoRawMode, RawTerminal},
+    raw::RawTerminal,
 };
 
-use crate::editor::Editor;
 use iedit_macros::ConfigParse;
 
 #[derive(ConfigParse)]
@@ -48,7 +46,7 @@ impl EditorConfig {
 
         let term_height = termion::terminal_size()?.1;
         let mut real_estate = term_height.saturating_sub(ui_start_y);
-        let mut offset = self.min_real_estate.saturating_sub(real_estate);
+        let offset = self.min_real_estate.saturating_sub(real_estate);
         if offset > 0 {
             real_estate = self.min_real_estate;
             let newlines = "\n".repeat(real_estate as usize);

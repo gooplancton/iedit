@@ -1,10 +1,7 @@
-#![allow(warnings)]
-
 use std::{
-    fs::{File, OpenOptions},
-    io::{BufRead, BufReader, BufWriter, Read, Stdout, Write, stdin},
-    path::Path,
-    process::exit,
+    fs::File,
+    io::{Stdout, stdin},
+    path::{Path, PathBuf},
 };
 
 use config::EditorConfig;
@@ -16,9 +13,9 @@ use termion::{
 };
 
 use crate::{
-    editor::input::{EditorInput, InputReader},
+    editor::{input::InputReader, io::read_file},
     line::EditorLine,
-    terminal::{CURSOR_DOWN1, H_BAR},
+    terminal::H_BAR,
 };
 
 mod command;
@@ -32,8 +29,8 @@ mod state;
 mod viewport;
 
 pub struct Editor<TextLine: EditorLine> {
-    file: File,
-    file_name: String,
+    file: Option<File>,
+    canonicalized_file_path: PathBuf,
     file_lines: Vec<TextLine>,
     state: EditorState<TextLine>,
     config: EditorConfig,
@@ -45,31 +42,8 @@ pub struct Editor<TextLine: EditorLine> {
 }
 
 impl<TextLine: EditorLine> Editor<TextLine> {
-    pub fn new(path: impl AsRef<Path>) -> std::io::Result<Self> {
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .append(false)
-            .create(true)
-            .open(path.as_ref())?;
-
-        if file.metadata()?.is_dir() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Provided path is a directory",
-            ));
-        }
-
-        let file_name = path.as_ref().components().last().unwrap().as_os_str();
-        let mut file_lines = Vec::<TextLine>::new();
-        let mut file_reader = BufReader::new(file);
-        let mut file_line = String::default();
-        while file_reader.read_line(&mut file_line)? > 0 {
-            file_lines.push(TextLine::from_str(&file_line));
-            file_line.truncate(0);
-        }
-
-        let file = file_reader.into_inner();
+    pub fn new(path: impl AsRef<Path>, open_at: usize) -> std::io::Result<Self> {
+        let (file, canonicalized_file_path, file_lines) = read_file(path)?;
         let mut state = EditorState::default();
 
         let (term_width, term_height) = terminal_size()?;
@@ -89,14 +63,16 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             ui_start.1 = ui_start.1.saturating_sub(offset);
         }
 
-        state.viewport.bottom_line = config.n_lines as usize;
+        state.cursor_pos_y = open_at;
+        state.viewport.top_line = open_at.saturating_sub(config.n_lines as usize / 2);
+        state.viewport.bottom_line = state.viewport.top_line + config.n_lines as usize;
         state.viewport.right_col = (term_width as usize) - (config.show_line_numbers as usize * 7);
 
         let horizontal_bar = str::repeat(H_BAR, term_width as usize);
 
         Ok(Self {
             file,
-            file_name: file_name.to_string_lossy().to_string(),
+            canonicalized_file_path,
             file_lines,
             state,
             config,
@@ -125,6 +101,9 @@ impl<TextLine: EditorLine> Editor<TextLine> {
 
             if self.state.should_quit {
                 break;
+            } else if self.state.should_run_command {
+                self.run_command()?;
+                self.state.should_run_command = false;
             }
 
             self.clamp_cursor();

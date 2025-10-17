@@ -1,3 +1,5 @@
+#![allow(clippy::option_map_unit_fn)]
+
 use std::cmp::{max, min};
 
 use crate::line::EditorLine;
@@ -55,11 +57,11 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             self.state.cursor_pos_x = self.get_current_line().len();
         } else {
             let current_line = self.get_current_line();
-            let mut new_x = x - 1;
+            let mut new_x = x;
             let is_current_char_alphanum = |x| {
                 current_line
                     .get_nth_char(x)
-                    .map_or(false, |c: char| c.is_alphanumeric())
+                    .is_some_and(char::is_alphanumeric)
             };
 
             // Skip whitespace
@@ -93,7 +95,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             let is_current_char_alphanum = |x| {
                 current_line
                     .get_nth_char(x)
-                    .map_or(false, |c: char| c.is_alphanumeric())
+                    .is_some_and(char::is_alphanumeric)
             };
 
             // Skip current word
@@ -114,3 +116,4 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         self.state.set_ideal_cursor_pos_x();
     }
 }
+
