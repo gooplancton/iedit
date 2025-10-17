@@ -91,7 +91,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
 
     fn render_status(&mut self) -> std::io::Result<()> {
         self.update_status_text();
-        let content = if self.state.is_entering_command {
+        let content = if !self.state.is_editing_content() {
             &self.state.command_text
         } else {
             &self.state.status_text
@@ -106,7 +106,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         let mut renderer =
             LineRenderer::new(content).with_display_range(0..self.term_width as usize);
 
-        if self.state.is_entering_command {
+        if !self.state.is_editing_content() {
             self.term.write_all(":".as_bytes())?;
             let x = self.state.cmd_cursor_pos_x;
             let selection_highlight = SelectionHighlight::Range(x, x + 1);
@@ -115,7 +115,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
 
         renderer.render_to(&mut self.term);
 
-        let is_cursor_at_end_of_line = self.state.is_entering_command
+        let is_cursor_at_end_of_line = !self.state.is_editing_content()
             && self.state.cmd_cursor_pos_x == self.state.command_text.len();
         if is_cursor_at_end_of_line {
             self.term.write_all(terminal::EMPTY_CURSOR.as_bytes())?;

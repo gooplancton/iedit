@@ -2,7 +2,10 @@ use std::io::{self, Read};
 use termion::event::Key;
 use termion::input::TermRead;
 
-use crate::line::EditorLine;
+use crate::{
+    editor::state::EditorMode,
+    line::{CharacterEditable, EditorLine},
+};
 
 use super::{Editor, cursor::MovementDirection};
 
@@ -20,7 +23,7 @@ pub enum EditorInput {
     Quit,
     ToggleLineNumbers,
     EnterCommandMode(&'static str),
-    ToggleCommandMode,
+    BackToDefaultMode,
 }
 
 pub trait InputReader {
@@ -72,7 +75,7 @@ impl InputReader for io::Stdin {
                 Key::Char('\t') => Ok(TabInsertion),
                 Key::Char(c) => Ok(CharInsertion(c)),
 
-                Key::Esc => Ok(ToggleCommandMode),
+                Key::Esc => Ok(BackToDefaultMode),
 
                 // TODO: support utf-8 chars
 
@@ -93,19 +96,25 @@ impl<TextLine: EditorLine> Editor<TextLine> {
 
         match input {
             EditorInput::CharInsertion(c) => {
+                if c == 'n' && matches!(self.state.mode, EditorMode::Find(_)) {
+                    self.goto_next_match();
+                    return Ok(());
+                }
+
                 if self.state.selection_anchor.is_some() {
                     self.delete_selection();
                     self.state.selection_anchor = None;
                 }
                 self.insert_char(c)
             }
-            EditorInput::NewlineInsertion => {
-                if self.state.is_entering_command {
-                    self.run_command();
-                } else {
-                    self.insert_newline()
+            EditorInput::NewlineInsertion => match self.state.mode {
+                EditorMode::Insert => self.insert_newline(),
+                EditorMode::Command => self.run_command(),
+                EditorMode::Find(_) => {
+                    self.state.command_text.truncate_chars(0);
+                    self.state.mode = EditorMode::Insert;
                 }
-            }
+            },
             EditorInput::TabInsertion => self.insert_tab(),
             EditorInput::Deletion => {
                 if self.state.selection_anchor.is_some() {
@@ -163,12 +172,14 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 self.config.show_line_numbers = !self.config.show_line_numbers;
             }
             EditorInput::EnterCommandMode(prefix) => {
-                self.enter_command_mode(prefix);
+                if self.state.mode == EditorMode::Insert {
+                    self.enter_command_mode(prefix);
+                }
             }
-            EditorInput::ToggleCommandMode => match self.state.is_entering_command {
-                true => self.state.is_entering_command = false,
-                false => self.enter_command_mode(""),
-            },
+            EditorInput::BackToDefaultMode => {
+                self.state.command_text.truncate_chars(0);
+                self.state.mode = EditorMode::Insert;
+            }
             EditorInput::NoOp => {}
         }
 
