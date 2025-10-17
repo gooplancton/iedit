@@ -91,6 +91,11 @@ impl<TextLine: EditorLine> Editor<TextLine> {
 
     fn render_status(&mut self) -> std::io::Result<()> {
         self.update_status_text();
+        let content = if self.state.is_entering_command {
+            &self.state.command_text
+        } else {
+            &self.state.status_text
+        };
 
         self.term.write_all(CLEAR_LINE.as_bytes())?;
         self.term.write_all(self.horizontal_bar.as_bytes())?;
@@ -98,7 +103,24 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
 
         self.term.write_all(CLEAR_LINE.as_bytes())?;
-        self.term.write_all(self.state.status_text.as_bytes())?;
+        let mut renderer =
+            LineRenderer::new(content).with_display_range(0..self.term_width as usize);
+
+        if self.state.is_entering_command {
+            self.term.write_all(":".as_bytes())?;
+            let x = self.state.cmd_cursor_pos_x;
+            let selection_highlight = SelectionHighlight::Range(x, x + 1);
+            renderer = renderer.with_selection_highlight(selection_highlight);
+        }
+
+        renderer.render_to(&mut self.term);
+
+        let is_cursor_at_end_of_line = self.state.is_entering_command
+            && self.state.cmd_cursor_pos_x == self.state.command_text.len();
+        if is_cursor_at_end_of_line {
+            self.term.write_all(terminal::EMPTY_CURSOR.as_bytes())?;
+        }
+
         self.term.write_all(CURSOR_DOWN1.as_bytes())?;
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
 

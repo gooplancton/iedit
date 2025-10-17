@@ -13,18 +13,24 @@ pub enum MovementDirection {
 
 impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn move_cursor_up(&mut self) {
-        self.state.cursor_pos_y = self.state.cursor_pos_y.saturating_sub(1);
+        let (_, cursor_pos_y) = self.state.get_cursor_pos_mut();
+        cursor_pos_y.map(|y| *y = y.saturating_sub(1));
     }
     pub fn move_cursor_down(&mut self) {
-        self.state.cursor_pos_y += 1;
+        let (_, cursor_pos_y) = self.state.get_cursor_pos_mut();
+        cursor_pos_y.map(|y| *y += 1);
     }
     pub fn move_cursor_left(&mut self) {
-        self.state.cursor_pos_x = self.state.cursor_pos_x.saturating_sub(1);
-        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x
+        let (cursor_pos_x, _) = self.state.get_cursor_pos_mut();
+        *cursor_pos_x = cursor_pos_x.saturating_sub(1);
+
+        self.state.set_ideal_cursor_pos_x();
     }
     pub fn move_cursor_right(&mut self) {
-        self.state.cursor_pos_x += 1;
-        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x
+        let (cursor_pos_x, _) = self.state.get_cursor_pos_mut();
+        *cursor_pos_x += 1;
+
+        self.state.set_ideal_cursor_pos_x();
     }
 
     pub fn clamp_cursor(&mut self) {
@@ -39,14 +45,13 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     }
 
     pub fn move_cursor_word_left(&mut self) {
-        if self.state.cursor_pos_x == 0 {
-            if self.state.cursor_pos_y > 0 {
-                self.move_cursor_up();
-                self.state.cursor_pos_x = self.get_current_line().len();
-            }
+        let (x, y) = self.state.get_cursor_pos();
+        if x == 0 && y.is_some_and(|y| y > 0) {
+            self.move_cursor_up();
+            self.state.cursor_pos_x = self.get_current_line().len();
         } else {
             let current_line = self.get_current_line();
-            let mut new_x = self.state.cursor_pos_x - 1;
+            let mut new_x = x - 1;
             let is_current_char_alphanum = |x| {
                 current_line
                     .get_nth_char(x)
@@ -63,23 +68,24 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 new_x -= 1;
             }
 
-            self.state.cursor_pos_x = new_x;
+            let (x, _) = self.state.get_cursor_pos_mut();
+
+            *x = new_x;
         }
 
-        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
+        self.state.set_ideal_cursor_pos_x();
     }
 
     pub fn move_cursor_word_right(&mut self) {
+        let (x, y) = self.state.get_cursor_pos();
         let current_line = self.get_current_line();
         let line_len = current_line.len();
 
-        if self.state.cursor_pos_x >= line_len {
-            if self.state.cursor_pos_y < self.file_lines.len() - 1 {
-                self.move_cursor_down();
-                self.state.cursor_pos_x = 0;
-            }
+        if x >= line_len && y.is_some_and(|y| y < self.file_lines.len() - 1) {
+            self.move_cursor_down();
+            self.state.cursor_pos_x = 0;
         } else {
-            let mut new_x = self.state.cursor_pos_x;
+            let mut new_x = x;
             let is_current_char_alphanum = |x| {
                 current_line
                     .get_nth_char(x)
@@ -96,9 +102,11 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 new_x += 1;
             }
 
-            self.state.cursor_pos_x = new_x;
+            let (x, _) = self.state.get_cursor_pos_mut();
+
+            *x = new_x;
         }
 
-        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
+        self.state.set_ideal_cursor_pos_x();
     }
 }

@@ -2,21 +2,22 @@ use crate::{editor::Editor, line::EditorLine};
 
 impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn insert_char(&mut self, c: char) {
-        let mut y = self.state.cursor_pos_y;
-        let x = self.state.cursor_pos_x;
+        let total_lines = self.file_lines.len();
+        let (x, y) = self.state.get_cursor_pos_mut();
+        let x = x.clone();
 
-        if y == self.file_lines.len() {
+        if y.is_some_and(|y| *y == total_lines) {
             self.file_lines.push(TextLine::new());
         }
 
-        let line = &mut self.file_lines[y];
+        let line = self.get_current_line_mut();
         if x >= line.len() {
             line.push_char(c);
         } else {
             line.insert_char_at(c, x);
         }
-        self.state.cursor_pos_x += 1;
-        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
+
+        self.move_cursor_right();
         self.state.is_file_modified = true;
     }
 
@@ -27,28 +28,28 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     }
 
     pub fn delete_char(&mut self) {
-        let y = self.state.cursor_pos_y;
-        let x = self.state.cursor_pos_x;
+        let (x, y) = self.state.get_cursor_pos();
 
-        if (x == 0 && y == 0) || y >= self.file_lines.len() {
+        if x == 0 && y.is_some_and(|y| y == 0 || y >= self.file_lines.len()) {
             return;
         }
 
-        let line = &mut self.file_lines[y];
+        let line = self.get_current_line_mut();
 
         if x > 0 && x <= line.len() {
             line.remove_char_at(x - 1);
-            self.state.cursor_pos_x -= 1;
-        } else if x == 0 && y > 0 {
+            self.move_cursor_left();
+        } else if x == 0 && y.is_some_and(|y| y > 0) {
             // Merge with previous line
+            let y = y.unwrap();
             let prev_line_len = self.file_lines[y - 1].len();
             let mut current_line = self.file_lines.remove(y);
             self.file_lines[y - 1].merge_at_end(&mut current_line);
-            self.state.cursor_pos_y -= 1;
+            self.move_cursor_up();
             self.state.cursor_pos_x = prev_line_len;
+            self.state.set_ideal_cursor_pos_x();
         }
 
-        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
         self.state.is_file_modified = true;
     }
 
@@ -82,13 +83,13 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     }
 
     pub fn delete_word(&mut self) {
-        let current_line = self.get_current_line();
-        let x = self.state.cursor_pos_x;
+        let (x, y) = self.state.get_cursor_pos();
 
-        if x == 0 && self.state.cursor_pos_y == 0 {
+        if x == 0 && y.is_some_and(|y| y > 0) {
             return;
         }
 
+        let current_line = self.get_current_line();
         let mut new_x = x;
         let is_current_char_alphanum = |x| {
             current_line
@@ -107,10 +108,15 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         }
 
         if new_x < x {
-            let line = &mut self.file_lines[self.state.cursor_pos_y];
-            line.delete_chars(new_x..x);
-            self.state.cursor_pos_x = new_x;
-            self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
+            let old_x = x.clone();
+            let line = match y {
+                Some(y) => &mut self.file_lines[y],
+                None => &mut self.state.command_text,
+            };
+            line.delete_chars(new_x..old_x);
+            let (x, _) = self.state.get_cursor_pos_mut();
+            *x = new_x;
+            self.state.set_ideal_cursor_pos_x();
             self.state.is_file_modified = true;
         }
     }

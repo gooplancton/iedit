@@ -35,7 +35,7 @@ pub struct Editor<TextLine: EditorLine> {
     file: File,
     file_name: String,
     file_lines: Vec<TextLine>,
-    state: EditorState,
+    state: EditorState<TextLine>,
     config: EditorConfig,
     term: HideCursor<RawTerminal<Stdout>>,
     term_width: u16,

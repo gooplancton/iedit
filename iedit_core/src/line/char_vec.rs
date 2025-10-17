@@ -21,8 +21,12 @@ impl EditorLine for Vec<char> {
         self.iter().collect()
     }
 
+    fn as_str(&self) -> &str {
+        todo!()
+    }
+
     fn iter_chars(&self) -> impl Iterator<Item = char> {
-        self.iter().map(|char| *char)
+        self.iter().copied()
     }
 
     fn split_chars_off_at(&mut self, idx: usize) -> Self {
@@ -60,6 +64,14 @@ impl EditorLine for Vec<char> {
     fn is_empty(&self) -> bool {
         self.is_empty()
     }
+
+    fn push_str(&mut self, string: &str) {
+        self.append(&mut string.chars().into_iter().collect::<Vec<_>>());
+    }
+
+    fn truncate_chars(&mut self, new_len: usize) {
+        self.truncate(new_len);
+    }
 }
 
 impl CharacterEditable for [char] {
@@ -68,7 +80,7 @@ impl CharacterEditable for [char] {
     }
 
     fn iter_chars(&self) -> impl Iterator<Item = char> {
-        self.iter().map(|char| *char)
+        self.iter().copied()
     }
 
     fn split_chars_at(&self, idx: usize) -> (&Self, &Self) {
