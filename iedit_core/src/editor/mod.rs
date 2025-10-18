@@ -63,7 +63,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             ui_start.1 = ui_start.1.saturating_sub(offset);
         }
 
-        state.cursor_pos_y = open_at;
+        state.cursor_pos_y = open_at.saturating_sub(1);
         state.viewport.top_line = open_at.saturating_sub(config.n_lines as usize / 2);
         state.viewport.bottom_line = state.viewport.top_line + config.n_lines as usize;
         state.viewport.right_col = (term_width as usize) - (config.show_line_numbers as usize * 7);
