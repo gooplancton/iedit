@@ -2,10 +2,7 @@ use std::io::{self};
 use termion::event::Key;
 use termion::input::TermRead;
 
-use crate::{
-    editor::state::EditorMode,
-    line::EditorLine,
-};
+use crate::{editor::state::EditorMode, line::EditorLine};
 
 use super::{Editor, cursor::MovementDirection};
 
@@ -98,17 +95,19 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                     return Ok(());
                 }
 
-                if self.state.selection_anchor.is_some() {
-                    self.delete_selection();
-                    self.state.selection_anchor = None;
+                if self.state.mode == EditorMode::Command || self.state.mode == EditorMode::Insert {
+                    if self.state.selection_anchor.is_some() {
+                        self.delete_selection();
+                        self.state.selection_anchor = None;
+                    }
+                    self.insert_char(c)
                 }
-                self.insert_char(c)
             }
             EditorInput::NewlineInsertion => match self.state.mode {
                 EditorMode::Insert => self.insert_newline(),
                 EditorMode::Command => {
                     self.state.should_run_command = true;
-                },
+                }
                 EditorMode::Find(_) => {
                     self.state.command_text.truncate_chars(0);
                     self.state.mode = EditorMode::Insert;

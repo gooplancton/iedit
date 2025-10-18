@@ -100,8 +100,8 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             let term_len = self.get_search_term().len();
             self.state.cursor_pos_x = x;
             self.state.cursor_pos_y = y;
+            self.state.ideal_cursor_pos_x = x;
             self.state.selection_anchor = Some((x + term_len, y));
-            self.state.set_ideal_cursor_pos_x();
             self.state.mode = EditorMode::Find((x + 1, y))
         }
     }

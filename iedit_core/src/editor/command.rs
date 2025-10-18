@@ -77,6 +77,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                     Some(&move |state: &mut EditorState<TextLine>| {
                         state.cursor_pos_x = x;
                         state.cursor_pos_y = y;
+                        state.ideal_cursor_pos_x = x;
                         state.selection_anchor = Some((x + term_len, y));
                         state.set_ideal_cursor_pos_x();
                         state.mode = EditorMode::Find((x + 1, y));
@@ -103,7 +104,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     }
 
     pub fn get_search_term(&self) -> &TextLine::SliceType {
-        self.state.command_text.get_chars(6..)
+        self.state.command_text.get_chars(5..)
     }
 
     pub fn find_next_match(&self) -> Option<(usize, usize)> {
@@ -115,10 +116,10 @@ impl<TextLine: EditorLine> Editor<TextLine> {
 
         let term = self.get_search_term();
 
-        for (y, line) in self.file_lines.iter().skip(start_y).enumerate() {
-            let offset = start_x * (y == 0) as usize;
-            if let Some(x) = line.get_chars(start_x..).find_term_from(term, offset) {
-                return Some((x + offset, y + start_y));
+        for (y, line) in self.file_lines.iter().enumerate().skip(start_y) {
+            let offset = start_x * (y == start_y) as usize;
+            if let Some(x) = line.get_chars(offset..).find_term_from(term, offset) {
+                return Some((x + offset, y));
             }
         }
 
