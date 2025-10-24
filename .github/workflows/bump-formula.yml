@@ -53,7 +53,7 @@ jobs:
 
           MACOS_X86_SHA=$(curl -fsSL "$MACOS_X86_URL" | sha256sum | cut -d' ' -f1)
           MACOS_ARM_SHA=$(curl -fsSL "$MACOS_ARM_URL" | sha256sum | cut -d' ' -f1)
-          SRC_SHA=$(curl -fsSL "$LINUX_URL" | sha256sum | cut -d' ' -f1)
+          LINXU_SHA=$(curl -fsSL "$LINUX_URL" | sha256sum | cut -d' ' -f1)
 
           echo "macos x86 sha: $MACOS_X86_SHA"
           echo "macos arm sha: $MACOS_ARM_SHA"
