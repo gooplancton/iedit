@@ -83,7 +83,7 @@ jobs:
     steps:
       - name: Checkout repository (for tag/version extraction)
         uses: actions/checkout@v4
-
+      
       - name: Read version from iedit_core/Cargo.toml
         id: tag
         run: |
@@ -94,11 +94,19 @@ jobs:
           if [[ "$ver" == v* ]]; then TAG="$ver"; else TAG="v$ver"; fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "version=$ver" >> $GITHUB_OUTPUT
-
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+      
       - name: Create GitHub release and attach artifacts
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
-          artifacts: iedit-linux,iedit-macos-arm64,iedit-macos-x86_64
+          artifacts: "artifacts/*/*"
           token: ${{ secrets.PAT }}

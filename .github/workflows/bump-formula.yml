@@ -38,9 +38,9 @@ jobs:
 
           VERSION="${VERSION}"
 
-          MACOS_X86_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-x86_64.tar.gz"
-          MACOS_ARM_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-arm64.tar.gz"
-          SRC_URL="https://github.com/gooplancton/iedit/archive/refs/tags/v${VERSION}.tar.gz"
+          MACOS_X86_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-x86_64"
+          MACOS_ARM_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-arm64"
+          SRC_URL="https://github.com/gooplancton/iedit/archive/refs/tags/v${VERSION}"
 
           echo "Fetching and hashing:"
           echo "  $MACOS_X86_URL"
@@ -79,6 +79,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "iedit ${VERSION}"
+            git commit -m "chore: updated homebrew formula [skip ci]"
             git push
           fi
