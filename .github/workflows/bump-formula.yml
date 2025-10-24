@@ -8,8 +8,11 @@ jobs:
   bump-formula:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout tap repo
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          fetch-depth: 0
 
       - name: Read version
         id: read_version
@@ -28,49 +31,54 @@ jobs:
           echo "version=$ver" >> $GITHUB_OUTPUT
 
       - name: Calculate SHAs and update formula
+        env:
+          VERSION: ${{ steps.read_version.outputs.version }}
         run: |
-          VERSION="${{ steps.read_version.outputs.version }}"
-          
-          # Calculate SHA for macOS Intel
+          set -euo pipefail
+
+          VERSION="${VERSION}"
+
           MACOS_X86_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-x86_64.tar.gz"
-          MACOS_X86_SHA=$(curl -sL "$MACOS_X86_URL" | shasum -a 256 | cut -d' ' -f1)
-          
-          # Calculate SHA for macOS ARM
           MACOS_ARM_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-arm64.tar.gz"
-          MACOS_ARM_SHA=$(curl -sL "$MACOS_ARM_URL" | shasum -a 256 | cut -d' ' -f1)
-          
-          # Calculate SHA for Linux source tarball
           SRC_URL="https://github.com/gooplancton/iedit/archive/refs/tags/v${VERSION}.tar.gz"
-          SRC_SHA=$(curl -sL "$SRC_URL" | shasum -a 256 | cut -d' ' -f1)
-          
-          # Update the formula file
+
+          echo "Fetching and hashing:"
+          echo "  $MACOS_X86_URL"
+          echo "  $MACOS_ARM_URL"
+          echo "  $SRC_URL"
+
+          MACOS_X86_SHA=$(curl -fsSL "$MACOS_X86_URL" | sha256sum | cut -d' ' -f1)
+          MACOS_ARM_SHA=$(curl -fsSL "$MACOS_ARM_URL" | sha256sum | cut -d' ' -f1)
+          SRC_SHA=$(curl -fsSL "$SRC_URL" | sha256sum | cut -d' ' -f1)
+
+          echo "macos x86 sha: $MACOS_X86_SHA"
+          echo "macos arm sha: $MACOS_ARM_SHA"
+          echo "src sha: $SRC_SHA"
+
+          export VERSION MACOS_X86_SHA MACOS_ARM_SHA SRC_SHA
+
           ruby <<'EOF'
-          require 'tempfile'
-          
           formula_file = 'Formula/iedit.rb'
           content = File.read(formula_file)
-          
-          # Update version
-          content.gsub!(/version "[\d.]+"/, "version \"#{ENV['VERSION']}\"")
-          
-          # Update macOS Intel SHA
-          content.gsub!(/sha256 "REPLACE_WITH_ACTUAL_SHA256_FOR_x86_64_TAR_GZ"/, "sha256 \"#{ENV['MACOS_X86_SHA']}\"")
-          
-          # Update macOS ARM SHA  
-          content.gsub!(/sha256 "REPLACE_WITH_ACTUAL_SHA256_FOR_arm64_TAR_GZ"/, "sha256 \"#{ENV['MACOS_ARM_SHA']}\"")
-          
-          # Update Linux source SHA
-          content.gsub!(/sha256 "REPLACE_WITH_SOURCE_TARBALL_SHA256"/, "sha256 \"#{ENV['SRC_SHA']}\"")
-          
+
+          # update version (robust to non-numeric segments)
+          content.gsub!(/version\s+["'][^"']+["']/, "version \"#{ENV['VERSION']}\"")
+
+          # replace explicit placeholder checksums (adjust placeholders if your formula differs)
+          content.gsub!(/sha256\s+["']REPLACE_WITH_ACTUAL_SHA256_FOR_x86_64_TAR_GZ["']/, "sha256 \"#{ENV['MACOS_X86_SHA']}\"")
+          content.gsub!(/sha256\s+["']REPLACE_WITH_ACTUAL_SHA256_FOR_arm64_TAR_GZ["']/, "sha256 \"#{ENV['MACOS_ARM_SHA']}\"")
+          content.gsub!(/sha256\s+["']REPLACE_WITH_SOURCE_TARBALL_SHA256["']/, "sha256 \"#{ENV['SRC_SHA']}\"")
+
           File.write(formula_file, content)
           EOF
-          
-          cd tap-repo
+
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add Formula/iedit.rb
-          git commit -m "iedit #{VERSION}"
-          git push
-        env:
-          VERSION: ${{ github.ref_name }}
-          BREW_TAP_TOKEN: ${{ secrets.PAT }}
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "iedit ${VERSION}"
+            git push
+          fi
