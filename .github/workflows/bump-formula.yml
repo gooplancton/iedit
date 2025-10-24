@@ -1,0 +1,64 @@
+name: Bump Homebrew Formula
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  bump-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tap repo
+        uses: actions/checkout@v4
+        with:
+          repository: gooplancton/homebrew-tap
+          token: ${{ secrets.BREW_TAP_TOKEN }}
+          path: tap-repo
+
+      - name: Calculate SHAs and update formula
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          
+          # Calculate SHA for macOS Intel
+          MACOS_X86_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-x86_64.tar.gz"
+          MACOS_X86_SHA=$(curl -sL "$MACOS_X86_URL" | shasum -a 256 | cut -d' ' -f1)
+          
+          # Calculate SHA for macOS ARM
+          MACOS_ARM_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-arm64.tar.gz"
+          MACOS_ARM_SHA=$(curl -sL "$MACOS_ARM_URL" | shasum -a 256 | cut -d' ' -f1)
+          
+          # Calculate SHA for Linux source tarball
+          SRC_URL="https://github.com/gooplancton/iedit/archive/refs/tags/v${VERSION}.tar.gz"
+          SRC_SHA=$(curl -sL "$SRC_URL" | shasum -a 256 | cut -d' ' -f1)
+          
+          # Update the formula file
+          ruby <<'EOF'
+          require 'tempfile'
+          
+          formula_file = 'tap-repo/Formula/iedit.rb'
+          content = File.read(formula_file)
+          
+          # Update version
+          content.gsub!(/version "[\d.]+"/, "version \"#{ENV['VERSION']}\"")
+          
+          # Update macOS Intel SHA
+          content.gsub!(/sha256 "REPLACE_WITH_ACTUAL_SHA256_FOR_x86_64_TAR_GZ"/, "sha256 \"#{ENV['MACOS_X86_SHA']}\"")
+          
+          # Update macOS ARM SHA  
+          content.gsub!(/sha256 "REPLACE_WITH_ACTUAL_SHA256_FOR_arm64_TAR_GZ"/, "sha256 \"#{ENV['MACOS_ARM_SHA']}\"")
+          
+          # Update Linux source SHA
+          content.gsub!(/sha256 "REPLACE_WITH_SOURCE_TARBALL_SHA256"/, "sha256 \"#{ENV['SRC_SHA']}\"")
+          
+          File.write(formula_file, content)
+          EOF
+          
+          cd tap-repo
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add Formula/iedit.rb
+          git commit -m "iedit #{VERSION}"
+          git push
+        env:
+          VERSION: ${{ github.ref_name }}
+          BREW_TAP_TOKEN: ${{ secrets.BREW_TAP_TOKEN }}
