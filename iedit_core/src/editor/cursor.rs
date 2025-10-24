@@ -1,6 +1,6 @@
 #![allow(clippy::option_map_unit_fn)]
 
-use std::cmp::{max, min};
+use std::cmp::min;
 
 use crate::line::EditorLine;
 
@@ -36,14 +36,13 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     }
 
     pub fn clamp_cursor(&mut self) {
-        let max_y = self.file_lines.len();
-        self.state.cursor_pos_y = max(0, min(max_y, self.state.cursor_pos_y));
-
         let max_x = self
             .file_lines
             .get(self.state.cursor_pos_y)
             .map_or(0, |line| line.len());
-        self.state.cursor_pos_x = max(0, min(self.state.ideal_cursor_pos_x, max_x));
+
+        self.state.cursor_pos_x = min(self.state.ideal_cursor_pos_x, max_x);
+        self.state.cursor_pos_y = min(self.state.cursor_pos_y, self.file_lines.len());
     }
 
     pub fn goto_line(&mut self, idx: usize) {
@@ -82,6 +81,17 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         self.state.set_ideal_cursor_pos_x();
     }
 
+    pub fn move_cursor_page_down(&mut self) {
+        self.state.cursor_pos_y += self.config.page_size;
+    }
+
+    pub fn move_cursor_page_up(&mut self) {
+        self.state.cursor_pos_y = self
+            .state
+            .cursor_pos_y
+            .saturating_sub(self.config.page_size);
+    }
+
     pub fn move_cursor_word_right(&mut self) {
         let (x, y) = self.state.get_cursor_pos();
         let current_line = self.get_current_line();
@@ -116,4 +126,3 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         self.state.set_ideal_cursor_pos_x();
     }
 }
-

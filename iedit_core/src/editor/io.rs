@@ -71,6 +71,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             file_writer.flush()?;
 
             self.state.is_file_modified = false;
+            self.temp_message = "File saved".to_owned();
         }
 
         Ok(())
