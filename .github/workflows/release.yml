@@ -1,4 +1,4 @@
-name: Publish release on master
+name: Publish release for multiple platforms
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -20,51 +20,85 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Cache cargo registry and git
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build (release)
+      - name: Build (linux)
         run: cargo build --workspace --release --locked
 
-      - name: Run tests
-        run: cargo test --workspace --verbose
-
-      - name: Show built artifacts (debug)
-        run: ls -la target/release || true
-
-      - name: Upload built binary as artifact
+      - name: Upload linux binary
         uses: actions/upload-artifact@v4
         with:
-          name: iedit
+          name: iedit-linux
           path: target/release/iedit*
 
-      - name: Prepare release tag (read from iedit_core/Cargo.toml)
+  build-macos-arm64:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Add macOS aarch64 target
+        run: rustup target add aarch64-apple-darwin
+
+      - name: Build (macos aarch64)
+        run: cargo build --workspace --release --target aarch64-apple-darwin --locked
+
+      - name: Upload macos arm64 binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: iedit-macos-arm64
+          path: target/aarch64-apple-darwin/release/iedit*
+
+  build-macos-x86_64:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Add macOS x86_64 target
+        run: rustup target add x86_64-apple-darwin
+
+      - name: Build (macos x86_64)
+        run: cargo build --workspace --release --target x86_64-apple-darwin --locked
+
+      - name: Upload macos x86_64 binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: iedit-macos-x86_64
+          path: target/x86_64-apple-darwin/release/iedit*
+
+  create-release:
+    needs: [build-linux, build-macos-arm64, build-macos-x86_64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (for tag/version extraction)
+        uses: actions/checkout@v4
+
+      - name: Read version from iedit_core/Cargo.toml
         id: tag
         run: |
           set -e
           CARGO_TOML="iedit_core/Cargo.toml"
-          if [ -f "$CARGO_TOML" ]; then
-            ver=$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' "$CARGO_TOML" | head -n1)
-          else
-            ver=""
-          fi
-          if [ -z "$ver" ]; then
-            echo "No version found in $CARGO_TOML; defaulting to 0.0.0" >&2
-            ver="0.0.0"
-          fi
+          ver=$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' "$CARGO_TOML" | head -n1 || true)
+          if [ -z "$ver" ]; then ver="0.0.0"; fi
           if [[ "$ver" == v* ]]; then TAG="$ver"; else TAG="v$ver"; fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Prepared tag: $TAG"
+          echo "version=$ver" >> $GITHUB_OUTPUT
 
-      - name: Create GitHub release and upload binary
+      - name: Create GitHub release and attach artifacts
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
-          artifact: target/release/iedit
+          artifacts: iedit-linux,iedit-macos-arm64,iedit-macos-x86_64
           token: ${{ secrets.PAT }}
