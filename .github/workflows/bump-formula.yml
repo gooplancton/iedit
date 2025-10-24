@@ -10,14 +10,26 @@ jobs:
     steps:
       - name: Checkout tap repo
         uses: actions/checkout@v4
-        with:
-          repository: gooplancton/homebrew-tap
-          token: ${{ secrets.BREW_TAP_TOKEN }}
-          path: tap-repo
+
+      - name: Read version
+        id: read_version
+        run: |
+          set -e
+          CARGO_TOML="iedit_core/Cargo.toml"
+          if [ -f "$CARGO_TOML" ]; then
+            ver=$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' "$CARGO_TOML" | head -n1)
+          else
+            ver=""
+          fi
+          if [ -z "$ver" ]; then
+            echo "No version found in $CARGO_TOML; defaulting to 0.0.0" >&2
+            ver="0.0.0"
+          fi
+          echo "version=$ver" >> $GITHUB_OUTPUT
 
       - name: Calculate SHAs and update formula
         run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
+          VERSION="${{ steps.read_version.outputs.version }}"
           
           # Calculate SHA for macOS Intel
           MACOS_X86_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-x86_64.tar.gz"
@@ -61,4 +73,4 @@ jobs:
           git push
         env:
           VERSION: ${{ github.ref_name }}
-          BREW_TAP_TOKEN: ${{ secrets.BREW_TAP_TOKEN }}
+          BREW_TAP_TOKEN: ${{ secrets.PAT }}

@@ -66,5 +66,5 @@ jobs:
         with:
           tag: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
-          artifacts: iedit
-          token: ${{ secrets.GITHUB_TOKEN }}
+          artifact: iedit
+          token: ${{ secrets.PAT }}
