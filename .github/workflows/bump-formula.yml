@@ -47,7 +47,7 @@ jobs:
           ruby <<'EOF'
           require 'tempfile'
           
-          formula_file = 'tap-repo/Formula/iedit.rb'
+          formula_file = 'Formula/iedit.rb'
           content = File.read(formula_file)
           
           # Update version
