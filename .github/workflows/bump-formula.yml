@@ -68,14 +68,14 @@ jobs:
           # update version (robust to non-numeric segments)
           content.gsub!(/version\s+["'][^"']+["']/, "version \"#{ENV['VERSION']}\"")
 
-          content.gsub!(/MACOS_X86_URL = ["']\S+["']/, "MACOS_X86_URL = \"#{ENV['MACOS_X86_URL']}\"")
-          content.gsub!(/MACOS_X86_SHA = ["']\S+["']/, "MACOS_X86_SHA = \"#{ENV['MACOS_X86_SHA']}\"")
+          content.gsub!(/MACOS_X86_URL = ["']\S*["']/, "MACOS_X86_URL = \"#{ENV['MACOS_X86_URL']}\"")
+          content.gsub!(/MACOS_X86_SHA = ["']\S*+["']/, "MACOS_X86_SHA = \"#{ENV['MACOS_X86_SHA']}\"")
 
-          content.gsub!(/MACOS_ARM_URL = ["']\S+["']/, "MACOS_ARM_URL = \"#{ENV['MACOS_ARM_URL']}\"")
-          content.gsub!(/MACOS_ARM_SHA = ["']\S+["']/, "MACOS_ARM_SHA = \"#{ENV['MACOS_ARM_SHA']}\"")
+          content.gsub!(/MACOS_ARM_URL = ["']\S*["']/, "MACOS_ARM_URL = \"#{ENV['MACOS_ARM_URL']}\"")
+          content.gsub!(/MACOS_ARM_SHA = ["']\S*["']/, "MACOS_ARM_SHA = \"#{ENV['MACOS_ARM_SHA']}\"")
 
-          content.gsub!(/LINUX_URL = ["']\S+["']/, "LINUX_URL = \"#{ENV['LINUX_URL']}\"")
-          content.gsub!(/LINUX_SHA = ["']\S+["']/, "LINUX_SHA = \"#{ENV['LINUX_SHA']}\"")
+          content.gsub!(/LINUX_URL = ["']\S*["']/, "LINUX_URL = \"#{ENV['LINUX_URL']}\"")
+          content.gsub!(/LINUX_SHA = ["']\S*["']/, "LINUX_SHA = \"#{ENV['LINUX_SHA']}\"")
 
           File.write(formula_file, content)
           EOF
