@@ -40,22 +40,22 @@ jobs:
 
           MACOS_X86_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-x86_64"
           MACOS_ARM_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-macos-arm64"
-          SRC_URL="https://github.com/gooplancton/iedit/archive/refs/tags/v${VERSION}"
+          LINUX_URL="https://github.com/gooplancton/iedit/releases/download/v${VERSION}/iedit-linux"
 
           echo "Fetching and hashing:"
           echo "  $MACOS_X86_URL"
           echo "  $MACOS_ARM_URL"
-          echo "  $SRC_URL"
+          echo "  $LINUX_URL"
 
           MACOS_X86_SHA=$(curl -fsSL "$MACOS_X86_URL" | sha256sum | cut -d' ' -f1)
           MACOS_ARM_SHA=$(curl -fsSL "$MACOS_ARM_URL" | sha256sum | cut -d' ' -f1)
-          SRC_SHA=$(curl -fsSL "$SRC_URL" | sha256sum | cut -d' ' -f1)
+          SRC_SHA=$(curl -fsSL "$LINUX_URL" | sha256sum | cut -d' ' -f1)
 
           echo "macos x86 sha: $MACOS_X86_SHA"
           echo "macos arm sha: $MACOS_ARM_SHA"
-          echo "src sha: $SRC_SHA"
+          echo "linux sha: $LINUX_SHA"
 
-          export VERSION MACOS_X86_SHA MACOS_ARM_SHA SRC_SHA
+          export VERSION MACOS_X86_SHA MACOS_ARM_SHA LINUX_SHA
 
           ruby <<'EOF'
           formula_file = 'Formula/iedit.rb'
@@ -64,10 +64,14 @@ jobs:
           # update version (robust to non-numeric segments)
           content.gsub!(/version\s+["'][^"']+["']/, "version \"#{ENV['VERSION']}\"")
 
-          # replace explicit placeholder checksums (adjust placeholders if your formula differs)
-          content.gsub!(/sha256\s+["']REPLACE_WITH_ACTUAL_SHA256_FOR_x86_64_TAR_GZ["']/, "sha256 \"#{ENV['MACOS_X86_SHA']}\"")
-          content.gsub!(/sha256\s+["']REPLACE_WITH_ACTUAL_SHA256_FOR_arm64_TAR_GZ["']/, "sha256 \"#{ENV['MACOS_ARM_SHA']}\"")
-          content.gsub!(/sha256\s+["']REPLACE_WITH_SOURCE_TARBALL_SHA256["']/, "sha256 \"#{ENV['SRC_SHA']}\"")
+          content.gsub!(/MACOS_X86_URL = ["']\S+["']/, "MACOS_X86_URL = \"#{ENV['MACOS_X86_URL']}\"")
+          content.gsub!(/MACOS_X86_SHA = ["']\S+["']/, "MACOS_X86_SHA = \"#{ENV['MACOS_X86_SHA']}\"")
+
+          content.gsub!(/MACOS_ARM_URL = ["']\S+["']/, "MACOS_ARM_URL = \"#{ENV['MACOS_ARM_URL']}\"")
+          content.gsub!(/MACOS_ARM_SHA = ["']\S+["']/, "MACOS_ARM_SHA = \"#{ENV['MACOS_ARM_SHA']}\"")
+
+          content.gsub!(/LINUX_URL = ["']\S+["']/, "LINUX_URL = \"#{ENV['LINUX_URL']}\"")
+          content.gsub!(/LINUX_SHA = ["']\S+["']/, "LINUX_SHA = \"#{ENV['LINUX_SHA']}\"")
 
           File.write(formula_file, content)
           EOF
