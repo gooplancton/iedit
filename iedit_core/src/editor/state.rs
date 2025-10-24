@@ -1,7 +1,6 @@
-use crate::{
-    editor::{EditorLine, viewport::Viewport},
-    line::CharacterEditable,
-};
+use regex_lite::Regex;
+
+use crate::editor::{EditorLine, viewport::Viewport};
 
 use super::Editor;
 
@@ -18,6 +17,26 @@ impl Default for EditorMode {
     }
 }
 
+static KEYBINDINGS_STRING: &'static str = concat!(
+    " | Ctrl+ ",
+    "\x1b[7m",
+    "q",
+    "\x1b[0m",
+    "uit, ",
+    "\x1b[7m",
+    "s",
+    "\x1b[0m",
+    "ave, ",
+    "\x1b[7m",
+    "f",
+    "\x1b[0m",
+    "ind, ",
+    "\x1b[7m",
+    "g",
+    "\x1b[0m",
+    "oto"
+);
+
 #[derive(Default)]
 pub struct EditorState<TextLine: EditorLine> {
     pub status_text: TextLine,
@@ -25,6 +44,7 @@ pub struct EditorState<TextLine: EditorLine> {
     pub viewport: Viewport,
     pub cursor_pos_x: usize,
     pub cursor_pos_y: usize,
+    pub cursor_previous_pos_y: usize,
     pub ideal_cursor_pos_x: usize,
     pub cmd_cursor_pos_x: usize,
     pub cursor_vel_x: isize,
@@ -32,6 +52,7 @@ pub struct EditorState<TextLine: EditorLine> {
     pub selection_anchor: Option<(usize, usize)>,
 
     pub mode: EditorMode,
+    pub searched_regex: Option<Regex>,
     pub is_file_modified: bool,
     pub should_quit: bool,
     pub should_run_command: bool,
@@ -89,21 +110,21 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             .next_back()
             .map(|f| f.as_os_str())
             .unwrap_or_default();
-        self.state.status_text = TextLine::from_str(&format!(
-            "{:?}{} | Ln {}, Col {} | {} lines",
-            file_name, modified, line, col, total_lines
-        ))
-    }
 
-    pub fn goto_next_match(&mut self) {
-        if let Some((x, y)) = self.find_next_match() {
-            let term_len = self.get_search_term().len();
-            self.state.cursor_pos_x = x;
-            self.state.cursor_pos_y = y;
-            self.state.ideal_cursor_pos_x = x;
-            self.state.selection_anchor = Some((x + term_len, y));
-            self.state.mode = EditorMode::Find((x + 1, y))
+        let mut status_text = format!(
+            "{}{} | Ln {}, Col {} | {} lines",
+            file_name.display(),
+            modified,
+            line,
+            col,
+            total_lines
+        );
+
+        if self.config.display_keybindings {
+            status_text.push_str(&KEYBINDINGS_STRING)
         }
+
+        self.state.status_text = TextLine::from_str(&status_text);
     }
 
     pub fn get_highlighted_range(&self) -> ((usize, usize), (usize, usize)) {

@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{Stdout, stdin},
+    io::{Stdout, Write, stdin},
     path::{Path, PathBuf},
 };
 
@@ -8,12 +8,13 @@ use config::EditorConfig;
 use state::EditorState;
 use termion::{
     cursor::{DetectCursorPos, Goto, HideCursor},
+    input::TermRead,
     raw::{IntoRawMode, RawTerminal},
     terminal_size,
 };
 
 use crate::{
-    editor::{input::InputReader, io::read_file},
+    editor::{input::process_key_event, io::read_file},
     line::EditorLine,
     terminal::H_BAR,
 };
@@ -35,10 +36,14 @@ pub struct Editor<TextLine: EditorLine> {
     state: EditorState<TextLine>,
     config: EditorConfig,
     term: HideCursor<RawTerminal<Stdout>>,
+    ui_origin: (u16, u16),
     term_width: u16,
 
-    reset_cursor_seq: Goto,
     horizontal_bar: String,
+    temp_message: String,
+
+    dirty_lines: Vec<usize>,
+    needs_full_rerender: bool,
 }
 
 impl<TextLine: EditorLine> Editor<TextLine> {
@@ -48,7 +53,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
 
         let (term_width, term_height) = terminal_size()?;
         let mut term = HideCursor::from(std::io::stdout().into_raw_mode()?);
-        let mut ui_start = term.cursor_pos()?;
+        let mut ui_origin = term.cursor_pos()?;
 
         let mut config = if let Some(mut path) = std::env::home_dir() {
             path.push(".iedit.conf");
@@ -57,18 +62,20 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             EditorConfig::default()
         };
 
-        let real_estate = term_height.saturating_sub(ui_start.1);
+        let real_estate = term_height.saturating_sub(ui_origin.1);
         if config.n_lines == 0 || real_estate < config.n_lines {
-            let offset = config.set_default_n_lines(&mut term, ui_start.1)?;
-            ui_start.1 = ui_start.1.saturating_sub(offset);
+            let offset = config.set_default_n_lines(&mut term, ui_origin.1)?;
+            ui_origin.1 = ui_origin.1.saturating_sub(offset);
         }
 
         state.cursor_pos_y = open_at.saturating_sub(1);
-        state.viewport.top_line = open_at.saturating_sub(config.n_lines as usize / 2);
+        state.viewport.pre_scroll_top_line = open_at.saturating_sub(config.n_lines as usize / 2);
+        state.viewport.top_line = state.viewport.pre_scroll_top_line;
         state.viewport.bottom_line = state.viewport.top_line + config.n_lines as usize;
         state.viewport.right_col = (term_width as usize) - (config.show_line_numbers as usize * 7);
 
         let horizontal_bar = str::repeat(H_BAR, term_width as usize);
+        let temp_message = String::with_capacity(10);
 
         Ok(Self {
             file,
@@ -78,8 +85,11 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             config,
             term,
             term_width,
-            reset_cursor_seq: Goto(ui_start.0, ui_start.1),
+            ui_origin,
             horizontal_bar,
+            temp_message,
+            dirty_lines: vec![],
+            needs_full_rerender: true,
         })
     }
 
@@ -88,15 +98,28 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         Ok(())
     }
 
+    pub fn reset_cursor(&mut self) -> std::io::Result<()> {
+        write!(
+            &mut self.term,
+            "{}",
+            Goto(self.ui_origin.0, self.ui_origin.1)
+        )
+    }
+
     pub fn run(&mut self) -> std::io::Result<()> {
         self.render()?;
 
-        let mut stdin = stdin();
-        loop {
+        let stdin = stdin();
+        for key in stdin.keys() {
+            let key = key?;
+
             let prev_x = self.state.cursor_pos_x as isize;
             let prev_y = self.state.cursor_pos_y as isize;
 
-            let input = stdin.get_input()?;
+            self.state.cursor_previous_pos_y = self.state.cursor_pos_y;
+
+            let input = process_key_event(key);
+
             self.process_input(input)?;
 
             if self.state.should_quit {

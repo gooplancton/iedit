@@ -1,4 +1,6 @@
-use std::io;
+use std::{io, str::FromStr};
+
+use regex_lite::Regex;
 
 use crate::{
     Editor,
@@ -41,57 +43,34 @@ impl<TextLine: EditorLine> EditorState<TextLine> {
     }
 }
 
-type ModifyStateFn<TextLine> = dyn Fn(&mut EditorState<TextLine>);
-
 impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn run_command(&mut self) -> io::Result<()> {
         let command = self.state.parse_command();
 
-        let modify_state: Option<&ModifyStateFn<TextLine>> = match command {
+        match command {
             EditorCommand::GotoLine(idx) => {
                 self.goto_line(idx);
-                Some(&move |state: &mut EditorState<TextLine>| {
-                    state.command_text.truncate_chars(0);
-                    state.mode = EditorMode::default();
-                })
+                self.state.command_text.truncate_chars(0);
+                self.state.mode = EditorMode::default();
             }
             EditorCommand::Write => {
                 self.save_file()?;
-                Some(&move |state: &mut EditorState<TextLine>| {
-                    state.command_text.truncate_chars(0);
-                    state.mode = EditorMode::default();
-                })
+                self.state.command_text.truncate_chars(0);
+                self.state.mode = EditorMode::default();
             }
             EditorCommand::WriteAndQuit => {
                 self.save_file()?;
                 self.quit()?;
-                None
             }
             EditorCommand::Quit => {
                 self.quit()?;
-                None
             }
             EditorCommand::Find => {
-                if let Some((x, y)) = self.find_next_match() {
-                    let term_len = self.get_search_term().len();
-                    Some(&move |state: &mut EditorState<TextLine>| {
-                        state.cursor_pos_x = x;
-                        state.cursor_pos_y = y;
-                        state.ideal_cursor_pos_x = x;
-                        state.selection_anchor = Some((x + term_len, y));
-                        state.set_ideal_cursor_pos_x();
-                        state.mode = EditorMode::Find((x + 1, y));
-                    })
-                } else {
-                    None
-                }
+                self.state.searched_regex = Regex::from_str(self.get_search_input_str()).ok();
+                self.goto_next_match();
             }
-            EditorCommand::NoOp => None,
+            EditorCommand::NoOp => {}
         };
-
-        if let Some(modify_state) = modify_state {
-            modify_state(&mut self.state);
-        }
 
         Ok(())
     }
@@ -103,26 +82,59 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         self.state.cmd_cursor_pos_x = self.state.command_text.len();
     }
 
-    pub fn get_search_term(&self) -> &TextLine::SliceType {
-        self.state.command_text.get_chars(5..)
+    pub fn get_search_input_str(&self) -> &str {
+        self.state.command_text.get_chars(5..).as_str()
     }
 
-    pub fn find_next_match(&self) -> Option<(usize, usize)> {
+    pub fn goto_next_match(&mut self) {
         let (start_x, start_y) = if let EditorMode::Find((x, y)) = self.state.mode {
-            (x, y)
+            (x + 1, y)
         } else {
             (0, 0)
         };
 
-        let term = self.get_search_term();
-
-        for (y, line) in self.file_lines.iter().enumerate().skip(start_y) {
-            let offset = start_x * (y == start_y) as usize;
-            if let Some(x) = line.get_chars(offset..).find_term_from(term, offset) {
-                return Some((x + offset, y));
+        if let Some(regex) = &self.state.searched_regex {
+            for (y, line) in self.file_lines.iter().enumerate().skip(start_y) {
+                let offset = start_x * (y == start_y) as usize;
+                if let Some((x_start, x_end)) = line.find_regex_from(regex, offset) {
+                    self.state.cursor_pos_x = x_start;
+                    self.state.cursor_pos_y = y;
+                    self.state.ideal_cursor_pos_x = x_start;
+                    self.state.selection_anchor = Some((x_end, y));
+                    self.state.mode = EditorMode::Find((x_start, y));
+                    return
+                }
             }
         }
 
-        None
+        self.temp_message = "Already at last match".to_owned();
+    }
+
+    pub fn goto_previous_match(&mut self) {
+        let (end_x, end_y) = if let EditorMode::Find((x, y)) = self.state.mode {
+            (x.saturating_sub(1), y)
+        } else {
+            (0, 0)
+        };
+
+        if let Some(regex) = &self.state.searched_regex {
+            for (y, line) in self.file_lines.iter().enumerate().take(end_y + 1).rev() {
+                let line = if y == end_y {
+                    line.get_chars(..end_x)
+                } else {
+                    line.get_chars(..)
+                };
+                if let Some((x_start, x_end)) = line.find_last_match(regex) {
+                    self.state.cursor_pos_x = x_start;
+                    self.state.cursor_pos_y = y;
+                    self.state.ideal_cursor_pos_x = x_start;
+                    self.state.selection_anchor = Some((x_end, y));
+                    self.state.mode = EditorMode::Find((x_start, y));
+                    return
+                }
+            }
+        }
+
+        self.temp_message = "Already at first match".to_owned();
     }
 }

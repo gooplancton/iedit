@@ -9,8 +9,7 @@ use super::Editor;
 
 impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn render(&mut self) -> std::io::Result<()> {
-        self.term
-            .write_fmt(format_args!("{}", self.reset_cursor_seq))?;
+        self.reset_cursor()?;
         self.render_content()?;
         self.render_status()?;
         self.term.flush()?;
@@ -24,8 +23,20 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         self.term.write_all(CLEAR_LINE.as_bytes())?;
         self.term.write_all(HIGHLIGHT_END.as_bytes())?;
         if self.config.show_line_numbers {
-            self.term
-                .write_fmt(format_args!("{: >5} {}", line_idx + 1, V_BAR))?;
+            let line_number_color = if line_idx == self.state.cursor_pos_y {
+                termion::color::White.fg_str()
+            } else {
+                termion::color::LightBlack.fg_str()
+            };
+
+            write!(
+                self.term,
+                "{}{: >5}{} {}",
+                line_number_color,
+                line_idx + 1,
+                termion::color::Reset.fg_str(),
+                V_BAR,
+            )?;
         }
 
         let display_start = self.state.viewport.left_col;
@@ -69,7 +80,15 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         let row_span_high = self.state.viewport.bottom_line.min(self.file_lines.len());
 
         for line_idx in row_span_low..row_span_high {
-            self.render_line(line_idx)?;
+            let should_render_line = self.needs_full_rerender
+                || self.dirty_lines.contains(&line_idx)
+                || line_idx == self.state.cursor_pos_y
+                || line_idx == self.state.cursor_previous_pos_y;
+
+            if should_render_line {
+                self.render_line(line_idx)?;
+            }
+
             self.term.write_all(CURSOR_DOWN1.as_bytes())?;
             self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
         }
@@ -83,23 +102,45 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
         }
 
+        self.dirty_lines.truncate(0);
+        self.needs_full_rerender = false;
+
+        Ok(())
+    }
+
+    fn render_temp_message(&mut self) -> std::io::Result<()> {
+        self.term.write_all(self.temp_message.as_bytes())?;
+
+        self.term.write_all(CURSOR_DOWN1.as_bytes())?;
+        self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
+
+        self.term.write_all(CLEAR_LINE.as_bytes())?;
+
+        self.temp_message.truncate(0);
+
         Ok(())
     }
 
     fn render_status(&mut self) -> std::io::Result<()> {
-        self.update_status_text();
-        let content = if !self.state.is_editing_content() {
-            &self.state.command_text
-        } else {
-            &self.state.status_text
-        };
-
         self.term.write_all(CLEAR_LINE.as_bytes())?;
         self.term.write_all(self.horizontal_bar.as_bytes())?;
         self.term.write_all(CURSOR_DOWN1.as_bytes())?;
         self.term.write_all(CURSOR_TO_COL1.as_bytes())?;
 
         self.term.write_all(CLEAR_LINE.as_bytes())?;
+        self.term.write_all("  ".as_bytes())?;
+
+        if !self.temp_message.is_empty() {
+            return self.render_temp_message();
+        }
+
+        let content = if !self.state.is_editing_content() {
+            &self.state.command_text
+        } else {
+            self.update_status_text();
+            &self.state.status_text
+        };
+
         let mut renderer =
             LineRenderer::new(content).with_display_range(0..self.term_width as usize);
 
@@ -127,8 +168,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     }
 
     pub fn cleanup(&mut self) -> std::io::Result<()> {
-        self.term
-            .write_fmt(format_args!("{}", self.reset_cursor_seq))?;
+        self.reset_cursor()?;
         self.term
             .write_all(terminal::CLEAR_BELOW_CURSOR.as_bytes())?;
 

@@ -1,5 +1,7 @@
 use std::ops::RangeBounds;
 
+use regex_lite::Regex;
+
 use crate::line::{CharacterEditable, EditorLine};
 
 impl CharacterEditable for str {
@@ -15,38 +17,67 @@ impl CharacterEditable for str {
         self.chars()
     }
 
-    fn split_chars_at(&self, idx: usize) -> (&Self, &Self) {
-        let char_idx = self
-            .char_indices()
-            .nth(idx)
+    fn nth_char_idx(&self, n: usize) -> usize {
+        self.char_indices()
+            .nth(n)
             .map(|(i, _)| i)
-            .unwrap_or(self.len());
+            .unwrap_or(self.len())
+    }
+
+    fn char_idx_at_byte(&self, byte_idx: usize) -> Option<usize> {
+        self.char_indices()
+            .enumerate()
+            .find(|(_, (char_byte_idx, _))| *char_byte_idx == byte_idx)
+            .map(|(char_idx, _)| char_idx)
+    }
+
+    fn split_chars_at(&self, idx: usize) -> (&Self, &Self) {
+        let char_idx = self.nth_char_idx(idx);
 
         self.split_at(char_idx)
     }
 
     fn split_chars_at_mut(&mut self, idx: usize) -> (&mut Self, &mut Self) {
-        let char_idx = self
-            .char_indices()
-            .nth(idx)
-            .map(|(i, _)| i)
-            .unwrap_or(self.len());
+        let char_idx = self.nth_char_idx(idx);
 
         self.split_at_mut(char_idx)
+    }
+
+    fn as_str(&self) -> &str {
+        self
     }
 
     fn to_string(&self) -> String {
         self.to_owned()
     }
 
-    fn find_term_from(&self, term: &str, pos: usize) -> Option<usize> {
-        let char_idx = self
-            .char_indices()
-            .nth(pos)
-            .map(|(i, _)| i)
-            .unwrap_or(self.len());
+    fn find_regex_from(&self, regex: &Regex, idx: usize) -> Option<(usize, usize)> {
+        let char_idx = self.nth_char_idx(idx);
 
-        self.get(char_idx..).and_then(|string| string.find(term))
+        regex.find_at(self, char_idx).map(|m| {
+            let match_range = m.range();
+            let (start, end) = (match_range.start, match_range.end);
+
+            (
+                self.char_idx_at_byte(start).unwrap_or(start),
+                self.char_idx_at_byte(end).unwrap_or(end),
+            )
+        })
+    }
+
+    fn find_last_match(&self, regex: &Regex) -> Option<(usize, usize)> {
+        let (mut start_idx, mut end_idx) = self.find_regex_from(regex, 0)?;
+
+        loop {
+            let from_idx = self.nth_char_idx(start_idx + 1);
+
+            if let Some((last_start_idx, last_end_idx)) = self.find_regex_from(regex, from_idx) {
+                start_idx = last_start_idx;
+                end_idx = last_end_idx;
+            } else {
+                return Some((start_idx, end_idx));
+            }
+        }
     }
 }
 
@@ -85,6 +116,19 @@ impl EditorLine for String {
         self.push_str(other.as_str());
     }
 
+    fn nth_char_idx(&self, n: usize) -> usize {
+        self.char_indices()
+            .nth(n)
+            .map(|(i, _)| i)
+            .unwrap_or(self.len())
+    }
+
+    fn char_idx_at_byte(&self, byte_idx: usize) -> Option<usize> {
+        self.char_indices()
+            .find(|(char_idx, _)| *char_idx == byte_idx)
+            .map(|(char_idx, _)| char_idx)
+    }
+
     fn split_chars_off_at(&mut self, idx: usize) -> Self {
         let char_idx = self
             .char_indices()
@@ -96,29 +140,13 @@ impl EditorLine for String {
 
     fn delete_chars(&mut self, range: impl std::ops::RangeBounds<usize>) {
         let start = match range.start_bound() {
-            std::ops::Bound::Included(&idx) => self
-                .char_indices()
-                .nth(idx)
-                .map(|(i, _)| i)
-                .unwrap_or(self.len()),
-            std::ops::Bound::Excluded(&idx) => self
-                .char_indices()
-                .nth(idx + 1)
-                .map(|(i, _)| i)
-                .unwrap_or(self.len()),
+            std::ops::Bound::Included(&idx) => self.nth_char_idx(idx),
+            std::ops::Bound::Excluded(&idx) => self.nth_char_idx(idx + 1),
             std::ops::Bound::Unbounded => 0,
         };
         let end = match range.end_bound() {
-            std::ops::Bound::Included(&idx) => self
-                .char_indices()
-                .nth(idx + 1)
-                .map(|(i, _)| i)
-                .unwrap_or(self.len()),
-            std::ops::Bound::Excluded(&idx) => self
-                .char_indices()
-                .nth(idx)
-                .map(|(i, _)| i)
-                .unwrap_or(self.len()),
+            std::ops::Bound::Included(&idx) => self.nth_char_idx(idx + 1),
+            std::ops::Bound::Excluded(&idx) => self.nth_char_idx(idx),
             std::ops::Bound::Unbounded => self.len(),
         };
         if start < end && end <= self.len() {
@@ -131,20 +159,14 @@ impl EditorLine for String {
     }
 
     fn insert_char_at(&mut self, ch: char, idx: usize) {
-        let char_idx = self
-            .char_indices()
-            .nth(idx)
-            .map(|(i, _)| i)
-            .unwrap_or(self.len());
+        let char_idx = self.nth_char_idx(idx);
+
         self.insert(char_idx, ch);
     }
 
     fn remove_char_at(&mut self, idx: usize) -> char {
-        let char_idx = self
-            .char_indices()
-            .nth(idx)
-            .map(|(i, _)| i)
-            .unwrap_or(self.len());
+        let char_idx = self.nth_char_idx(idx);
+
         if char_idx < self.len() {
             let ch = self[char_idx..].chars().next().unwrap();
             self.replace_range(char_idx..char_idx + ch.len_utf8(), "");
@@ -156,29 +178,13 @@ impl EditorLine for String {
 
     fn get_chars(&self, range: impl RangeBounds<usize>) -> &Self::SliceType {
         let start = match range.start_bound() {
-            std::ops::Bound::Included(&idx) => self
-                .char_indices()
-                .nth(idx)
-                .map(|(i, _)| i)
-                .unwrap_or(self.len()),
-            std::ops::Bound::Excluded(&idx) => self
-                .char_indices()
-                .nth(idx + 1)
-                .map(|(i, _)| i)
-                .unwrap_or(self.len()),
+            std::ops::Bound::Included(&idx) => self.nth_char_idx(idx),
+            std::ops::Bound::Excluded(&idx) => self.nth_char_idx(idx + 1),
             std::ops::Bound::Unbounded => 0,
         };
         let end = match range.end_bound() {
-            std::ops::Bound::Included(&idx) => self
-                .char_indices()
-                .nth(idx + 1)
-                .map(|(i, _)| i)
-                .unwrap_or(self.len()),
-            std::ops::Bound::Excluded(&idx) => self
-                .char_indices()
-                .nth(idx)
-                .map(|(i, _)| i)
-                .unwrap_or(self.len()),
+            std::ops::Bound::Included(&idx) => self.nth_char_idx(idx + 1),
+            std::ops::Bound::Excluded(&idx) => self.nth_char_idx(idx),
             std::ops::Bound::Unbounded => self.len(),
         };
         &self[start..end]
@@ -196,22 +202,23 @@ impl EditorLine for String {
         if new_len == 0 {
             self.truncate(0);
         } else {
-            let char_idx = self
-                .char_indices()
-                .nth(new_len - 1)
-                .map(|(i, _)| i)
-                .unwrap_or(self.len());
+            let char_idx = self.nth_char_idx(new_len - 1);
+
             self.truncate(char_idx);
         }
     }
 
-    fn find_term_from(&self, term: &str, pos: usize) -> Option<usize> {
-        let char_idx = self
-            .char_indices()
-            .nth(pos)
-            .map(|(i, _)| i)
-            .unwrap_or(self.len());
+    fn find_regex_from(&self, regex: &Regex, idx: usize) -> Option<(usize, usize)> {
+        let char_idx = self.nth_char_idx(idx);
 
-        self.get(char_idx..).and_then(|string| string.find(term))
+        regex.find_at(self, char_idx).map(|m| {
+            let match_range = m.range();
+            let (start, end) = (match_range.start, match_range.end);
+
+            (
+                self.char_idx_at_byte(start).unwrap_or(start),
+                self.char_idx_at_byte(end).unwrap_or(end),
+            )
+        })
     }
 }

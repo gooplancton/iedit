@@ -1,6 +1,4 @@
-use std::io::{self};
 use termion::event::Key;
-use termion::input::TermRead;
 
 use crate::{editor::state::EditorMode, line::EditorLine};
 
@@ -13,9 +11,12 @@ pub enum EditorInput {
     TabInsertion,
     Deletion,
     WordDeletion,
+    ScrollViewport(MovementDirection),
     BasicMovement(MovementDirection),
     SelectionMovement(MovementDirection),
     WordMovement(MovementDirection),
+    PageDown,
+    PageUp,
     Save,
     Quit,
     ToggleLineNumbers,
@@ -23,84 +24,98 @@ pub enum EditorInput {
     BackToDefaultMode,
 }
 
-pub trait InputReader {
-    fn get_input(&mut self) -> io::Result<EditorInput>;
-}
+pub fn process_key_event(key: Key) -> EditorInput {
+    use EditorInput::*;
+    use MovementDirection::*;
+    match key {
+        // Arrow keys
+        Key::Up => BasicMovement(Up),
+        Key::Down => BasicMovement(Down),
+        Key::Left => BasicMovement(Left),
+        Key::Right => BasicMovement(Right),
 
-impl InputReader for io::Stdin {
-    fn get_input(&mut self) -> io::Result<EditorInput> {
-        use EditorInput::*;
-        use MovementDirection::*;
-        // Use termion's keys() iterator which properly handles all escape sequences
-        if let Some(key) = io::stdin().keys().next() {
-            match key? {
-                // Arrow keys
-                Key::Up => Ok(BasicMovement(Up)),
-                Key::Down => Ok(BasicMovement(Down)),
-                Key::Left => Ok(BasicMovement(Left)),
-                Key::Right => Ok(BasicMovement(Right)),
+        // Ctrl + Arrow keys for word movement
+        Key::CtrlRight => WordMovement(Right),
+        Key::CtrlLeft => WordMovement(Left),
+        Key::CtrlDown => ScrollViewport(Down),
+        Key::CtrlUp => ScrollViewport(Up),
 
-                // Ctrl + Arrow keys for word movement
-                Key::CtrlRight => Ok(WordMovement(Right)),
-                Key::CtrlLeft => Ok(WordMovement(Left)),
+        // Shift + Arrow keys for selection movement
+        Key::ShiftUp => SelectionMovement(Up),
+        Key::ShiftDown => SelectionMovement(Down),
+        Key::ShiftLeft => SelectionMovement(Left),
+        Key::ShiftRight => SelectionMovement(Right),
 
-                // Shift + Arrow keys for selection movement
-                Key::ShiftUp => Ok(SelectionMovement(Up)),
-                Key::ShiftDown => Ok(SelectionMovement(Down)),
-                Key::ShiftLeft => Ok(SelectionMovement(Left)),
-                Key::ShiftRight => Ok(SelectionMovement(Right)),
+        // MacOS specific word movement keys
+        Key::Alt('f') => WordMovement(Right),
+        Key::Alt('b') => WordMovement(Left),
 
-                // MacOS specific word movement keys
-                Key::Alt('f') => Ok(WordMovement(Right)),
-                Key::Alt('b') => Ok(WordMovement(Left)),
+        // Control keys
+        Key::Ctrl('q') => Quit,
+        Key::Ctrl('s') => Save,
+        Key::Ctrl('l') => ToggleLineNumbers,
+        Key::Ctrl('g') => EnterCommandMode("goto "),
+        Key::Ctrl('f') => EnterCommandMode("find "),
 
-                // Control keys
-                Key::Ctrl('q') => Ok(Quit),
-                Key::Ctrl('s') => Ok(Save),
-                Key::Ctrl('l') => Ok(ToggleLineNumbers),
-                Key::Ctrl('g') => Ok(EnterCommandMode("goto ")),
-                Key::Ctrl('f') => Ok(EnterCommandMode("find ")),
+        // Page up/down
+        Key::Ctrl('d') => PageDown,
+        Key::Ctrl('u') => PageUp,
 
-                // Ctrl + Backspace for deleting the previous word
-                Key::Ctrl('\x7F') => Ok(WordDeletion),
-                Key::Ctrl('h') => Ok(WordDeletion),
+        // Ctrl + Backspace for deleting the previous word
+        Key::Ctrl('\x7F') => WordDeletion,
+        Key::Ctrl('h') => WordDeletion,
 
-                // Backspace/Delete
-                Key::Backspace | Key::Delete => Ok(Deletion),
+        // Backspace/Delete
+        Key::Backspace | Key::Delete => Deletion,
 
-                Key::Char('\n') | Key::Char('\r') => Ok(NewlineInsertion),
-                Key::Char('\t') => Ok(TabInsertion),
-                Key::Char(c) => Ok(CharInsertion(c)),
+        Key::Char('\n') | Key::Char('\r') => NewlineInsertion,
+        Key::Char('\t') => TabInsertion,
+        Key::Char(c) => CharInsertion(c),
 
-                Key::Esc => Ok(BackToDefaultMode),
+        Key::Esc => BackToDefaultMode,
 
-                // TODO: support utf-8 chars
-
-                // Ignore other keys
-                _ => Ok(NoOp),
-            }
-        } else {
-            // No input available
-            Ok(EditorInput::NoOp)
-        }
+        _ => NoOp,
     }
 }
 
 impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn process_input(&mut self, input: EditorInput) -> std::io::Result<()> {
-        match input {
-            EditorInput::CharInsertion(c) => {
-                if c == 'n' && matches!(self.state.mode, EditorMode::Find(_)) {
-                    self.goto_next_match();
-                    return Ok(());
-                }
+        if !matches!(input, EditorInput::ScrollViewport(_)) {
+            self.state.viewport.vertical_offset = 0;
+        }
 
+        match input {
+            EditorInput::PageUp => {
+                self.move_cursor_page_up();
+            }
+            EditorInput::PageDown => {
+                self.move_cursor_page_down();
+            }
+            EditorInput::ScrollViewport(MovementDirection::Up) => {
+                if self.state.viewport.top_line > 0 {
+                    self.state.viewport.vertical_offset += -1;
+                }
+            }
+            EditorInput::ScrollViewport(MovementDirection::Down) => {
+                if self.state.viewport.top_line + (self.config.n_lines as usize)
+                    < self.file_lines.len()
+                {
+                    self.state.viewport.vertical_offset += 1;
+                }
+            }
+            EditorInput::CharInsertion(c) => {
                 if self.state.mode == EditorMode::Command || self.state.mode == EditorMode::Insert {
                     if self.state.selection_anchor.is_some() {
                         self.delete_selection();
                         self.state.selection_anchor = None;
                     }
                     self.insert_char(c)
+                } else if matches!(self.state.mode, EditorMode::Find(_)) {
+                    match c {
+                        'n' => self.goto_next_match(),
+                        'b' => self.goto_previous_match(),
+                        _ => {}
+                    };
                 }
             }
             EditorInput::NewlineInsertion => match self.state.mode {
@@ -168,6 +183,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             }
             EditorInput::ToggleLineNumbers => {
                 self.config.show_line_numbers = !self.config.show_line_numbers;
+                self.needs_full_rerender = true;
             }
             EditorInput::EnterCommandMode(prefix) => {
                 if self.state.mode == EditorMode::Insert {
@@ -178,7 +194,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 self.state.command_text.truncate_chars(0);
                 self.state.mode = EditorMode::Insert;
             }
-            EditorInput::NoOp => {}
+            _ => {}
         }
 
         Ok(())

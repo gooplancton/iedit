@@ -11,23 +11,27 @@ use iedit_macros::ConfigParse;
 
 #[derive(ConfigParse)]
 pub struct EditorConfig {
+    pub page_size: usize,
     pub n_lines: u16,
     pub min_real_estate: u16,
     pub horizontal_margin: u16,
     pub vertical_margin: u16,
     pub tab_size: u16,
     pub show_line_numbers: bool,
+    pub display_keybindings: bool
 }
 
 impl Default for EditorConfig {
     fn default() -> Self {
         Self {
+            page_size: 33,
             n_lines: 0,
             min_real_estate: 10,
             horizontal_margin: 4,
             tab_size: 4,
             vertical_margin: 4,
             show_line_numbers: true,
+            display_keybindings: true
         }
     }
 }

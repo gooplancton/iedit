@@ -3,18 +3,23 @@ mod renderer;
 mod string;
 
 pub use highlight::SelectionHighlight;
+use regex_lite::Regex;
 pub use renderer::LineRenderer;
 use std::ops::RangeBounds;
 
 pub trait CharacterEditable {
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
+    fn nth_char_idx(&self, idx: usize) -> usize;
+    fn char_idx_at_byte(&self, byte_idx: usize) -> Option<usize>;
     fn iter_chars(&self) -> impl Iterator<Item = char>;
-    fn find_term_from(&self, term: &Self, pos: usize) -> Option<usize>;
+    fn find_regex_from(&self, regex: &Regex, pos: usize) -> Option<(usize, usize)>;
+    fn find_last_match(&self, regex: &Regex) -> Option<(usize, usize)>;
     fn split_chars_at(&self, idx: usize) -> (&Self, &Self);
     fn split_chars_at_mut(&mut self, idx: usize) -> (&mut Self, &mut Self);
     //fn multi_split_chars_at(&self, idxs: &[usize]) -> Vec<&Self>;
     //fn multi_split_chars_at_mut(&mut self, idxs: &[usize]) -> Vec<&mut Self>;
+    fn as_str(&self) -> &str;
     fn to_string(&self) -> String;
 }
 
@@ -24,9 +29,11 @@ pub trait EditorLine: Default {
     fn new() -> Self;
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
+    fn nth_char_idx(&self, idx: usize) -> usize;
+    fn char_idx_at_byte(&self, byte_idx: usize) -> Option<usize>;
     fn from_str(string: &impl AsRef<str>) -> Self;
     fn as_str(&self) -> &str;
-    fn find_term_from(&self, term: &str, pos: usize) -> Option<usize>;
+    fn find_regex_from(&self, regex: &Regex, pos: usize) -> Option<(usize, usize)>;
     fn to_string(&self) -> String;
     fn iter_chars(&self) -> impl Iterator<Item = char>;
     fn merge_at_end(&mut self, other: &mut Self);
