@@ -1,12 +1,79 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use crate::{editor::Editor, line::EditorLine};
 
+pub struct Edit {
+    pub pos: (usize, usize),
+    pub text: Vec<u8>,
+    pub ts: u64,
+    pub is_insertion: bool,
+}
+
 impl<TextLine: EditorLine> Editor<TextLine> {
+    pub fn undo_last_edit(&mut self) {
+        let edit = self.state.undo_stack.pop();
+        if edit.is_none() {
+            return;
+        }
+
+        let edit = edit.unwrap();
+        let line = self.file_lines.get_mut(edit.pos.1);
+        if line.is_none() {
+            return;
+        }
+
+        let line = line.unwrap();
+        let text = str::from_utf8(edit.text.as_slice());
+        if text.is_err() {
+            return;
+        }
+
+        if edit.is_insertion {
+            let len = text.unwrap().chars().count();
+            line.delete_chars(edit.pos.0..(edit.pos.0 + len));
+        } else {
+            line.insert_str_at(edit.pos.0, text.unwrap());
+        }
+
+        self.dirty_lines.push(edit.pos.1);
+        self.state.redo_stack.push(edit);
+    }
+
+    pub fn redo_last_edit(&mut self) {
+        let edit = self.state.redo_stack.pop();
+        if edit.is_none() {
+            return;
+        }
+
+        let edit = edit.unwrap();
+        let line = self.file_lines.get_mut(edit.pos.1);
+        if line.is_none() {
+            return;
+        }
+
+        let line = line.unwrap();
+        let text = str::from_utf8(&edit.text);
+        if text.is_err() {
+            return;
+        }
+
+        if edit.is_insertion {
+            line.insert_str_at(edit.pos.0, text.unwrap());
+        } else {
+            let len = text.unwrap().chars().count();
+            line.delete_chars(edit.pos.0..(edit.pos.0 + len));
+        }
+
+        self.dirty_lines.push(edit.pos.1);
+    }
+
     pub fn insert_char(&mut self, c: char) {
         let total_lines = self.file_lines.len();
         let (x, y) = self.state.get_cursor_pos_mut();
         let x = *x;
+        let y = y.copied();
 
-        if y.is_some_and(|y| *y == total_lines) {
+        if y.is_some_and(|y| y == total_lines) {
             self.file_lines.push(TextLine::new());
         }
 
@@ -15,6 +82,30 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             line.push_char(c);
         } else {
             line.insert_char_at(c, x);
+        }
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_secs())
+            .unwrap_or(u64::MAX);
+
+        if let Some(edit) = self.state.undo_stack.iter_mut().last()
+            && edit.is_insertion
+            && y.is_some_and(|y| y == edit.pos.1)
+            && now.saturating_sub(edit.ts) < self.config.edit_debounce_time_secs
+        {
+            String::from(c)
+                .bytes()
+                .for_each(|byte| edit.text.push(byte));
+            edit.ts = now;
+        } else if let Some(y) = y {
+            self.state.undo_stack.push(Edit {
+                pos: (x, y),
+                text: String::from(c).into_bytes(),
+                is_insertion: true,
+                ts: now,
+            });
+            self.state.redo_stack.truncate(0);
         }
 
         self.move_cursor_right();
@@ -36,9 +127,11 @@ impl<TextLine: EditorLine> Editor<TextLine> {
 
         let line = self.get_current_line_mut();
 
-        if x > 0 && x <= line.len() {
-            line.remove_char_at(x - 1);
+        let removed_char = if x > 0 && x <= line.len() {
+            let c = line.remove_char_at(x - 1);
             self.move_cursor_left();
+
+            Some(c)
         } else if x == 0 && y.is_some_and(|y| y > 0) {
             // Merge with previous line
             let y = y.unwrap();
@@ -48,6 +141,39 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             self.move_cursor_up();
             self.state.cursor_pos_x = prev_line_len;
             self.state.set_ideal_cursor_pos_x();
+            Some('\n')
+        } else {
+            None
+        };
+
+        if removed_char.is_none() {
+            return;
+        }
+
+        let removed_char = removed_char.unwrap();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_secs())
+            .unwrap_or(u64::MAX);
+
+        if let Some(edit) = self.state.undo_stack.iter_mut().last()
+            && !edit.is_insertion
+            && y.is_some_and(|y| y == edit.pos.1)
+            && now.saturating_sub(edit.ts) < self.config.edit_debounce_time_secs
+        {
+            // FIXME: this is just a temp solution
+            String::from(removed_char)
+                .bytes()
+                .for_each(|byte| edit.text.insert(0, byte));
+            edit.ts = now;
+        } else if let Some(y) = y {
+            self.state.undo_stack.push(Edit {
+                pos: (x, y),
+                text: String::from(removed_char).bytes().rev().collect(),
+                is_insertion: false,
+                ts: now,
+            });
+            self.state.redo_stack.truncate(0);
         }
 
         self.state.is_file_modified = true;

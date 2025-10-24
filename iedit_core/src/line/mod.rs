@@ -41,6 +41,7 @@ pub trait EditorLine: Default {
     fn delete_chars(&mut self, range: impl RangeBounds<usize>);
     fn push_char(&mut self, ch: char);
     fn push_str(&mut self, string: &str);
+    fn insert_str_at(&mut self, idx: usize, string: &str);
     fn insert_char_at(&mut self, ch: char, idx: usize);
     fn remove_char_at(&mut self, idx: usize) -> char;
     fn get_chars(&self, range: impl RangeBounds<usize>) -> &Self::SliceType;

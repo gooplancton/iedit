@@ -1,11 +1,6 @@
-use std::
-    io::{Stdout, Write}
-;
+use std::io::{Stdout, Write};
 
-use termion::{
-    cursor::HideCursor,
-    raw::RawTerminal,
-};
+use termion::{cursor::HideCursor, raw::RawTerminal};
 
 use iedit_macros::ConfigParse;
 
@@ -18,7 +13,8 @@ pub struct EditorConfig {
     pub vertical_margin: u16,
     pub tab_size: u16,
     pub show_line_numbers: bool,
-    pub display_keybindings: bool
+    pub show_keybindings: bool,
+    pub edit_debounce_time_secs: u64,
 }
 
 impl Default for EditorConfig {
@@ -31,7 +27,8 @@ impl Default for EditorConfig {
             tab_size: 4,
             vertical_margin: 4,
             show_line_numbers: true,
-            display_keybindings: true
+            show_keybindings: true,
+            edit_debounce_time_secs: 1,
         }
     }
 }
@@ -66,3 +63,4 @@ impl EditorConfig {
         Ok(offset)
     }
 }
+

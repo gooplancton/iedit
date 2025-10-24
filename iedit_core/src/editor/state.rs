@@ -1,6 +1,6 @@
 use regex_lite::Regex;
 
-use crate::editor::{EditorLine, viewport::Viewport};
+use crate::editor::{edit::Edit, viewport::Viewport, EditorLine};
 
 use super::Editor;
 
@@ -17,7 +17,7 @@ impl Default for EditorMode {
     }
 }
 
-static KEYBINDINGS_STRING: &'static str = concat!(
+static KEYBINDINGS_STRING: &str = concat!(
     " | Ctrl+ ",
     "\x1b[7m",
     "q",
@@ -53,6 +53,8 @@ pub struct EditorState<TextLine: EditorLine> {
 
     pub mode: EditorMode,
     pub searched_regex: Option<Regex>,
+    pub undo_stack: Vec<Edit>,
+    pub redo_stack: Vec<Edit>,
     pub is_file_modified: bool,
     pub should_quit: bool,
     pub should_run_command: bool,
@@ -120,8 +122,8 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             total_lines
         );
 
-        if self.config.display_keybindings {
-            status_text.push_str(&KEYBINDINGS_STRING)
+        if self.config.show_keybindings {
+            status_text.push_str(KEYBINDINGS_STRING)
         }
 
         self.state.status_text = TextLine::from_str(&status_text);

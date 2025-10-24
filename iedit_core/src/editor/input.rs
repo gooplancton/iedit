@@ -19,6 +19,8 @@ pub enum EditorInput {
     PageUp,
     Save,
     Quit,
+    Undo,
+    Redo,
     ToggleLineNumbers,
     EnterCommandMode(&'static str),
     BackToDefaultMode,
@@ -56,6 +58,8 @@ pub fn process_key_event(key: Key) -> EditorInput {
         Key::Ctrl('l') => ToggleLineNumbers,
         Key::Ctrl('g') => EnterCommandMode("goto "),
         Key::Ctrl('f') => EnterCommandMode("find "),
+        Key::Ctrl('z') => Undo,
+        Key::Ctrl('r') => Redo,
 
         // Page up/down
         Key::Ctrl('d') => PageDown,
@@ -85,6 +89,12 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         }
 
         match input {
+            EditorInput::Undo => {
+                self.undo_last_edit();
+            }
+            EditorInput::Redo => {
+                self.redo_last_edit();
+            }
             EditorInput::PageUp => {
                 self.move_cursor_page_up();
             }
