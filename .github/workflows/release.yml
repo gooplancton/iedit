@@ -66,5 +66,5 @@ jobs:
         with:
           tag: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
-          artifact: iedit
+          artifact: target/release/iedit
           token: ${{ secrets.PAT }}
