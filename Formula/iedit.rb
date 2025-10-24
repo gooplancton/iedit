@@ -1,40 +1,45 @@
 class Iedit < Formula
   desc "Minimal text editor that opens alongside the scrollback buffer"
   homepage "https://github.com/gooplancton/iedit"
-  # Set the version to match your GitHub release tag (without the leading 'v').
-  # e.g. if your release is 'v0.1.0' set version "0.1.0"
   version "0.1.0"
+  
+  MACOS_X86_URL = "https://github.com/gooplancton/iedit/releases/download/v0.1.0/iedit-macos-x86_64"
+  MACOS_X86_SHA = "***"
 
+  MACOS_ARM_URL = "https://github.com/gooplancton/iedit/releases/download/v0.1.0/iedit-macos-arm64"
+  MACOS_ARM_SHA = "***"
+
+  LINUX_URL = "https://github.com/gooplancton/iedit/releases/download/v0.1.0/iedit-linux"
+  LINUX_SHA = "***"
+  
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/gooplancton/iedit/releases/download/v#{version}/iedit-macos-x86_64"
-      sha256 "REPLACE_WITH_ACTUAL_SHA256_FOR_x86_64_TAR_GZ"
+      url MACOS_X86_URL
+      sha256 MACOS_X86_SHA
     else
-      url "https://github.com/gooplancton/iedit/releases/download/v#{version}/iedit-macos-arm64"
-      sha256 "REPLACE_WITH_ACTUAL_SHA256_FOR_arm64_TAR_GZ"
-    end
-
-    def install
-      # The release tarball is expected to contain a single executable named `iedit`.
-      bin.install "iedit"
+      url MACOS_ARM_URL
+      sha256 MACOS_ARM_SHA
     end
   end
-
+  
   on_linux do
-    # For Linux/Homebrew on Linux we build from source by default.
-    url "https://github.com/gooplancton/iedit/archive/refs/tags/v#{version}"
-    sha256 "REPLACE_WITH_SOURCE_TARBALL_SHA256"
-
-    depends_on "rust" => :build
-
-    def install
-      system "cargo", "install", *std_cargo_args
+    url LINUX_URL
+    sha256 LINUX_SHA
+  end
+  
+  def install
+    if OS.mac?
+      if Hardware::CPU.intel?
+        bin.install "iedit-macos-x86_64" => "iedit"
+      else
+        bin.install "iedit-macos-arm64" => "iedit"
+      end
+    else
+      bin.install "iedit-linux" => "iedit"
     end
   end
-
+  
   test do
-    # Basic smoke test: --version or help should exit successfully.
-    # Adjust if `iedit` uses a different flag for version output.
     output = shell_output("#{bin}/iedit --version 2>&1", 0)
     assert_match version.to_s, output
   end
