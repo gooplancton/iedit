@@ -208,6 +208,12 @@ impl EditorLine for String {
         }
     }
 
+    fn insert_str_at(&mut self, idx: usize, string: &str) {
+        let char_idx = self.nth_char_idx(idx);
+
+        self.insert_str(char_idx, string);
+    }
+
     fn find_regex_from(&self, regex: &Regex, idx: usize) -> Option<(usize, usize)> {
         let char_idx = self.nth_char_idx(idx);
 
