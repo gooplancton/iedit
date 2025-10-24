@@ -34,19 +34,37 @@ jobs:
       - name: Run tests
         run: cargo test --workspace --verbose
 
-      - name: Prepare release tag
+      - name: Show built artifacts (debug)
+        run: ls -la target/release || true
+
+      - name: Upload built binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iedit
+          path: target/release/iedit*
+
+      - name: Prepare release tag (read from iedit_core/Cargo.toml)
         id: tag
         run: |
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
-          TAG="v$(date -u +%Y%m%d%H%M%S)-${SHORT_SHA}"
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "Prepared tag: ${TAG}"
+          set -e
+          CARGO_TOML="iedit_core/Cargo.toml"
+          if [ -f "$CARGO_TOML" ]; then
+            ver=$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' "$CARGO_TOML" | head -n1)
+          else
+            ver=""
+          fi
+          if [ -z "$ver" ]; then
+            echo "No version found in $CARGO_TOML; defaulting to 0.0.0" >&2
+            ver="0.0.0"
+          fi
+          if [[ "$ver" == v* ]]; then TAG="$ver"; else TAG="v$ver"; fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Prepared tag: $TAG"
 
       - name: Create GitHub release and upload binary
-        # ncipollo/release-action will create the tag (if missing) and the release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
-          files: |
-            target/release/iedit
+          artifacts: iedit
+          token: ${{ secrets.GITHUB_TOKEN }}
