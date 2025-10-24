@@ -59,7 +59,7 @@ jobs:
           echo "macos arm sha: $MACOS_ARM_SHA"
           echo "linux sha: $LINUX_SHA"
 
-          export VERSION MACOS_X86_SHA MACOS_ARM_SHA LINUX_SHA
+          export VERSION MACOS_X86_SHA MACOS_ARM_SHA LINUX_SHA MACOS_X86_URL MACOS_ARM_URL LINUX_URL
 
           ruby <<'EOF'
           formula_file = 'Formula/iedit.rb'
