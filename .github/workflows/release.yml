@@ -99,14 +99,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      
-      - name: Display structure of downloaded files
-        run: ls -R artifacts
-      
+
+      - name: Rename binaries
+        run: |
+          mv artifacts/iedit-linux/iedit iedit-linux
+          mv artifacts/iedit-macos-arm64/iedit iedit-macos-arm64
+          mv artifacts/iedit-macos-x86_64/iedit iedit-macos-x86_64
+
       - name: Create GitHub release and attach artifacts
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.tag.outputs.tag }}
           name: Release ${{ steps.tag.outputs.tag }}
-          artifacts: "artifacts/*/*"
+          artifacts: "iedit-linux,iedit-macos-arm64,iedit-macos-x86_64"
           token: ${{ secrets.PAT }}
