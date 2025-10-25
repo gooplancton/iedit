@@ -27,6 +27,8 @@ mod io;
 mod render;
 mod state;
 mod viewport;
+mod highlight;
+mod line_renderer;
 
 pub struct Editor {
     file: Option<File>,

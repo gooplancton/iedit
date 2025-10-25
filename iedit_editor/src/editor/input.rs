@@ -1,6 +1,6 @@
 use termion::event::Key;
 
-use crate::{editor::state::EditorMode, line::EditorLine};
+use crate::{editor::state::EditorMode, line::DocumentLine};
 
 use super::{Editor, cursor::MovementDirection};
 

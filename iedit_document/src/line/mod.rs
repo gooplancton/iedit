@@ -1,10 +1,6 @@
-mod highlight;
-mod renderer;
 mod string;
 
-pub use highlight::SelectionHighlight;
 use regex_lite::Regex;
-pub use renderer::LineRenderer;
 use std::ops::RangeBounds;
 
 pub trait CharacterEditable {
@@ -21,7 +17,7 @@ pub trait CharacterEditable {
     fn to_string(&self) -> String;
 }
 
-pub trait EditorLine: Default {
+pub trait DocumentLine: Default {
     fn len(&self) -> usize;
     fn is_empty(&self) -> bool;
     fn nth_char_idx(&self, idx: usize) -> usize;
@@ -43,4 +39,3 @@ pub trait EditorLine: Default {
     fn get_nth_char(&self, idx: usize) -> Option<char>;
     fn truncate_chars(&mut self, new_len: usize);
 }
-

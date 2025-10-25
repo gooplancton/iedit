@@ -1,14 +1,13 @@
 [workspace]
-members = [
-    "iedit_core",
-    "iedit_macros",
-]
-default-members = ["iedit_core"]
+members = ["iedit_editor", "iedit_document", "iedit_macros"]
+default-members = ["iedit_editor"]
 resolver = "2"
 
 [workspace.dependencies]
+regex-lite = "0.1.8"
 termion = "4.0"
 iedit_macros = { path = "./iedit_macros" }
+iedit_document = { path = "./iedit_document" }
 
 # Proc macro dependencies (used by iedit_macros)
 syn = { version = "2.0", features = ["full"] }

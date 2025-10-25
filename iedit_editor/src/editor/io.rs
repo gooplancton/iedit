@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::line::EditorLine;
+use crate::line::DocumentLine;
 
 use super::Editor;
 

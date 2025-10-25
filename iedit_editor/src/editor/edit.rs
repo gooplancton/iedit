@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{editor::Editor, line::EditorLine};
+use crate::{editor::Editor, line::DocumentLine};
 
 pub struct Edit {
     pub pos: (usize, usize),

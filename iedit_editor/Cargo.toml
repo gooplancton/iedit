@@ -1,12 +1,13 @@
 [package]
-name = "iedit_core"
+name = "iedit_editor"
 version = "0.1.2"
 edition = "2024"
 
 [dependencies]
 iedit_macros = { workspace = true }
-regex-lite = "0.1.8"
+iedit_document = { workspace = true }
 termion = { workspace = true }
+regex-lite = { workspace = true }
 
 [[bin]]
 name = "iedit"

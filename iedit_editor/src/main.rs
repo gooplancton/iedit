@@ -1,4 +1,4 @@
-use iedit_core::Editor;
+use iedit_editor::Editor;
 
 fn main() -> std::io::Result<()> {
     let path = std::env::args()

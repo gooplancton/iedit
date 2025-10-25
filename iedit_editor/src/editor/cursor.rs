@@ -2,7 +2,7 @@
 
 use std::cmp::min;
 
-use crate::line::EditorLine;
+use crate::line::DocumentLine;
 
 use super::Editor;
 
