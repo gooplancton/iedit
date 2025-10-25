@@ -9,9 +9,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2261d10cca569e4643e526d8dc2e62e433cc8aba21ab764233731f8d369bf394"
 
 [[package]]
-name = "iedit_core"
+name = "iedit_document"
+version = "0.1.0"
+dependencies = [
+ "regex-lite",
+]
+
+[[package]]
+name = "iedit_editor"
 version = "0.1.2"
 dependencies = [
+ "iedit_document",
  "iedit_macros",
  "regex-lite",
  "termion",

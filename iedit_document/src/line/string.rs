@@ -2,7 +2,7 @@ use std::ops::RangeBounds;
 
 use regex_lite::Regex;
 
-use crate::line::{CharacterEditable, EditorLine};
+use crate::line::{CharacterEditable, DocumentLine};
 
 impl CharacterEditable for str {
     fn len(&self) -> usize {
@@ -81,7 +81,7 @@ impl CharacterEditable for str {
     }
 }
 
-impl EditorLine for String {
+impl DocumentLine for String {
     fn len(&self) -> usize {
         self.chars().count()
     }

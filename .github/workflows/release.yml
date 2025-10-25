@@ -84,11 +84,11 @@ jobs:
       - name: Checkout repository (for tag/version extraction)
         uses: actions/checkout@v4
       
-      - name: Read version from iedit_core/Cargo.toml
+      - name: Read version from iedit_editor/Cargo.toml
         id: tag
         run: |
           set -e
-          CARGO_TOML="iedit_core/Cargo.toml"
+          CARGO_TOML="iedit_editor/Cargo.toml"
           ver=$(sed -n 's/^[[:space:]]*version[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' "$CARGO_TOML" | head -n1 || true)
           if [ -z "$ver" ]; then ver="0.0.0"; fi
           if [[ "$ver" == v* ]]; then TAG="$ver"; else TAG="v$ver"; fi

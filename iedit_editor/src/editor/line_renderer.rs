@@ -1,8 +1,9 @@
 use std::{cmp::min, io::Write, ops::Range};
 
 use crate::{
-    line::{CharacterEditable, EditorLine, highlight::SelectionHighlight},
+    line::{CharacterEditable, DocumentLine},
     terminal::{HIGHLIGHT_END, HIGHLIGHT_START},
+    editor::highlight::SelectionHighlight
 };
 
 pub struct LineRenderer<'line> {

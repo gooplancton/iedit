@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crate::{
-    line::{LineRenderer, SelectionHighlight},
+    editor::{highlight::SelectionHighlight, line_renderer::LineRenderer},
     terminal::{self, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, HIGHLIGHT_END, V_BAR},
 };
 

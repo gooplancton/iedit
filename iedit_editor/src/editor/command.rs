@@ -1,12 +1,12 @@
 use std::{io, str::FromStr};
 
-use regex_lite::Regex;
-
 use crate::{
     Editor,
     editor::state::{EditorMode, EditorState},
-    line::{CharacterEditable, EditorLine},
 };
+
+use iedit_document::{CharacterEditable, DocumentLine};
+use regex_lite::Regex;
 
 pub enum EditorCommand {
     GotoLine(usize),
