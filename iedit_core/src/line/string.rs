@@ -82,12 +82,6 @@ impl CharacterEditable for str {
 }
 
 impl EditorLine for String {
-    type SliceType = str;
-
-    fn new() -> Self {
-        String::new()
-    }
-
     fn len(&self) -> usize {
         self.chars().count()
     }
@@ -100,7 +94,7 @@ impl EditorLine for String {
         self.as_str()
     }
 
-    fn from_str(string: &impl AsRef<str>) -> Self {
+    fn from_str_trim_newline(string: &impl AsRef<str>) -> Self {
         string.as_ref().trim_end_matches("\n").to_owned()
     }
 
@@ -138,7 +132,7 @@ impl EditorLine for String {
         self.split_off(char_idx)
     }
 
-    fn delete_chars(&mut self, range: impl std::ops::RangeBounds<usize>) {
+    fn delete_chars(&mut self, range: impl std::ops::RangeBounds<usize>) -> Option<String> {
         let start = match range.start_bound() {
             std::ops::Bound::Included(&idx) => self.nth_char_idx(idx),
             std::ops::Bound::Excluded(&idx) => self.nth_char_idx(idx + 1),
@@ -150,8 +144,14 @@ impl EditorLine for String {
             std::ops::Bound::Unbounded => self.len(),
         };
         if start < end && end <= self.len() {
-            self.replace_range(start..end, "");
+            let mut rest = self.split_off(start);
+            let deleted_chars = rest.split_off(end - start);
+            self.merge_at_end(&mut rest);
+
+            return Some(deleted_chars);
         }
+
+        None
     }
 
     fn push_char(&mut self, ch: char) {
@@ -176,7 +176,7 @@ impl EditorLine for String {
         }
     }
 
-    fn get_chars(&self, range: impl RangeBounds<usize>) -> &Self::SliceType {
+    fn get_chars(&self, range: impl RangeBounds<usize>) -> &str {
         let start = match range.start_bound() {
             std::ops::Bound::Included(&idx) => self.nth_char_idx(idx),
             std::ops::Bound::Excluded(&idx) => self.nth_char_idx(idx + 1),

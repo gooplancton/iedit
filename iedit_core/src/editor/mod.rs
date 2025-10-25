@@ -15,7 +15,6 @@ use termion::{
 
 use crate::{
     editor::{input::process_key_event, io::read_file},
-    line::EditorLine,
     terminal::H_BAR,
 };
 
@@ -29,11 +28,11 @@ mod render;
 mod state;
 mod viewport;
 
-pub struct Editor<TextLine: EditorLine> {
+pub struct Editor {
     file: Option<File>,
     canonicalized_file_path: PathBuf,
-    file_lines: Vec<TextLine>,
-    state: EditorState<TextLine>,
+    file_lines: Vec<String>,
+    state: EditorState,
     config: EditorConfig,
     term: HideCursor<RawTerminal<Stdout>>,
     ui_origin: (u16, u16),
@@ -46,7 +45,7 @@ pub struct Editor<TextLine: EditorLine> {
     needs_full_rerender: bool,
 }
 
-impl<TextLine: EditorLine> Editor<TextLine> {
+impl Editor {
     pub fn new(path: impl AsRef<Path>, open_at: usize) -> std::io::Result<Self> {
         let (file, canonicalized_file_path, file_lines) = read_file(path)?;
         let mut state = EditorState::default();

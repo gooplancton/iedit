@@ -82,7 +82,7 @@ pub fn process_key_event(key: Key) -> EditorInput {
     }
 }
 
-impl<TextLine: EditorLine> Editor<TextLine> {
+impl Editor {
     pub fn process_input(&mut self, input: EditorInput) -> std::io::Result<()> {
         if !matches!(input, EditorInput::ScrollViewport(_)) {
             self.state.viewport.vertical_offset = 0;

@@ -17,7 +17,7 @@ pub enum EditorCommand {
     NoOp,
 }
 
-impl<TextLine: EditorLine> EditorState<TextLine> {
+impl EditorState {
     pub fn parse_command(&self) -> EditorCommand {
         match self
             .command_text
@@ -43,7 +43,7 @@ impl<TextLine: EditorLine> EditorState<TextLine> {
     }
 }
 
-impl<TextLine: EditorLine> Editor<TextLine> {
+impl Editor {
     pub fn run_command(&mut self) -> io::Result<()> {
         let command = self.state.parse_command();
 
@@ -83,7 +83,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     }
 
     pub fn get_search_input_str(&self) -> &str {
-        self.state.command_text.get_chars(5..).as_str()
+        self.state.command_text.get_chars(5..)
     }
 
     pub fn goto_next_match(&mut self) {
@@ -102,7 +102,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                     self.state.ideal_cursor_pos_x = x_start;
                     self.state.selection_anchor = Some((x_end, y));
                     self.state.mode = EditorMode::Find((x_start, y));
-                    return
+                    return;
                 }
             }
         }
@@ -130,7 +130,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                     self.state.ideal_cursor_pos_x = x_start;
                     self.state.selection_anchor = Some((x_end, y));
                     self.state.mode = EditorMode::Find((x_start, y));
-                    return
+                    return;
                 }
             }
         }

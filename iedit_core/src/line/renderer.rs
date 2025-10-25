@@ -5,14 +5,14 @@ use crate::{
     terminal::{HIGHLIGHT_END, HIGHLIGHT_START},
 };
 
-pub struct LineRenderer<'line, TextLine: EditorLine> {
-    pub line: &'line TextLine,
+pub struct LineRenderer<'line> {
+    pub line: &'line String,
     pub display_range: Range<usize>,
     pub selection_highlight: SelectionHighlight,
 }
 
-impl<'line, TextLine: EditorLine> LineRenderer<'line, TextLine> {
-    pub fn new(line: &'line TextLine) -> Self {
+impl<'line> LineRenderer<'line> {
+    pub fn new(line: &'line String) -> Self {
         Self {
             line,
             display_range: (0..line.len()),

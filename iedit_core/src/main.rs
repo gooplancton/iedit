@@ -1,4 +1,4 @@
-use iedit_core::{Editor, line::DefaultLineType};
+use iedit_core::Editor;
 
 fn main() -> std::io::Result<()> {
     let path = std::env::args()
@@ -10,7 +10,7 @@ fn main() -> std::io::Result<()> {
         .and_then(|open_at| open_at.parse::<usize>().ok())
         .unwrap_or_default();
 
-    let mut editor = Editor::<DefaultLineType>::new(path, open_at)?;
+    let mut editor = Editor::new(path, open_at)?;
 
     editor.run()?;
 
