@@ -13,7 +13,7 @@ pub enum MovementDirection {
     Right,
 }
 
-impl<TextLine: EditorLine> Editor<TextLine> {
+impl Editor {
     pub fn move_cursor_up(&mut self) {
         let (_, cursor_pos_y) = self.state.get_cursor_pos_mut();
         cursor_pos_y.map(|y| *y = y.saturating_sub(1));

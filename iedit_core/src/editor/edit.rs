@@ -9,10 +9,11 @@ pub struct Edit {
     pub is_insertion: bool,
 }
 
-impl<TextLine: EditorLine> Editor<TextLine> {
+impl Editor {
     pub fn undo_last_edit(&mut self) {
         let edit = self.state.undo_stack.pop();
         if edit.is_none() {
+            self.temp_message = "Already at oldest change".to_owned();
             return;
         }
 
@@ -42,6 +43,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
     pub fn redo_last_edit(&mut self) {
         let edit = self.state.redo_stack.pop();
         if edit.is_none() {
+            self.temp_message = "Already at newest change".to_owned();
             return;
         }
 
@@ -74,7 +76,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
         let y = y.copied();
 
         if y.is_some_and(|y| y == total_lines) {
-            self.file_lines.push(TextLine::new());
+            self.file_lines.push(String::new());
         }
 
         let line = self.get_current_line_mut();
@@ -186,19 +188,45 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             end_x = self.file_lines[end_y].len();
         }
 
-        if start_y == end_y {
+        let deleted_text = if start_y == end_y {
             let line = &mut self.file_lines[start_y];
-            line.delete_chars(start_x..end_x);
+            line.delete_chars(start_x..end_x)
         } else {
             let (before_last_line, last_line) = self.file_lines.split_at_mut(end_y);
-            before_last_line[start_y].delete_chars(start_x..);
+            let mut deleted_text = before_last_line[start_y]
+                .delete_chars(start_x..)
+                .unwrap_or_default();
 
             let after_end = &mut last_line[0];
-            after_end.delete_chars(..end_x);
+            let mut last_line_deleted = after_end.delete_chars(..end_x).unwrap_or_default();
 
             before_last_line[start_y].merge_at_end(after_end);
 
-            self.file_lines.drain(start_y + 1..=end_y);
+            for mut deleted_line in self.file_lines.drain(start_y + 1..=end_y).into_iter() {
+                deleted_text.push('\n');
+                deleted_text.merge_at_end(&mut deleted_line);
+            }
+
+            deleted_text.push('\n');
+            deleted_text.merge_at_end(&mut last_line_deleted);
+
+            Some(deleted_text)
+        };
+
+        if let Some(deleted_text) = deleted_text
+            && self.state.is_editing_content()
+        {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|duration| duration.as_secs())
+                .unwrap_or(u64::MAX);
+            self.state.undo_stack.push(Edit {
+                pos: (start_x, start_y),
+                text: deleted_text.into_bytes(),
+                is_insertion: false,
+                ts: now,
+            });
+            self.state.redo_stack.truncate(0);
         }
 
         self.state.cursor_pos_x = start_x;
@@ -233,36 +261,63 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             new_x -= 1;
         }
 
-        if new_x < x {
+        let deleted_word: Option<String> = if new_x < x {
             let old_x = x;
             let line = match y {
                 Some(y) => &mut self.file_lines[y],
                 None => &mut self.state.command_text,
             };
-            line.delete_chars(new_x..old_x);
+            let deleted_word = line.delete_chars(new_x..old_x);
             let (x, _) = self.state.get_cursor_pos_mut();
             *x = new_x;
             self.state.set_ideal_cursor_pos_x();
             self.state.is_file_modified = true;
+
+            deleted_word
+        } else {
+            None
+        };
+
+        if let (Some(y), Some(deleted_word)) = (y, deleted_word) {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|duration| duration.as_secs())
+                .unwrap_or(u64::MAX);
+            self.state.undo_stack.push(Edit {
+                pos: (x, y),
+                text: deleted_word.into_bytes(),
+                is_insertion: false,
+                ts: now,
+            });
+            self.state.redo_stack.truncate(0);
         }
     }
 
     pub fn insert_newline(&mut self) {
-        let y = self.state.cursor_pos_y;
-        let x = self.state.cursor_pos_x;
-
-        if y == self.file_lines.len() {
-            self.file_lines.push(TextLine::new());
+        let (x, y) = self.state.get_cursor_pos_mut();
+        if y.is_none() {
+            return;
         }
-        let current_line = if x < self.file_lines[y].len() {
-            self.file_lines[y].split_chars_off_at(x)
+
+        let y = y.unwrap();
+
+        if *y == self.file_lines.len() {
+            self.file_lines.push(String::new());
+        }
+        let current_line = if *x < self.file_lines[*y].len() {
+            self.file_lines[*y].split_chars_off_at(*x)
         } else {
-            TextLine::new()
+            String::new()
         };
-        self.file_lines.insert(y + 1, current_line);
-        self.state.cursor_pos_y += 1;
-        self.state.cursor_pos_x = 0;
-        self.state.ideal_cursor_pos_x = self.state.cursor_pos_x;
+
+        *y += 1;
+        *x = 0;
+
+        self.file_lines.insert(*y, current_line);
+
+        // TODO: add to edit stack
+
+        self.state.set_ideal_cursor_pos_x();
         self.state.is_file_modified = true;
     }
 }

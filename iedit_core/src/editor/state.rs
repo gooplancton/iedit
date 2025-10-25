@@ -1,6 +1,6 @@
 use regex_lite::Regex;
 
-use crate::editor::{edit::Edit, viewport::Viewport, EditorLine};
+use crate::editor::{edit::Edit, viewport::Viewport};
 
 use super::Editor;
 
@@ -34,13 +34,21 @@ static KEYBINDINGS_STRING: &str = concat!(
     "\x1b[7m",
     "g",
     "\x1b[0m",
-    "oto"
+    "oto, ",
+    "\x1b[7m",
+    "z",
+    "\x1b[0m",
+    "-undo, ",
+    "\x1b[7m",
+    "r",
+    "\x1b[0m",
+    "edo"
 );
 
 #[derive(Default)]
-pub struct EditorState<TextLine: EditorLine> {
-    pub status_text: TextLine,
-    pub command_text: TextLine,
+pub struct EditorState {
+    pub status_text: String,
+    pub command_text: String,
     pub viewport: Viewport,
     pub cursor_pos_x: usize,
     pub cursor_pos_y: usize,
@@ -60,7 +68,7 @@ pub struct EditorState<TextLine: EditorLine> {
     pub should_run_command: bool,
 }
 
-impl<TextLine: EditorLine> EditorState<TextLine> {
+impl EditorState {
     pub fn get_cursor_pos(&mut self) -> (usize, Option<usize>) {
         match self.mode {
             EditorMode::Insert => (self.cursor_pos_x, Some(self.cursor_pos_y)),
@@ -86,15 +94,15 @@ impl<TextLine: EditorLine> EditorState<TextLine> {
     }
 }
 
-impl<TextLine: EditorLine> Editor<TextLine> {
-    pub fn get_current_line(&self) -> &TextLine {
+impl Editor {
+    pub fn get_current_line(&self) -> &String {
         match self.state.mode {
             EditorMode::Insert => &self.file_lines[self.state.cursor_pos_y],
             _ => &self.state.command_text,
         }
     }
 
-    pub fn get_current_line_mut(&mut self) -> &mut TextLine {
+    pub fn get_current_line_mut(&mut self) -> &mut String {
         match self.state.mode {
             EditorMode::Insert => &mut self.file_lines[self.state.cursor_pos_y],
             _ => &mut self.state.command_text,
@@ -126,7 +134,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
             status_text.push_str(KEYBINDINGS_STRING)
         }
 
-        self.state.status_text = TextLine::from_str(&status_text);
+        self.state.status_text = String::from(&status_text);
     }
 
     pub fn get_highlighted_range(&self) -> ((usize, usize), (usize, usize)) {

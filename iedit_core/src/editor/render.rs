@@ -1,13 +1,13 @@
 use std::io::Write;
 
 use crate::{
-    line::{EditorLine, LineRenderer, SelectionHighlight},
+    line::{LineRenderer, SelectionHighlight},
     terminal::{self, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, HIGHLIGHT_END, V_BAR},
 };
 
 use super::Editor;
 
-impl<TextLine: EditorLine> Editor<TextLine> {
+impl Editor {
     pub fn render(&mut self) -> std::io::Result<()> {
         self.reset_cursor()?;
         self.render_content()?;

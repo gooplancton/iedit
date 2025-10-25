@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-use crate::editor::{Editor, EditorLine};
+use crate::editor::Editor;
 
 pub struct Viewport {
     pub top_line: usize,
@@ -24,7 +24,7 @@ impl Default for Viewport {
     }
 }
 
-impl<TextLine: EditorLine> Editor<TextLine> {
+impl Editor {
     pub fn adjust_viewport(&mut self) {
         let n_lines = self.config.n_lines as usize;
         let n_cols = (self.term_width as usize) - self.config.show_line_numbers as usize * 7;

@@ -8,9 +8,9 @@ use crate::line::EditorLine;
 
 use super::Editor;
 
-type ReadFile<TextLine> = (Option<File>, PathBuf, Vec<TextLine>);
+type ReadFile = (Option<File>, PathBuf, Vec<String>);
 
-pub fn read_file<TextLine: EditorLine>(path: impl AsRef<Path>) -> io::Result<ReadFile<TextLine>> {
+pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
     let file = OpenOptions::new()
         .read(true)
         .write(true)
@@ -34,7 +34,7 @@ pub fn read_file<TextLine: EditorLine>(path: impl AsRef<Path>) -> io::Result<Rea
             let mut file_reader = BufReader::new(file);
             let mut file_line = String::default();
             while file_reader.read_line(&mut file_line)? > 0 {
-                file_lines.push(TextLine::from_str(&file_line));
+                file_lines.push(String::from_str_trim_newline(&file_line));
                 file_line.truncate(0);
             }
 
@@ -44,7 +44,7 @@ pub fn read_file<TextLine: EditorLine>(path: impl AsRef<Path>) -> io::Result<Rea
     }
 }
 
-impl<TextLine: EditorLine> Editor<TextLine> {
+impl Editor {
     pub fn save_file(&mut self) -> std::io::Result<()> {
         // naive implemetation for now, in the future we can keep track of
         // lines that have been modified and only write them
@@ -60,7 +60,7 @@ impl<TextLine: EditorLine> Editor<TextLine> {
                 .iter()
                 .enumerate()
                 .try_for_each(|(line_idx, line)| {
-                    write!(file_writer, "{}", line.to_string())?;
+                    write!(file_writer, "{}", line)?;
                     if line_idx != self.file_lines.len() - 1 {
                         writeln!(file_writer)
                     } else {
