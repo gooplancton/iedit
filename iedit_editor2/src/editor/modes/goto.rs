@@ -21,6 +21,7 @@ impl Editor {
         use EditorMode as M;
 
         match input {
+            Input::Keypress(Key::Esc) => Some(C::SwitchMode(M::Insert)),
             Input::Keypress(Key::Left) => Some(C::MovePromptCursorLeft),
             Input::Keypress(Key::Right) => Some(C::MovePromptCursorRight),
             Input::Keypress(Key::Backspace) | Input::Keypress(Key::Delete) => {
