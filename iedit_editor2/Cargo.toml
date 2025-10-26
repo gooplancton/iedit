@@ -1,0 +1,14 @@
+[package]
+name = "iedit_editor2"
+version = "0.1.2"
+edition = "2024"
+
+[dependencies]
+iedit_macros = { workspace = true }
+iedit_document = { workspace = true }
+termion = { workspace = true }
+regex-lite = { workspace = true }
+
+[[bin]]
+name = "iedit"
+path = "src/main.rs"

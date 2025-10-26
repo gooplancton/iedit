@@ -26,6 +26,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "iedit_editor2"
+version = "0.1.2"
+dependencies = [
+ "iedit_document",
+ "iedit_macros",
+ "regex-lite",
+ "termion",
+]
+
+[[package]]
 name = "iedit_macros"
 version = "0.1.0"
 dependencies = [
