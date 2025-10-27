@@ -40,11 +40,9 @@ impl Editor {
                 .viewport
                 .pre_scroll_top_line
                 .saturating_sub(vertical_scroll);
-            self.renderer.needs_full_rerender = true;
         } else if should_scroll_down && lines_below_viewport > 0 {
             let vertical_scroll = min(lines_below_viewport, y.saturating_sub(bottom_limit));
             self.viewport.pre_scroll_top_line += vertical_scroll;
-            self.renderer.needs_full_rerender = true;
         }
 
         self.viewport.top_line = self.viewport.pre_scroll_top_line;

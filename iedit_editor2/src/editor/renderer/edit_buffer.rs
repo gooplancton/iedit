@@ -73,16 +73,17 @@ impl Editor {
         Ok(())
     }
 
-    pub fn render_content(&mut self) -> std::io::Result<()> {
+    pub fn render_edit_buffer(&mut self) -> std::io::Result<()> {
         let row_span_low = self.viewport.top_line;
         let row_span_high =
             (self.viewport.top_line + self.config.n_lines as usize).min(self.document.n_lines());
 
         for line_idx in row_span_low..row_span_high {
             let should_render_line = self.renderer.needs_full_rerender
-                || self.renderer.dirty_lines.contains(&line_idx)
                 || line_idx == self.cursor.cur_y
-                || line_idx == self.cursor.past_y;
+                || line_idx == self.cursor.past_y
+                || self.viewport.vertical_offset != 0
+                || self.renderer.dirty_lines.contains(&line_idx);
 
             if should_render_line {
                 self.render_line(line_idx)?;

@@ -40,7 +40,7 @@ impl Renderer {
 impl Editor {
     pub fn render(&mut self) -> std::io::Result<()> {
         self.renderer.reset_cursor()?;
-        self.render_content()?;
+        self.render_edit_buffer()?;
         self.render_status()?;
         self.renderer.term.flush()?;
 

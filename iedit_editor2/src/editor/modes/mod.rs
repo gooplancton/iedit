@@ -26,7 +26,13 @@ impl Editor {
         use EditorCommand as C;
 
         if !matches!(command, C::ScrollViewportUp) && !matches!(command, C::ScrollViewportDown) {
+            if (self.viewport.top_line <= self.cursor.cur_y)
+                && (self.cursor.cur_y < self.viewport.top_line + self.config.n_lines as usize)
+            {
+                self.viewport.pre_scroll_top_line = self.viewport.top_line;
+            }
             self.viewport.vertical_offset = 0;
+            self.renderer.needs_full_rerender = true;
         }
 
         match command {
