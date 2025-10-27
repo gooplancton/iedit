@@ -2,7 +2,7 @@
 
 use std::{
     fs::File,
-    io::{Stdout, Write, stdin},
+    io::{BufWriter, Stdout, Write, stdin},
     path::{Path, PathBuf},
 };
 
@@ -39,12 +39,14 @@ pub struct Editor {
     file: Option<File>,
     document: Document,
     canonicalized_file_path: PathBuf,
-    temp_notification: String,
     mode: EditorMode,
     status_bar: StatusBar,
     cursor: Cursor,
     viewport: Viewport,
     renderer: Renderer,
+
+    // could be a bitfield?
+    is_selection_locked: bool,
 }
 
 impl Editor {
@@ -78,7 +80,7 @@ impl Editor {
 
         let horizontal_bar = str::repeat(H_BAR, term_width as usize);
         let renderer = Renderer {
-            term,
+            term: BufWriter::new(term),
             ui_origin,
             term_width,
             horizontal_bar,
@@ -92,16 +94,16 @@ impl Editor {
             document,
             mode: EditorMode::Insert,
             config,
-            temp_notification: String::with_capacity(10),
             status_bar: StatusBar::default(),
             cursor: Cursor::new((0, cur_y)),
             renderer,
             viewport,
+            is_selection_locked: false,
         })
     }
 
     pub fn run(&mut self) -> std::io::Result<()> {
-        // self.render()?;
+        self.render()?;
 
         let stdin = stdin();
         let input_parser = InputParser {
@@ -116,20 +118,20 @@ impl Editor {
             }
 
             let command = command.unwrap();
-            let res = self.execute_command(&command);
+            let res = self.execute_command(command);
 
             if matches!(res, CommandExecutionResult::ShouldQuit) {
                 break;
             }
 
-            // // self.clamp_cursor();
+            self.clamp_cursor();
 
-            // self.adjust_viewport();
+            self.adjust_viewport();
 
-            // self.render()?;
+            self.render()?;
         }
 
-        // self.cleanup()?;
+        self.cleanup()?;
         Ok(())
     }
 }

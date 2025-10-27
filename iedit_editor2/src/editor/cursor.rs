@@ -1,3 +1,7 @@
+use std::cmp::min;
+
+use crate::Editor;
+
 pub struct Cursor {
     pub cur_x: usize,
     pub cur_y: usize,
@@ -72,3 +76,17 @@ impl Cursor {
         })
     }
 }
+
+impl Editor {
+    pub fn clamp_cursor(&mut self) {
+        let max_x = self
+            .document
+            .lines
+            .get(self.cursor.cur_y)
+            .map_or(0, |line| line.len());
+
+        self.cursor.cur_x = min(self.cursor.ideal_x, max_x);
+        self.cursor.cur_y = min(self.cursor.cur_y, self.document.n_lines());
+    }
+}
+

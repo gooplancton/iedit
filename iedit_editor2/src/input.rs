@@ -19,6 +19,7 @@ impl Iterator for InputParser {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.keys.next()?.ok()? {
+            // TODO: parse ctrl + shift + arrows chords
             key => Some(Input::Keypress(key)),
         }
     }

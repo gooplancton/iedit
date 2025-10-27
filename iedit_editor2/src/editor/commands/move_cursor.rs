@@ -1,5 +1,5 @@
 pub enum MoveCursor {
-    ToAbsolutePos((usize, usize)),
+    AbsolutePos((usize, usize)),
     Up(usize),
     Down(usize),
     Left(usize),
@@ -7,6 +7,10 @@ pub enum MoveCursor {
     NextWord,
     PreviousWord,
     NextParagraph,
+    StartOfLine,
+    EndOfLine,
+    StartOfFile,
+    EndOfFile,
     PreviousParagraph,
     MatchingParenthesis,
     NextOccurrenceOf(char),

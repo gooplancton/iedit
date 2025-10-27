@@ -1,7 +1,8 @@
+mod edit;
 mod move_cursor;
 
 use crate::{Editor, editor::modes::EditorMode};
-use iedit_document::Edit;
+use iedit_document::EditOperation;
 pub use move_cursor::MoveCursor;
 pub enum EditorCommand {
     Quit,
@@ -10,22 +11,20 @@ pub enum EditorCommand {
         movement: MoveCursor,
         with_selection: bool,
     },
+    ToggleLockSelection,
     ClearSelection,
     SwitchMode(EditorMode),
-    Edit {
-        op: Edit,
-        clear_selection: bool
-    },
+    Edit(EditOperation),
     UndoLastEdit,
     RedoLastEdit,
     MovePromptCursorLeft,
     MovePromptCursorRight,
     InsertCharPrompt {
         pos_x: usize,
-        ch: char
+        ch: char,
     },
     DeleteCharPrompt {
-        pos_x: usize
+        pos_x: usize,
     },
     SubmitPrompt,
     ToggleLineNumbers,

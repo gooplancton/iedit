@@ -1,4 +1,4 @@
-use iedit_document::Edit;
+use iedit_document::EditOperation;
 use termion::event::Key;
 
 use crate::{
@@ -8,13 +8,13 @@ use crate::{
 impl Editor {
     pub fn prompt_mode_execute_command(
         &mut self,
-        command: &EditorCommand,
+        command: EditorCommand,
     ) -> CommandExecutionResult {
         todo!()
     }
 
     pub fn prompt_mode_parse_command(&self, input: Input) -> Option<EditorCommand> {
-        use Edit as E;
+        use EditOperation as E;
         use EditorCommand as C;
         use EditorMode as M;
 

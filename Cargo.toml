@@ -1,6 +1,6 @@
 [workspace]
 members = ["iedit_editor", "iedit_document", "iedit_macros", "iedit_editor2"]
-default-members = ["iedit_editor"]
+default-members = ["iedit_editor2"]
 resolver = "2"
 
 [workspace.dependencies]

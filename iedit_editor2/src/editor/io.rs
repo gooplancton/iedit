@@ -72,7 +72,7 @@ impl Editor {
             file_writer.flush()?;
 
             // self.state.is_file_modified = false;
-            self.temp_notification = "File saved".to_owned();
+            self.status_bar.update_notification("File saved");
         }
 
         Ok(())
