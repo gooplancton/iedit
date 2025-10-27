@@ -49,11 +49,19 @@ pub struct Editor {
     is_selection_locked: bool,
 }
 
+fn get_terminal_size() -> std::io::Result<(u16, u16)> {
+    if std::env::var("LLDB_DEBUG").is_ok() {
+        Ok((20, 20))
+    } else {
+        terminal_size()
+    }
+}
+
 impl Editor {
     pub fn new(path: impl AsRef<Path>, open_at: usize) -> std::io::Result<Self> {
         let (file, canonicalized_file_path, file_lines) = read_file(path)?;
 
-        let (term_width, term_height) = terminal_size()?;
+        let (term_width, term_height) = get_terminal_size()?;
         let mut term = HideCursor::from(std::io::stdout().into_raw_mode()?);
         let mut ui_origin = term.cursor_pos()?;
 

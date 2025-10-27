@@ -5,7 +5,7 @@ use regex_lite::Regex;
 use crate::line::{CharacterEditable, DocumentLine};
 
 impl CharacterEditable for str {
-    fn len(&self) -> usize {
+    fn n_chars(&self) -> usize {
         self.chars().count()
     }
 
@@ -82,7 +82,7 @@ impl CharacterEditable for str {
 }
 
 impl DocumentLine for String {
-    fn len(&self) -> usize {
+    fn n_chars(&self) -> usize {
         self.chars().count()
     }
 
@@ -172,6 +172,7 @@ impl DocumentLine for String {
             self.replace_range(char_idx..char_idx + ch.len_utf8(), "");
             ch
         } else {
+            dbg!(idx, char_idx, self.n_chars());
             panic!("Index out of bounds");
         }
     }

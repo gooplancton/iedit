@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use iedit_document::CharacterEditable;
+
 use crate::{
     Editor,
     editor::{highlight::SelectionHighlight, renderer::legacy_line_renderer::LineRenderer},
@@ -33,7 +35,7 @@ impl Editor {
 
         let display_start = self.viewport.left_col;
         let display_end =
-            (self.viewport.left_col + self.renderer.term_width as usize).min(line.len());
+            (self.viewport.left_col + self.renderer.term_width as usize).min(line.n_chars());
         let highlighted_range = self.cursor.get_highlighted_range();
 
         let selection_highlight = if let Some(highlighted_range) = highlighted_range {
@@ -50,7 +52,7 @@ impl Editor {
             .render_to(&mut self.renderer.term)?;
 
         let is_cursor_at_end_of_line =
-            self.cursor.cur_y == line_idx && self.cursor.cur_x == line.len();
+            self.cursor.cur_y == line_idx && self.cursor.cur_x == line.n_chars();
         if is_cursor_at_end_of_line && self.cursor.selection_anchor.is_none() {
             self.renderer.add(terminal::EMPTY_CURSOR.as_bytes())?;
         }

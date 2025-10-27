@@ -1,4 +1,3 @@
-mod edit;
 mod move_cursor;
 
 use crate::{Editor, editor::modes::EditorMode};

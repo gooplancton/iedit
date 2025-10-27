@@ -8,7 +8,7 @@ use crate::{
 };
 
 impl Editor {
-    fn render_temp_message(&mut self) -> std::io::Result<()> {
+    fn render_notification(&mut self) -> std::io::Result<()> {
         self.renderer.add(&self.status_bar.notification)?;
 
         self.renderer.add(CURSOR_DOWN1.as_bytes())?;
@@ -31,7 +31,7 @@ impl Editor {
         self.renderer.add("  ".as_bytes())?;
 
         if !self.status_bar.notification.is_empty() {
-            return self.render_temp_message();
+            return self.render_notification();
         }
 
         //let content = if matches!(self.mode, EditorMode::Insert) {

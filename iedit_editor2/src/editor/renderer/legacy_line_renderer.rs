@@ -17,7 +17,7 @@ impl<'line> LineRenderer<'line> {
     pub fn new(line: &'line String) -> Self {
         Self {
             line,
-            display_range: (0..line.len()),
+            display_range: (0..line.n_chars()),
             selection_highlight: SelectionHighlight::None,
         }
     }
@@ -51,7 +51,7 @@ impl<'line> LineRenderer<'line> {
                 writer.write_all(HIGHLIGHT_END.as_bytes())?;
             }
             SelectionHighlight::Before(highlight_x) => {
-                let x = min(highlight_x, content.len());
+                let x = min(highlight_x, content.n_chars());
                 let (highlighted, unhighlighted) = content.split_chars_at(x);
 
                 writer.write_all(HIGHLIGHT_START.as_bytes())?;
@@ -64,7 +64,7 @@ impl<'line> LineRenderer<'line> {
                     .try_for_each(|ch| write!(writer, "{}", ch))?;
             }
             SelectionHighlight::After(highlight_x) => {
-                let x = min(highlight_x, content.len());
+                let x = min(highlight_x, content.n_chars());
                 let (unhighlighted, highlighted) = content.split_chars_at(x);
 
                 writer.write_all(HIGHLIGHT_END.as_bytes())?;
@@ -77,12 +77,12 @@ impl<'line> LineRenderer<'line> {
                     .try_for_each(|ch| write!(writer, "{}", ch))?;
             }
             SelectionHighlight::Range(highlight_start_x, highlight_end_x) => {
-                let x1 = min(highlight_start_x, content.len());
+                let x1 = min(highlight_start_x, content.n_chars());
                 let (unhighlighted1, rest) = content.split_chars_at(x1);
 
                 let x2 = min(
-                    highlight_end_x.saturating_sub(unhighlighted1.len()),
-                    rest.len(),
+                    highlight_end_x.saturating_sub(unhighlighted1.n_chars()),
+                    rest.n_chars(),
                 );
                 let (highlighted, unhighlighted2) = rest.split_chars_at(x2);
 

@@ -1,4 +1,4 @@
-use iedit_document::EditOperation;
+use iedit_document::{EditOperation, Text};
 use termion::event::Key;
 
 use crate::{
@@ -24,7 +24,10 @@ impl Editor {
             } => {
                 if !with_selection {
                     self.cursor.selection_anchor = None;
+                } else if self.cursor.selection_anchor.is_none() {
+                    self.cursor.selection_anchor = Some(self.cursor.pos())
                 }
+
                 match movement {
                     MoveCursor::AbsolutePos(pos) => self.cursor.update_pos(pos),
                     MoveCursor::Up(lines) => self.cursor.move_up(lines),
@@ -89,8 +92,9 @@ impl Editor {
                 self.cursor.selection_anchor = None;
             }
             EditorCommand::Edit(op) => {
-                self.apply_edit_side_effects(&op);
-                self.document.apply_edit(op);
+                if let Some(new_pos) = self.document.apply_edit(op) {
+                    self.cursor.update_pos(new_pos);
+                }
             }
             EditorCommand::UndoLastEdit => todo!(),
             EditorCommand::RedoLastEdit => todo!(),
@@ -110,6 +114,7 @@ impl Editor {
         use EditOperation as Op;
         use EditorCommand as C;
         use EditorMode as M;
+        use Text as T;
 
         match input {
             Input::Keypress(Key::Esc) => Some(C::ClearSelection),
@@ -133,39 +138,43 @@ impl Editor {
                 with_selection: self.is_selection_locked,
             }),
             Input::Keypress(Key::Char(ch)) => match self.cursor.get_highlighted_range() {
-                None => Some(C::Edit(Op::InsertCharAt {
+                None => Some(C::Edit(Op::Insertion {
                     pos: self.cursor.pos(),
-                    ch,
+                    text: T::Char(ch),
                 })),
-                Some((pos_from, pos_to)) => Some(C::Edit(Op::ReplaceRangeMultiline {
+                Some((pos_from, pos_to)) => Some(C::Edit(Op::Replacement {
                     pos_from,
                     pos_to,
-                    strings: vec![String::from(ch)],
+                    text: Text::Char(ch),
                 })),
             },
             Input::Keypress(Key::Backspace) | Input::Keypress(Key::Delete) => {
                 match self.cursor.get_highlighted_range() {
-                    None => Some(C::Edit(Op::DeleteCharAt {
+                    None => Some(C::Edit(Op::Deletion {
                         pos: self.cursor.pos(),
                     })),
-                    Some((pos_from, pos_to)) => {
-                        Some(C::Edit(Op::DeleteRangeMultiline { pos_from, pos_to }))
-                    }
+                    Some((pos_from, pos_to)) => Some(C::Edit(Op::Replacement {
+                        pos_from,
+                        pos_to,
+                        text: Text::Empty,
+                    })),
                 }
             }
             Input::Keypress(Key::Ctrl('h')) | Input::Keypress(Key::Ctrl('\x7F')) => {
                 match self.cursor.get_highlighted_range() {
                     None => {
                         let word_start_x = self.document.get_word_start_x(self.cursor.pos());
-                        Some(C::Edit(Op::DeleteRange {
-                            x_from: word_start_x,
-                            x_to: self.cursor.cur_x,
-                            y: self.cursor.cur_y,
+                        Some(C::Edit(Op::Replacement {
+                            pos_from: (word_start_x, self.cursor.cur_y),
+                            pos_to: self.cursor.pos(),
+                            text: Text::Empty,
                         }))
                     }
-                    Some((pos_from, pos_to)) => {
-                        Some(C::Edit(Op::DeleteRangeMultiline { pos_from, pos_to }))
-                    }
+                    Some((pos_from, pos_to)) => Some(C::Edit(Op::Replacement {
+                        pos_from,
+                        pos_to,
+                        text: Text::Empty,
+                    })),
                 }
             }
             Input::Keypress(Key::Left) => Some(C::MoveCursor {
@@ -203,13 +212,13 @@ impl Editor {
             Input::Keypress(Key::Alt('f')) | Input::Keypress(Key::CtrlRight) => {
                 Some(C::MoveCursor {
                     with_selection: self.is_selection_locked,
-                    movement: MoveCursor::PreviousWord,
+                    movement: MoveCursor::NextWord,
                 })
             }
             Input::Keypress(Key::Alt('b')) | Input::Keypress(Key::CtrlLeft) => {
                 Some(C::MoveCursor {
                     with_selection: self.is_selection_locked,
-                    movement: MoveCursor::NextWord,
+                    movement: MoveCursor::PreviousWord,
                 })
             }
             Input::KeyChord([Key::Ctrl('k'), Key::Char('l'), Key::Char('n')]) => {

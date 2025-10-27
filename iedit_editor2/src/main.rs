@@ -3,7 +3,7 @@ use iedit_editor2::Editor;
 fn main() -> std::io::Result<()> {
     let path = std::env::args()
         .nth(1)
-        .ok_or(std::io::Error::other("no file given"))?;
+        .unwrap_or("/tmp/iedit_buf".to_owned());
 
     let open_at = std::env::args()
         .nth(2)

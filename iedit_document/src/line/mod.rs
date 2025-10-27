@@ -4,7 +4,7 @@ use regex_lite::Regex;
 use std::ops::RangeBounds;
 
 pub trait CharacterEditable {
-    fn len(&self) -> usize;
+    fn n_chars(&self) -> usize;
     fn is_empty(&self) -> bool;
     fn nth_char_idx(&self, idx: usize) -> usize;
     fn char_idx_at_byte(&self, byte_idx: usize) -> Option<usize>;
@@ -18,7 +18,7 @@ pub trait CharacterEditable {
 }
 
 pub trait DocumentLine: Default {
-    fn len(&self) -> usize;
+    fn n_chars(&self) -> usize;
     fn is_empty(&self) -> bool;
     fn nth_char_idx(&self, idx: usize) -> usize;
     fn char_idx_at_byte(&self, byte_idx: usize) -> Option<usize>;
