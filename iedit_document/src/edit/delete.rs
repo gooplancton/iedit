@@ -25,11 +25,11 @@ impl Document {
         if pos_from.1 == pos_to.1
             && let Some(line) = self.lines.get_mut(pos_from.1)
         {
-            return match line.delete_chars(pos_from.0..pos_to.1) {
+            return match line.delete_chars(pos_from.0..pos_to.0) {
                 Some(string) => Text::String(string),
                 None => Text::Empty,
             };
-        };
+        }
 
         fn inner(
             doc: &mut Document,

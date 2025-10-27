@@ -95,6 +95,8 @@ impl Editor {
                 if let Some(new_pos) = self.document.apply_edit(op) {
                     self.cursor.update_pos(new_pos);
                 }
+
+                self.cursor.selection_anchor = None;
             }
             EditorCommand::UndoLastEdit => todo!(),
             EditorCommand::RedoLastEdit => todo!(),

@@ -143,12 +143,12 @@ impl DocumentLine for String {
             std::ops::Bound::Excluded(&idx) => self.nth_char_idx(idx),
             std::ops::Bound::Unbounded => self.len(),
         };
-        if start < end && end <= self.len() {
+        if start < end && end <= self.n_chars() {
             let mut rest = self.split_off(start);
-            let deleted_chars = rest.split_off(end - start);
-            self.merge_at_end(&mut rest);
+            let mut to_attach = rest.split_off(end - start);
+            self.merge_at_end(&mut to_attach);
 
-            return Some(deleted_chars);
+            return Some(rest);
         }
 
         None
