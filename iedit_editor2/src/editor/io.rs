@@ -77,7 +77,7 @@ impl Editor {
 
             file_writer.flush()?;
 
-            // self.state.is_file_modified = false;
+            self.document.has_been_edited = false;
             self.status_bar.update_notification("File saved");
         }
 

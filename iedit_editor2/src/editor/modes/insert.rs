@@ -18,6 +18,9 @@ impl Editor {
         use CommandExecutionResult as R;
 
         match command {
+            EditorCommand::SwitchMode(mode) => {
+                self.mode = mode;
+            }
             EditorCommand::MoveCursor {
                 movement,
                 with_selection,
@@ -35,12 +38,13 @@ impl Editor {
                     MoveCursor::Left(cols) => self.cursor.move_left(cols),
                     MoveCursor::Right(cols) => self.cursor.move_right(cols),
                     MoveCursor::NextWord => {
-                        let next_word_x = self.document.get_next_word_x(self.cursor.pos());
-                        self.cursor.update_pos((next_word_x, self.cursor.cur_y));
+                        let next_word_pos = self.document.get_next_word_pos(self.cursor.pos());
+                        self.cursor.update_pos(next_word_pos);
                     }
                     MoveCursor::PreviousWord => {
-                        let previous_word_x = self.document.get_previous_word_x(self.cursor.pos());
-                        self.cursor.update_pos((previous_word_x, self.cursor.cur_y));
+                        let previous_word_pos =
+                            self.document.get_previous_word_pos(self.cursor.pos());
+                        self.cursor.update_pos(previous_word_pos);
                     }
                     MoveCursor::NextParagraph => {
                         let next_paragraph_row =
@@ -96,14 +100,11 @@ impl Editor {
                     self.cursor.update_pos(new_pos);
                 }
 
+                self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
             }
             EditorCommand::UndoLastEdit => todo!(),
             EditorCommand::RedoLastEdit => todo!(),
-            EditorCommand::MovePromptCursorLeft => todo!(),
-            EditorCommand::MovePromptCursorRight => todo!(),
-            EditorCommand::InsertCharPrompt { pos_x, ch } => todo!(),
-            EditorCommand::DeleteCharPrompt { pos_x } => todo!(),
             EditorCommand::FindMatchForward => todo!(),
             EditorCommand::FindMatchBackward => todo!(),
             _ => {}
@@ -123,7 +124,7 @@ impl Editor {
             Input::Keypress(Key::Ctrl('z')) => Some(C::UndoLastEdit),
             Input::Keypress(Key::Ctrl('r')) => Some(C::RedoLastEdit),
             Input::Keypress(Key::Ctrl('f')) => Some(C::SwitchMode(M::Search)),
-            Input::Keypress(Key::Ctrl('g')) => Some(C::SwitchMode(M::Goto)),
+            Input::Keypress(Key::Ctrl('g')) => Some(C::SwitchMode(M::Goto(self.cursor.pos()))),
             Input::Keypress(Key::Ctrl('l')) => Some(C::ToggleLockSelection),
             Input::Keypress(Key::CtrlDown) => Some(C::ScrollViewportDown),
             Input::Keypress(Key::CtrlUp) => Some(C::ScrollViewportUp),
@@ -165,9 +166,9 @@ impl Editor {
             Input::Keypress(Key::Ctrl('h')) | Input::Keypress(Key::Ctrl('\x7F')) => {
                 match self.cursor.get_highlighted_range() {
                     None => {
-                        let word_start_x = self.document.get_word_start_x(self.cursor.pos());
+                        let word_start_pos = self.document.get_previous_word_pos(self.cursor.pos());
                         Some(C::Edit(Op::Replacement {
-                            pos_from: (word_start_x, self.cursor.cur_y),
+                            pos_from: word_start_pos,
                             pos_to: self.cursor.pos(),
                             text: Text::Empty,
                         }))

@@ -9,7 +9,6 @@ pub struct StatusBar {
     pub cursor_pos: usize,
 
     pub submit_action: Option<Box<dyn FnOnce(&mut Editor, String) -> CommandExecutionResult>>,
-    pub has_displayed_unsaved_file_msg: bool,
 }
 
 impl StatusBar {

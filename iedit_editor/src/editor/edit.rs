@@ -131,13 +131,9 @@ impl Editor {
 
         let removed_char = if x > 0 && x <= line.len() {
             let c = line.remove_char_at(x - 1);
-            if let Some(ch) = c {
-                self.move_cursor_left();
+            self.move_cursor_left();
 
-                Some(ch)
-            } else {
-                None
-            }
+            Some(c)
         } else if x == 0 && y.is_some_and(|y| y > 0) {
             // Merge with previous line
             let y = y.unwrap();

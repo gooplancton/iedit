@@ -11,45 +11,24 @@ mod insert;
 mod prompt;
 mod search;
 
+type OriginalCursorPos = (usize, usize);
+
 pub enum EditorMode {
     Insert,
     Prompt(&'static str),
-    Goto,
+    Goto(OriginalCursorPos),
     Search,
 }
 
-static UNSAVED_CHANGES_WARNING: &str = "\x1b[33mBuffer contains unsaved changes.\x1b[0m Ctrl+ \x1b[7ms\x1b[0mave; Ctrl\x1b[7mq\x1b0muit";
+static UNSAVED_CHANGES_WARNING: &str =
+    "\x1b[33mBuffer contains unsaved changes.\x1b[0m Ctrl+ \x1b[7ms\x1b[0mave, \x1b[7mq\x1b[0muit";
 
 impl Editor {
-    #[inline]
     pub fn execute_command(&mut self, command: EditorCommand) -> CommandExecutionResult {
         use EditorCommand as C;
 
-        if !matches!(command, C::ScrollViewportUp) && !matches!(command, C::ScrollViewportDown) {
-            if (self.viewport.top_line <= self.cursor.cur_y)
-                && (self.cursor.cur_y < self.viewport.top_line + self.config.n_lines as usize)
-            {
-                self.viewport.pre_scroll_top_line = self.viewport.top_line;
-            }
-            self.viewport.vertical_offset = 0;
-            self.renderer.needs_full_rerender = true;
-        }
-
         match command {
-            C::SwitchMode(editor_mode) => {
-                self.mode = editor_mode;
-                CommandExecutionResult::Continue
-            }
-            C::Quit => {
-                if !self.document.has_been_edited || self.status_bar.has_displayed_unsaved_file_msg
-                {
-                    CommandExecutionResult::ShouldQuit
-                } else {
-                    self.status_bar.update_notification(UNSAVED_CHANGES_WARNING);
-                    self.status_bar.has_displayed_unsaved_file_msg = true;
-                    CommandExecutionResult::Continue
-                }
-            }
+            C::Quit => self.quit(),
             C::Save => {
                 if let Err(err) = self.save_file() {
                     self.status_bar.update_notification(err.to_string());
@@ -80,7 +59,9 @@ impl Editor {
             _ => match self.mode {
                 EditorMode::Insert => self.insert_mode_execute_command(command),
                 EditorMode::Prompt(_) => self.prompt_mode_execute_command(command),
-                EditorMode::Goto => self.goto_mode_execute_command(command),
+                EditorMode::Goto(original_pos) => {
+                    self.goto_mode_execute_command(command, original_pos)
+                }
                 EditorMode::Search => self.search_mode_execute_command(command),
             },
         }
@@ -94,9 +75,19 @@ impl Editor {
             _ => match self.mode {
                 EditorMode::Insert => self.insert_mode_parse_command(input),
                 EditorMode::Prompt(_) => self.prompt_mode_parse_command(input),
-                EditorMode::Goto => self.goto_mode_parse_command(input),
+                EditorMode::Goto(_) => self.goto_mode_parse_command(input),
                 EditorMode::Search => self.search_mode_parse_command(input),
             },
+        }
+    }
+
+    pub fn quit(&mut self) -> CommandExecutionResult {
+        if !self.document.has_been_edited || !self.config.confirm_quit_unsaved_changes || self.first_quit_sent {
+            CommandExecutionResult::ShouldQuit
+        } else {
+            self.status_bar.update_notification(UNSAVED_CHANGES_WARNING);
+            self.first_quit_sent = true;
+            CommandExecutionResult::Continue
         }
     }
 }

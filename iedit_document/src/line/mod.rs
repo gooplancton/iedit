@@ -34,7 +34,7 @@ pub trait DocumentLine: Default {
     fn push_str(&mut self, string: &str);
     fn insert_str_at(&mut self, idx: usize, string: &str);
     fn insert_char_at(&mut self, ch: char, idx: usize);
-    fn remove_char_at(&mut self, idx: usize) -> Option<char>;
+    fn remove_char_at(&mut self, idx: usize) -> char;
     fn get_chars(&self, range: impl RangeBounds<usize>) -> &str;
     fn get_nth_char(&self, idx: usize) -> Option<char>;
     fn truncate_chars(&mut self, new_len: usize);

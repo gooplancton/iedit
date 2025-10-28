@@ -16,7 +16,7 @@ impl Document {
         }
 
         let line = self.get_or_add_line(y)?;
-        line.remove_char_at(x - 1)?;
+        line.remove_char_at(x - 1);
 
         Some((x - 1, y))
     }

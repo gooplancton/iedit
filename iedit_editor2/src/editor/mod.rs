@@ -48,6 +48,7 @@ pub struct Editor {
 
     // could be a bitfield?
     is_selection_locked: bool,
+    first_quit_sent: bool,
 }
 
 impl Editor {
@@ -100,6 +101,7 @@ impl Editor {
             renderer,
             viewport,
             is_selection_locked: false,
+            first_quit_sent: false,
         })
     }
 
@@ -113,6 +115,8 @@ impl Editor {
         };
 
         for input in input_parser {
+            self.cursor.set_last_pos();
+
             let command = self.parse_command(input);
             if command.is_none() {
                 continue;

@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::{any::Any, cmp::min};
 
 use iedit_document::{DocumentLine, EditOperation};
 use termion::event::Key;
@@ -21,6 +21,19 @@ impl Editor {
         use EditorCommand as C;
 
         match command {
+            C::MovePromptCursorLeft => {
+                self.status_bar.cursor_pos = self.status_bar.cursor_pos.saturating_sub(1);
+
+                R::Continue
+            }
+            C::MovePromptCursorRight => {
+                self.status_bar.cursor_pos = min(
+                    self.status_bar.prompt_line.len(),
+                    self.status_bar.cursor_pos + 1,
+                );
+
+                R::Continue
+            }
             C::InsertCharPrompt { pos_x, ch } => {
                 self.status_bar.prompt_line.insert_char_at(ch, pos_x);
                 self.status_bar.cursor_pos = pos_x + 1;
@@ -28,8 +41,17 @@ impl Editor {
                 R::Continue
             }
             C::DeleteCharPrompt { pos_x } => {
-                self.status_bar.prompt_line.remove_char_at(pos_x.saturating_sub(1));
-                self.status_bar.cursor_pos = pos_x.saturating_pow(1);
+                if pos_x == 0 {
+                    return R::Continue;
+                }
+
+                self.status_bar.prompt_line.remove_char_at(pos_x - 1);
+                self.status_bar.cursor_pos = pos_x - 1;
+
+                R::Continue
+            }
+            C::SwitchMode(mode) => {
+                self.mode = mode;
 
                 R::Continue
             }

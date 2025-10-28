@@ -18,11 +18,15 @@ impl Cursor {
     pub fn update_pos(&mut self, new_pos: (usize, usize)) {
         let (new_x, new_y) = new_pos;
 
-        self.past_x = self.cur_x;
-        self.past_y = self.cur_y;
         self.cur_x = new_x;
         self.cur_y = new_y;
         self.ideal_x = new_x;
+    }
+
+    #[inline]
+    pub fn set_last_pos(&mut self) {
+        self.past_x = self.cur_x;
+        self.past_y = self.cur_y;
     }
 
     #[inline]
@@ -91,4 +95,3 @@ impl Editor {
         self.cursor.cur_y = min(self.cursor.cur_y, self.document.n_lines());
     }
 }
-

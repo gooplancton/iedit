@@ -44,81 +44,67 @@ impl Document {
 
     // TODO: review AI boilerplate
 
-    pub fn get_next_word_x(&self, (x, y): (usize, usize)) -> usize {
+    pub fn get_next_word_pos(&self, (x, y): (usize, usize)) -> (usize, usize) {
         let line = match self.lines.get(y) {
             Some(line) => line,
-            None => return x,
+            None => return (x, y),
         };
 
-        let chars: Vec<char> = line.chars().collect();
+        let n_chars = line.n_chars();
+        let mut next_word_x = x;
 
-        // If we're already beyond the line, stay there
-        if x >= chars.len() {
-            return chars.len();
-        }
-
-        // Skip current word if we're in the middle of one
-        let mut pos = x;
-        while pos < chars.len() && chars[pos].is_alphanumeric() {
-            pos += 1;
+        // Skip word
+        while next_word_x <= n_chars
+            && line
+                .get_nth_char(next_word_x + 1)
+                .is_some_and(char::is_alphanumeric)
+        {
+            next_word_x += 1;
         }
 
         // Skip whitespace
-        while pos < chars.len() && chars[pos].is_whitespace() {
-            pos += 1;
+        while next_word_x <= n_chars
+            && line
+                .get_nth_char(next_word_x + 1)
+                .is_some_and(char::is_whitespace)
+        {
+            next_word_x += 1;
         }
 
-        pos
+        (next_word_x, y)
     }
 
-    pub fn get_previous_word_x(&self, (x, y): (usize, usize)) -> usize {
+    pub fn get_previous_word_pos(&self, (x, y): (usize, usize)) -> (usize, usize) {
         let line = match self.lines.get(y) {
             Some(line) => line,
-            None => return 0,
+            None => return (0, y),
         };
 
-        let chars: Vec<char> = line.chars().collect();
-
-        // If at start, stay there
         if x == 0 {
-            return 0;
+            return (x, 0);
         }
 
-        let mut pos = x.min(chars.len());
+        let mut previous_word_x = x;
 
         // Skip whitespace backwards
-        while pos > 0 && chars[pos - 1].is_whitespace() {
-            pos -= 1;
+        while previous_word_x > 0
+            && line
+                .get_nth_char(previous_word_x - 1)
+                .is_some_and(char::is_whitespace)
+        {
+            previous_word_x -= 1;
         }
 
         // Skip word backwards
-        while pos > 0 && chars[pos - 1].is_alphanumeric() {
-            pos -= 1;
+        while previous_word_x > 0
+            && line
+                .get_nth_char(previous_word_x - 1)
+                .is_some_and(char::is_alphanumeric)
+        {
+            previous_word_x -= 1;
         }
 
-        pos
-    }
-
-    pub fn get_word_start_x(&self, (x, y): (usize, usize)) -> usize {
-        let line = match self.lines.get(y) {
-            Some(line) => line,
-            None => return 0,
-        };
-
-        let chars: Vec<char> = line.chars().collect();
-        let mut pos = x.min(chars.len());
-
-        // If we're on whitespace or at line end, find previous word start
-        if pos == chars.len() || chars[pos].is_whitespace() {
-            return self.get_previous_word_x((pos, y));
-        }
-
-        // Move backwards to word start
-        while pos > 0 && chars[pos - 1].is_alphanumeric() {
-            pos -= 1;
-        }
-
-        pos
+        (previous_word_x, y)
     }
 
     pub fn get_next_occurrence_of_char(

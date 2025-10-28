@@ -14,6 +14,7 @@ pub struct EditorConfig {
     pub tab_size: u16,
     pub show_line_numbers: bool,
     pub show_keybindings: bool,
+    pub confirm_quit_unsaved_changes: bool,
     pub edit_debounce_time_secs: u64,
 }
 
@@ -28,6 +29,7 @@ impl Default for EditorConfig {
             vertical_margin: 4,
             show_line_numbers: true,
             show_keybindings: true,
+            confirm_quit_unsaved_changes: true,
             edit_debounce_time_secs: 1,
         }
     }
@@ -63,4 +65,3 @@ impl EditorConfig {
         Ok(offset)
     }
 }
-

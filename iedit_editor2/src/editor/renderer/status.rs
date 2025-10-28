@@ -38,14 +38,14 @@ impl Editor {
             EditorMode::Insert => &format!(
                 "{} | Ln: {}, Col: {}",
                 self.get_displayable_file_path(),
-                self.cursor.cur_y,
-                self.cursor.cur_x
+                self.cursor.cur_y + 1,
+                self.cursor.cur_x + 1
             ),
             EditorMode::Prompt(prompt) => {
                 self.renderer.add(prompt);
                 &self.status_bar.prompt_line
             }
-            EditorMode::Goto => {
+            EditorMode::Goto(_) => {
                 self.renderer.add("GOTO ");
                 &self.status_bar.prompt_line
             }

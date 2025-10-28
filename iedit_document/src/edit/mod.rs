@@ -39,6 +39,8 @@ impl Document {
         use EditOperation as Op;
         use Text as T;
 
+        self.has_been_edited = true;
+
         match op {
             Op::Insertion {
                 pos,
