@@ -1,8 +1,15 @@
-use iedit_document::EditOperation;
+use std::any::Any;
+
+use iedit_document::{DocumentLine, EditOperation};
 use termion::event::Key;
 
 use crate::{
-    editor::{commands::{CommandExecutionResult, EditorCommand}, modes::EditorMode}, input::Input, Editor
+    Editor,
+    editor::{
+        commands::{CommandExecutionResult, EditorCommand},
+        modes::EditorMode,
+    },
+    input::Input,
 };
 
 impl Editor {
@@ -10,7 +17,37 @@ impl Editor {
         &mut self,
         command: EditorCommand,
     ) -> CommandExecutionResult {
-        todo!()
+        use CommandExecutionResult as R;
+        use EditorCommand as C;
+
+        match command {
+            C::InsertCharPrompt { pos_x, ch } => {
+                self.status_bar.prompt_line.insert_char_at(ch, pos_x);
+                self.status_bar.cursor_pos = pos_x + 1;
+
+                R::Continue
+            }
+            C::DeleteCharPrompt { pos_x } => {
+                self.status_bar.prompt_line.remove_char_at(pos_x.saturating_sub(1));
+                self.status_bar.cursor_pos = pos_x.saturating_pow(1);
+
+                R::Continue
+            }
+            C::SubmitPrompt => {
+                let prompt = self.status_bar.prompt_line.split_off(0);
+                if let Some(fun) = self.status_bar.submit_action.take() {
+                    let res = fun(self, prompt);
+                    if !matches!(res, R::Continue) {
+                        return res;
+                    }
+                }
+
+                self.mode = EditorMode::Insert;
+
+                R::Continue
+            }
+            _ => R::Continue,
+        }
     }
 
     pub fn prompt_mode_parse_command(&self, input: Input) -> Option<EditorCommand> {
@@ -36,5 +73,14 @@ impl Editor {
             }),
             _ => None,
         }
+    }
+
+    pub fn prompt_user(
+        &mut self,
+        prompt: &'static str,
+        callback: impl FnOnce(&mut Editor, String) -> CommandExecutionResult + 'static,
+    ) {
+        self.mode = EditorMode::Prompt(prompt);
+        self.status_bar.submit_action = Some(Box::from(callback));
     }
 }

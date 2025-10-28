@@ -89,9 +89,6 @@ impl Editor {
 
         self.cursor.cur_x = min(self.cursor.ideal_x, max_x);
         self.cursor.cur_y = min(self.cursor.cur_y, self.document.n_lines());
-
-        // TODO: remove
-        self.status_bar.notification = format!("cursor: {},{}", self.cursor.cur_x, self.cursor.cur_y);
     }
 }
 

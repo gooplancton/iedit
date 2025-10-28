@@ -16,7 +16,7 @@ impl Document {
         }
 
         let line = self.get_or_add_line(y)?;
-        line.remove_char_at(x - 1);
+        line.remove_char_at(x - 1)?;
 
         Some((x - 1, y))
     }
@@ -46,7 +46,7 @@ impl Document {
             deleted_text.push(from_line.split_chars_off_at(pos_from.0));
             from_line.merge_at_end(&mut new_from_line_end);
 
-            for line in doc.lines.drain((pos_from.1 + 1)..pos_to.1) {
+            for line in doc.lines.drain((pos_from.1 + 1)..=pos_to.1) {
                 deleted_text.push(line);
             }
 

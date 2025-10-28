@@ -13,7 +13,7 @@ mod search;
 
 pub enum EditorMode {
     Insert,
-    Prompt,
+    Prompt(&'static str),
     Goto,
     Search,
 }
@@ -79,7 +79,7 @@ impl Editor {
             }
             _ => match self.mode {
                 EditorMode::Insert => self.insert_mode_execute_command(command),
-                EditorMode::Prompt => self.prompt_mode_execute_command(command),
+                EditorMode::Prompt(_) => self.prompt_mode_execute_command(command),
                 EditorMode::Goto => self.goto_mode_execute_command(command),
                 EditorMode::Search => self.search_mode_execute_command(command),
             },
@@ -93,7 +93,7 @@ impl Editor {
             Input::Keypress(Key::Ctrl('s')) => Some(EditorCommand::Save),
             _ => match self.mode {
                 EditorMode::Insert => self.insert_mode_parse_command(input),
-                EditorMode::Prompt => self.prompt_mode_parse_command(input),
+                EditorMode::Prompt(_) => self.prompt_mode_parse_command(input),
                 EditorMode::Goto => self.goto_mode_parse_command(input),
                 EditorMode::Search => self.search_mode_parse_command(input),
             },

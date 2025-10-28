@@ -34,19 +34,28 @@ impl Editor {
             return self.render_notification();
         }
 
-        //let content = if matches!(self.mode, EditorMode::Insert) {
-        //    // file info
-        //} else {
-        //    // interactive prompt
-        //};
-        //
-        let content = &self.status_bar.prompt_line;
+        let content: &String = match self.mode {
+            EditorMode::Insert => &format!(
+                "{} | Ln: {}, Col: {}",
+                self.get_displayable_file_path(),
+                self.cursor.cur_y,
+                self.cursor.cur_x
+            ),
+            EditorMode::Prompt(prompt) => {
+                self.renderer.add(prompt);
+                &self.status_bar.prompt_line
+            }
+            EditorMode::Goto => {
+                self.renderer.add("GOTO ");
+                &self.status_bar.prompt_line
+            }
+            EditorMode::Search => todo!(),
+        };
 
         let mut renderer =
             LineRenderer::new(content).with_display_range(0..self.renderer.term_width as usize);
 
         if !matches!(self.mode, EditorMode::Insert) {
-            self.renderer.add(":".as_bytes())?;
             let x = self.status_bar.cursor_pos;
             let selection_highlight = SelectionHighlight::Range(x, x + 1);
             renderer = renderer.with_selection_highlight(selection_highlight);

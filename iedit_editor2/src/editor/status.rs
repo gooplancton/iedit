@@ -1,9 +1,14 @@
+use std::any::Any;
+
+use crate::{Editor, editor::commands::CommandExecutionResult};
+
 #[derive(Default)]
 pub struct StatusBar {
     pub prompt_line: String,
     pub notification: String,
     pub cursor_pos: usize,
 
+    pub submit_action: Option<Box<dyn FnOnce(&mut Editor, String) -> CommandExecutionResult>>,
     pub has_displayed_unsaved_file_msg: bool,
 }
 

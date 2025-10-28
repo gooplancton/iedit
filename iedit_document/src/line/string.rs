@@ -164,16 +164,15 @@ impl DocumentLine for String {
         self.insert(char_idx, ch);
     }
 
-    fn remove_char_at(&mut self, idx: usize) -> char {
+    fn remove_char_at(&mut self, idx: usize) -> Option<char> {
         let char_idx = self.nth_char_idx(idx);
 
-        if char_idx < self.len() {
-            let ch = self[char_idx..].chars().next().unwrap();
+        if char_idx <= self.len() {
+            let ch = self[char_idx..].chars().next()?;
             self.replace_range(char_idx..char_idx + ch.len_utf8(), "");
-            ch
+            Some(ch)
         } else {
-            dbg!(idx, char_idx, self.n_chars());
-            panic!("Index out of bounds");
+            None
         }
     }
 
