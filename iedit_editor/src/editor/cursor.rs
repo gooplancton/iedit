@@ -31,12 +31,12 @@ impl Cursor {
 
     #[inline]
     pub fn move_down(&mut self, lines: usize) {
-        self.update_pos((self.cur_x, self.cur_y.saturating_add(lines)));
+        self.update_pos((self.ideal_x, self.cur_y.saturating_add(lines)));
     }
 
     #[inline]
     pub fn move_up(&mut self, lines: usize) {
-        self.update_pos((self.cur_x, self.cur_y.saturating_sub(lines)));
+        self.update_pos((self.ideal_x, self.cur_y.saturating_sub(lines)));
     }
 
     #[inline]
