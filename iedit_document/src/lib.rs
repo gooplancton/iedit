@@ -1,13 +1,13 @@
 mod edit;
 mod line;
 
-pub use edit::{EditOperation, Text};
+pub use edit::{EditOperation, Text, InverseStack};
 pub use line::{CharacterEditable, DocumentLine};
 
 pub struct Document {
     pub lines: Vec<String>,
-    // undo_stack: Vec<EditOperation>,
-    // redo_stack: Vec<EditOperation>,
+    undo_stack: Vec<EditOperation>,
+    redo_stack: Vec<EditOperation>,
     pub has_been_edited: bool,
 }
 
@@ -15,8 +15,8 @@ impl Document {
     pub fn new(lines: Vec<String>) -> Self {
         Self {
             lines,
-            // undo_stack: vec![],
-            // redo_stack: vec![],
+            undo_stack: vec![],
+            redo_stack: vec![],
             has_been_edited: false,
         }
     }
@@ -41,8 +41,6 @@ impl Document {
     pub fn get_char_at_pos(&self, (x, y): (usize, usize)) -> Option<char> {
         self.lines.get(y).and_then(|line| line.get_nth_char(x))
     }
-
-    // TODO: review AI boilerplate
 
     pub fn get_next_word_pos(&self, (x, y): (usize, usize)) -> (usize, usize) {
         let line = match self.lines.get(y) {
@@ -81,7 +79,7 @@ impl Document {
         };
 
         if x == 0 {
-            return (x, 0);
+            return (x, y.saturating_sub(1));
         }
 
         let mut previous_word_x = x;
@@ -175,13 +173,8 @@ impl Document {
 
     pub fn get_matching_paren_pos(&self, (x, y): (usize, usize)) -> Option<(usize, usize)> {
         let line = self.lines.get(y)?;
-        let chars: Vec<char> = line.chars().collect();
+        let start_char = line.iter_chars().nth(x)?;
 
-        if x >= chars.len() {
-            return None;
-        }
-
-        let start_char = chars[x];
         let (matching_char, direction) = match start_char {
             '(' => (')', 1),
             ')' => ('(', -1),
@@ -198,9 +191,7 @@ impl Document {
             // Search forward
             for (line_idx, current_line) in self.lines.iter().enumerate().skip(y) {
                 let start_pos = if line_idx == y { x + 1 } else { 0 };
-                let current_chars: Vec<char> = current_line.chars().collect();
-
-                for (char_idx, &ch) in current_chars.iter().enumerate().skip(start_pos) {
+                for (char_idx, ch) in current_line.iter_chars().enumerate().skip(start_pos) {
                     if ch == start_char {
                         stack += 1;
                     } else if ch == matching_char {
@@ -215,15 +206,18 @@ impl Document {
             // Search backward
             for line_idx in (0..=y).rev() {
                 let current_line = &self.lines[line_idx];
-                let current_chars: Vec<char> = current_line.chars().collect();
                 let end_pos = if line_idx == y {
                     x
                 } else {
-                    current_chars.len()
+                    current_line.n_chars()
                 };
+                for char_idx in 0..end_pos {
+                    let ch = line.get_nth_char(char_idx);
+                    if ch.is_none() {
+                        continue;
+                    }
 
-                for char_idx in (0..end_pos).rev() {
-                    let ch = current_chars[char_idx];
+                    let ch = ch.unwrap();
                     if ch == start_char {
                         stack += 1;
                     } else if ch == matching_char {

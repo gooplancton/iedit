@@ -16,6 +16,7 @@ impl Editor {
         command: EditorCommand,
     ) -> CommandExecutionResult {
         use CommandExecutionResult as R;
+        use iedit_document::InverseStack as S;
 
         match command {
             EditorCommand::SwitchMode(mode) => {
@@ -96,15 +97,29 @@ impl Editor {
                 self.cursor.selection_anchor = None;
             }
             EditorCommand::Edit(op) => {
-                if let Some(new_pos) = self.document.apply_edit(op) {
+                if let Some(new_pos) = self.document.apply_edit(op, S::Undo) {
                     self.cursor.update_pos(new_pos);
                 }
 
                 self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
             }
-            EditorCommand::UndoLastEdit => todo!(),
-            EditorCommand::RedoLastEdit => todo!(),
+            EditorCommand::UndoLastEdit => {
+                if let Some(new_pos) = self.document.undo_last_edit() {
+                    self.cursor.update_pos(new_pos);
+                }
+
+                self.first_quit_sent = false;
+                self.cursor.selection_anchor = None;
+            },
+            EditorCommand::RedoLastEdit => {
+                if let Some(new_pos) = self.document.redo_last_edit() {
+                    self.cursor.update_pos(new_pos);
+                }
+
+                self.first_quit_sent = false;
+                self.cursor.selection_anchor = None;
+            },
             EditorCommand::FindMatchForward => todo!(),
             EditorCommand::FindMatchBackward => todo!(),
             _ => {}

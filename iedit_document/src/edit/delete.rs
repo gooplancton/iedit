@@ -1,9 +1,9 @@
 use crate::{Document, DocumentLine, Text, edit::EditResult};
 
 impl Document {
-    pub fn delete_char_at(&mut self, (x, y): (usize, usize)) -> EditResult {
-        if x == 0 && y == 0 {
-            return None;
+    pub fn delete_char_at(&mut self, (x, y): (usize, usize)) -> (char, EditResult) {
+        if x == 0 && (y == 0 || y >= self.lines.len()) {
+            return ('0', None);
         }
 
         if x == 0 && y > 0 {
@@ -12,13 +12,16 @@ impl Document {
             let mut current_line = self.lines.remove(y);
             self.lines[y - 1].merge_at_end(&mut current_line);
 
-            return Some((prev_line_len, y - 1));
+            return ('\n', Some((prev_line_len, y - 1)));
         }
 
-        let line = self.get_or_add_line(y)?;
-        line.remove_char_at(x - 1);
+        if let Some(line) = self.get_or_add_line(y) {
+            let ch = line.remove_char_at(x - 1);
 
-        Some((x - 1, y))
+            (ch, Some((x - 1, y)))
+        } else {
+            ('0', None)
+        }
     }
 
     pub fn delete_range(&mut self, pos_from: (usize, usize), pos_to: (usize, usize)) -> Text {

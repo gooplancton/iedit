@@ -172,7 +172,8 @@ impl DocumentLine for String {
             self.replace_range(char_idx..char_idx + ch.len_utf8(), "");
             ch
         } else {
-            panic!("index out of bounds")
+            // NOTE: need to figure this out sooner or later
+            self.chars().last().unwrap_or_default()
         }
     }
 
