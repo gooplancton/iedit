@@ -3,17 +3,23 @@
 use std::{
     fmt::Display,
     fs::File,
-    io::{BufWriter, Stdout, Write, stdin},
+    io::{BufWriter, Stdout, Write, stdin, stdout},
     path::{Path, PathBuf},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 
 use config::EditorConfig;
 use iedit_document::Document;
+use signal_hook::{consts::SIGWINCH, flag};
 use termion::{
     cursor::{DetectCursorPos, Goto, HideCursor},
     event::Key,
     input::TermRead,
     raw::{IntoRawMode, RawTerminal},
+    screen::IntoAlternateScreen,
     terminal_size,
 };
 
@@ -62,44 +68,22 @@ lazy_static::lazy_static! {
 }
 
 impl Editor {
-    pub fn new(path: impl AsRef<Path>, open_at: usize) -> std::io::Result<Self> {
+    pub fn new(path: impl AsRef<Path>, open_at_line: usize) -> std::io::Result<Self> {
         let (file, canonicalized_file_path, file_lines) = read_file(path)?;
 
-        let (term_width, term_height) = terminal_size()?;
-        let mut term = HideCursor::from(std::io::stdout().into_raw_mode()?);
-        let mut ui_origin = term.cursor_pos()?;
-
-        let mut config = if let Some(mut path) = std::env::home_dir() {
+        let config = if let Some(mut path) = std::env::home_dir() {
             path.push(".iedit.conf");
             EditorConfig::from_file(path).unwrap_or_default()
         } else {
             EditorConfig::default()
         };
 
+        let open_at_line = file.as_ref().map(|_| open_at_line).unwrap_or_default();
+        let cur_y = open_at_line.saturating_sub(1);
+
         let document = Document::new(file_lines);
-
-        let real_estate = term_height.saturating_sub(ui_origin.1);
-        if config.n_lines == 0 || real_estate < config.n_lines {
-            let offset = config.set_default_n_lines(&mut term, ui_origin.1)?;
-            ui_origin.1 = ui_origin.1.saturating_sub(offset);
-        }
-
-        let open_at = file.as_ref().map(|_| open_at).unwrap_or_default();
-        let cur_y = open_at.saturating_sub(1);
-
-        let mut viewport = Viewport::default();
-        viewport.pre_scroll_top_line = open_at.saturating_sub(config.n_lines as usize / 2);
-        viewport.top_line = viewport.pre_scroll_top_line;
-
-        let horizontal_bar = str::repeat(H_BAR, term_width as usize);
-        let renderer = Renderer {
-            term: BufWriter::new(term),
-            ui_origin,
-            term_width,
-            horizontal_bar,
-            dirty_lines: vec![],
-            needs_full_rerender: true,
-        };
+        let renderer = Renderer::new(config.n_lines)?;
+        let viewport = Viewport::new(renderer.editor_lines, open_at_line);
 
         Ok(Self {
             file,
@@ -117,8 +101,15 @@ impl Editor {
         })
     }
 
+    pub fn reset_ui(&mut self) {
+        // need to figure something out here
+    }
+
     pub fn run(&mut self) -> std::io::Result<()> {
         self.render()?;
+
+        let window_resized = Arc::<AtomicBool>::new(AtomicBool::new(false));
+        flag::register(SIGWINCH, window_resized.clone());
 
         let (notification_sender, notification_receiver) = unbounded();
 
@@ -127,6 +118,13 @@ impl Editor {
         let input_parser = InputParser::new(notification_receiver);
         for input in input_parser {
             self.cursor.set_last_pos();
+
+            if window_resized
+                .compare_exchange(true, false, Ordering::Acquire, Ordering::Relaxed)
+                .is_ok()
+            {
+                self.reset_ui();
+            }
 
             let command = self.parse_command(input);
             if command.is_none() {

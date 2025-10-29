@@ -78,7 +78,7 @@ impl Editor {
     pub fn render_edit_buffer(&mut self) -> std::io::Result<()> {
         let row_span_low = self.viewport.top_line;
         let row_span_high =
-            (self.viewport.top_line + self.config.n_lines as usize).min(self.document.n_lines());
+            (self.viewport.top_line + self.renderer.editor_lines as usize).min(self.document.n_lines());
 
         for line_idx in row_span_low..row_span_high {
             let should_render_line = self.renderer.needs_full_rerender
@@ -95,7 +95,7 @@ impl Editor {
             self.renderer.add(CURSOR_TO_COL1.as_bytes())?;
         }
 
-        let empty_lines = self.config.n_lines as usize - (row_span_high - row_span_low);
+        let empty_lines = self.renderer.editor_lines as usize - (row_span_high - row_span_low);
         for empty_line_idx in 0..empty_lines {
             let with_cursor = empty_line_idx == 0 && self.cursor.cur_y >= self.document.lines.len();
             self.render_empty_line(with_cursor)?;

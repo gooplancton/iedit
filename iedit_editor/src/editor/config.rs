@@ -35,36 +35,4 @@ impl Default for EditorConfig {
 }
 
 impl EditorConfig {
-    /// Automatically infers the optimal number of lines to display based on the terminal height
-    /// and the starting position of the UI.
-    ///
-    /// Returns the scroll offset applied to the terminal to ensure enough space for the editor UI.
-    pub fn set_default_n_lines(
-        &mut self,
-        term: &mut HideCursor<RawTerminal<Stdout>>,
-        ui_start_y: u16,
-    ) -> std::io::Result<u16> {
-        term.suspend_raw_mode()?;
-        let term_height = termion::terminal_size()?.1;
-        let max_scroll_on_open = if self.n_lines == 0 {
-            term_height / 2
-        } else {
-            self.n_lines
-        };
-        let mut real_estate = term_height.saturating_sub(ui_start_y);
-        let offset = max_scroll_on_open.saturating_sub(real_estate);
-        if offset > 0 {
-            real_estate = min(max_scroll_on_open, term_height);
-            let newlines = "\n".repeat(real_estate as usize);
-            write!(term, "{}{}", newlines, termion::cursor::Up(offset))?;
-            term.flush()?;
-        }
-
-        // NOTE: 2 lines are reserved for the status bar
-        self.n_lines = real_estate.saturating_sub(2);
-
-        term.activate_raw_mode()?;
-
-        Ok(offset)
-    }
 }

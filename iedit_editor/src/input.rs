@@ -7,7 +7,6 @@ pub enum Input {
     NoOp,
     Keypress(Key),
     KeyChord([Key; 3]),
-    TerminalWindowResize,
     ExternalNotification(String),
 }
 

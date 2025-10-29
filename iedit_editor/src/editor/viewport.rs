@@ -10,11 +10,19 @@ pub struct Viewport {
     pub vertical_offset: isize,
 }
 
-impl Viewport {}
+impl Viewport {
+    pub fn new(editor_lines: u16, open_at_line: usize) -> Self {
+        let mut viewport = Self::default();
+        viewport.pre_scroll_top_line = open_at_line.saturating_sub(editor_lines as usize / 2);
+        viewport.top_line = viewport.pre_scroll_top_line;
+
+        viewport
+    }
+}
 
 impl Editor {
     pub fn adjust_viewport(&mut self) {
-        let n_lines = self.config.n_lines as usize;
+        let n_lines = self.renderer.editor_lines as usize;
         let term_width = self.renderer.term_width as usize;
         let n_cols = term_width - self.config.show_line_numbers as usize * 7;
         let y = self.cursor.cur_y;
@@ -99,6 +107,6 @@ impl Editor {
 
     #[inline(always)]
     pub fn viewport_contains_y(&self, y: usize) -> bool {
-        self.viewport.top_line <= y && y < self.viewport.top_line + self.config.n_lines as usize
+        self.viewport.top_line <= y && y < self.viewport.top_line + self.renderer.editor_lines as usize
     }
 }

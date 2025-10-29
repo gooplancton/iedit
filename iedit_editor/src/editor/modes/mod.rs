@@ -54,7 +54,7 @@ impl Editor {
                 CommandExecutionResult::Continue
             }
             C::ScrollViewportDown => {
-                if self.viewport.top_line + (self.config.n_lines as usize) < self.document.n_lines()
+                if self.viewport.top_line + (self.renderer.editor_lines as usize) < self.document.n_lines()
                 {
                     self.viewport.vertical_offset += 1;
                 }
