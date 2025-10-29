@@ -84,6 +84,7 @@ impl Editor {
             ui_origin.1 = ui_origin.1.saturating_sub(offset);
         }
 
+        let open_at = file.as_ref().map(|_| open_at).unwrap_or_default();
         let cur_y = open_at.saturating_sub(1);
 
         let mut viewport = Viewport::default();

@@ -147,11 +147,11 @@ impl Editor {
             Input::Keypress(Key::CtrlDown) => Some(C::ScrollViewportDown),
             Input::Keypress(Key::CtrlUp) => Some(C::ScrollViewportUp),
             Input::Keypress(Key::Ctrl('d')) => Some(C::MoveCursor {
-                movement: MoveCursor::Down(self.config.page_size),
+                movement: MoveCursor::Down(self.config.n_lines as usize),
                 with_selection: self.is_selection_locked,
             }),
             Input::Keypress(Key::Ctrl('u')) => Some(C::MoveCursor {
-                movement: MoveCursor::Up(self.config.page_size),
+                movement: MoveCursor::Up(self.config.n_lines as usize),
                 with_selection: self.is_selection_locked,
             }),
             Input::Keypress(Key::Ctrl('}')) => Some(C::MoveCursor {
