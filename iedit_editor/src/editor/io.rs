@@ -4,7 +4,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{editor::commands::CommandExecutionResult, line::DocumentLine};
+use crate::{
+    editor::commands::{CommandExecutionResult, send_notification},
+    line::DocumentLine,
+};
 
 use super::Editor;
 
@@ -47,7 +50,7 @@ pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
 }
 
 impl Editor {
-    pub fn save_file(&mut self) -> std::io::Result<()> {
+    pub fn save_file(&mut self, display_notification: bool) -> std::io::Result<()> {
         if self.file.is_none() && self.canonicalized_file_path.as_os_str().is_empty() {
             self.prompt_user("File name: ", Editor::set_file);
 
@@ -78,7 +81,9 @@ impl Editor {
             file_writer.flush()?;
 
             self.document.has_been_edited = false;
-            self.status_bar.update_notification("File saved");
+            if display_notification {
+                send_notification("File saved");
+            }
         }
 
         Ok(())
@@ -103,7 +108,7 @@ impl Editor {
             self.canonicalized_file_path = canonicalized_file_path;
         }
 
-        self.save_file();
+        self.save_file(false);
 
         CommandExecutionResult::Continue
     }

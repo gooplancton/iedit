@@ -1,6 +1,6 @@
-use std::io::Stdin;
-
-use termion::{event::Key, input::Keys};
+use crossbeam_channel::{Receiver, select, unbounded};
+use std::{fs, thread};
+use termion::{event::Key, input::TermRead};
 
 #[non_exhaustive]
 pub enum Input {
@@ -11,29 +11,76 @@ pub enum Input {
     ExternalNotification(String),
 }
 
+pub fn get_tty() -> fs::File {
+    fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open("/dev/tty")
+        .expect("could not get tty")
+}
+
 pub struct InputParser {
-    pub keys: Keys<Stdin>,
+    pub keys: Receiver<Key>,
+    pub keychord_buf: [Key; 3],
+    pub notifications: Receiver<String>,
+}
+
+impl InputParser {
+    pub fn new(notifications: Receiver<String>) -> Self {
+        let (sender, receiver) = unbounded();
+
+        thread::spawn(move || {
+            let tty = get_tty();
+            let keys = tty.keys();
+
+            for key in keys {
+                if key.is_err() {
+                    continue;
+                }
+                if sender.send(key.unwrap()).is_err() {
+                    break;
+                }
+            }
+        });
+
+        Self {
+            keys: receiver,
+            keychord_buf: [Key::Null; 3],
+            notifications,
+        }
+    }
 }
 
 impl Iterator for InputParser {
     type Item = Input;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.keys.next()?.ok()? {
-            // TODO: parse ctrl + shift + arrows chords
-            Key::Ctrl('k') => {
-                let second_key = self.keys.next()?.unwrap_or(Key::End);
-                if second_key == Key::Esc {
-                    return Some(Input::NoOp);
-                }
-                let third_key = self.keys.next()?.unwrap_or(Key::End);
-                if second_key == Key::Esc {
-                    return Some(Input::NoOp);
-                }
-
-                Some(Input::KeyChord([Key::Ctrl('k'), second_key, third_key]))
+        select! {
+            recv(self.notifications) -> msg => {
+                msg.ok().map(Input::ExternalNotification)
             }
-            key => Some(Input::Keypress(key)),
+            recv(self.keys) -> key => {
+                match key {
+                    Ok(Key::Ctrl('k')) => {
+                        self.keychord_buf = [Key::Null; 3];
+                        self.keychord_buf[0] = Key::Ctrl('k');
+                        Some(Input::NoOp)
+                    }
+                    Ok(key) if self.keychord_buf[1] != Key::Null => {
+                        self.keychord_buf[2] = key;
+                        let input = Input::KeyChord(self.keychord_buf);
+                        self.keychord_buf = [Key::Null; 3];
+
+                        Some(input)
+                    },
+                    Ok(key) if self.keychord_buf[0] != Key::Null => {
+                        self.keychord_buf[1] = key;
+                        Some(Input::NoOp)
+                    },
+                    Ok(key) => Some(Input::Keypress(key)),
+                    Err(_) => Some(Input::NoOp),
+                }
+            }
         }
     }
 }

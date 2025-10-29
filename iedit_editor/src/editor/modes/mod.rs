@@ -34,7 +34,7 @@ impl Editor {
             }
             C::Quit => self.quit(false),
             C::Save => {
-                if let Err(err) = self.save_file() {
+                if let Err(err) = self.save_file(true) {
                     self.status_bar.update_notification(err.to_string());
                 };
                 CommandExecutionResult::Continue

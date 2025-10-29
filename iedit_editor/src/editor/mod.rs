@@ -11,6 +11,7 @@ use config::EditorConfig;
 use iedit_document::Document;
 use termion::{
     cursor::{DetectCursorPos, Goto, HideCursor},
+    event::Key,
     input::TermRead,
     raw::{IntoRawMode, RawTerminal},
     terminal_size,
@@ -24,6 +25,8 @@ use crate::{
     input::InputParser,
     terminal::H_BAR,
 };
+
+use crossbeam_channel::unbounded;
 
 mod commands;
 mod config;
@@ -50,6 +53,12 @@ pub struct Editor {
     is_selection_locked: bool,
     first_quit_sent: bool,
     is_executing_file: bool,
+}
+
+// Store sender in a static or global location for access anywhere
+lazy_static::lazy_static! {
+    pub static ref NOTIFICATION_SENDER: std::sync::Mutex<Option<crossbeam_channel::Sender<String>>> =
+        std::sync::Mutex::new(None);
 }
 
 impl Editor {
@@ -110,9 +119,11 @@ impl Editor {
     pub fn run(&mut self) -> std::io::Result<()> {
         self.render()?;
 
-        let stdin = stdin();
-        let input_parser = InputParser { keys: stdin.keys() };
+        let (notification_sender, notification_receiver) = unbounded();
 
+        *NOTIFICATION_SENDER.lock().unwrap() = Some(notification_sender);
+
+        let input_parser = InputParser::new(notification_receiver);
         for input in input_parser {
             self.cursor.set_last_pos();
 
