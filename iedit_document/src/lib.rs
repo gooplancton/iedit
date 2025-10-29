@@ -1,7 +1,7 @@
 mod edit;
 mod line;
 
-pub use edit::{EditOperation, Text, InverseStack};
+pub use edit::{EditOperation, InverseStack, Text};
 pub use line::{CharacterEditable, DocumentLine};
 
 pub struct Document {
@@ -162,10 +162,8 @@ impl Document {
 
     pub fn get_previous_blank_line_idx(&self, pos_y: usize) -> usize {
         for idx in (0..pos_y).rev() {
-            if let Some(line) = self.lines.get(idx) {
-                if line.trim().is_empty() {
-                    return idx;
-                }
+            if self.lines.get(idx).is_some_and(|line| line.is_empty()) {
+                return idx;
             }
         }
         0
@@ -173,7 +171,7 @@ impl Document {
 
     pub fn get_matching_paren_pos(&self, (x, y): (usize, usize)) -> Option<(usize, usize)> {
         let line = self.lines.get(y)?;
-        let start_char = line.iter_chars().nth(x)?;
+        let start_char = line.get_nth_char(x)?;
 
         let (matching_char, direction) = match start_char {
             '(' => (')', 1),
@@ -211,13 +209,8 @@ impl Document {
                 } else {
                     current_line.n_chars()
                 };
-                for char_idx in 0..end_pos {
-                    let ch = line.get_nth_char(char_idx);
-                    if ch.is_none() {
-                        continue;
-                    }
-
-                    let ch = ch.unwrap();
+                for char_idx in (0..end_pos).rev() {
+                    let ch = current_line.get_nth_char(char_idx).unwrap();
                     if ch == start_char {
                         stack += 1;
                     } else if ch == matching_char {

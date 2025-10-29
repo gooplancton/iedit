@@ -91,13 +91,11 @@ impl Editor {
             } else {
                 return CommandExecutionResult::Continue;
             }
+        } else if let Ok(mut p) = std::env::current_dir() {
+            p.push(path);
+            p
         } else {
-            if let Ok(mut p) = std::env::current_dir() {
-                p.push(path);
-                p
-            } else {
-                return CommandExecutionResult::Continue;
-            }
+            return CommandExecutionResult::Continue;
         };
 
         if let Ok(file) = File::create_new(&canonicalized_file_path) {

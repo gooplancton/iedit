@@ -8,6 +8,7 @@ iedit_macros = { workspace = true }
 iedit_document = { workspace = true }
 termion = { workspace = true }
 regex-lite = { workspace = true }
+crossbeam-channel = "0.5.15"
 
 [[bin]]
 name = "iedit"

@@ -49,6 +49,7 @@ pub struct Editor {
     // could be a bitfield?
     is_selection_locked: bool,
     first_quit_sent: bool,
+    is_executing_file: bool,
 }
 
 impl Editor {
@@ -102,6 +103,7 @@ impl Editor {
             viewport,
             is_selection_locked: false,
             first_quit_sent: false,
+            is_executing_file: false,
         })
     }
 
@@ -109,10 +111,7 @@ impl Editor {
         self.render()?;
 
         let stdin = stdin();
-        let input_parser = InputParser {
-            keys: stdin.keys(),
-            chord_buffer: [None; 3],
-        };
+        let input_parser = InputParser { keys: stdin.keys() };
 
         for input in input_parser {
             self.cursor.set_last_pos();

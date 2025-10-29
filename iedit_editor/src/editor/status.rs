@@ -2,13 +2,15 @@ use std::any::Any;
 
 use crate::{Editor, editor::commands::CommandExecutionResult};
 
+type SubmitAction = Box<dyn FnOnce(&mut Editor, String) -> CommandExecutionResult>;
+
 #[derive(Default)]
 pub struct StatusBar {
     pub prompt_line: String,
     pub notification: String,
     pub cursor_pos: usize,
 
-    pub submit_action: Option<Box<dyn FnOnce(&mut Editor, String) -> CommandExecutionResult>>,
+    pub submit_action: Option<SubmitAction>,
 }
 
 impl StatusBar {

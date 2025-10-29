@@ -28,7 +28,11 @@ impl Editor {
         use EditorCommand as C;
 
         match command {
-            C::Quit => self.quit(),
+            C::DisplayExternalNotification(notification) => {
+                self.status_bar.notification = notification;
+                CommandExecutionResult::Continue
+            }
+            C::Quit => self.quit(false),
             C::Save => {
                 if let Err(err) = self.save_file() {
                     self.status_bar.update_notification(err.to_string());
@@ -70,6 +74,9 @@ impl Editor {
     #[inline]
     pub fn parse_command(&self, input: Input) -> Option<EditorCommand> {
         match input {
+            Input::ExternalNotification(notification) => {
+                Some(EditorCommand::DisplayExternalNotification(notification))
+            }
             Input::Keypress(Key::Ctrl('q')) => Some(EditorCommand::Quit),
             Input::Keypress(Key::Ctrl('s')) => Some(EditorCommand::Save),
             _ => match self.mode {
@@ -81,8 +88,12 @@ impl Editor {
         }
     }
 
-    pub fn quit(&mut self) -> CommandExecutionResult {
-        if !self.document.has_been_edited || !self.config.confirm_quit_unsaved_changes || self.first_quit_sent {
+    pub fn quit(&mut self, force: bool) -> CommandExecutionResult {
+        if !self.document.has_been_edited
+            || !self.config.confirm_quit_unsaved_changes
+            || self.first_quit_sent
+            || force
+        {
             CommandExecutionResult::ShouldQuit
         } else {
             self.status_bar.update_notification(UNSAVED_CHANGES_WARNING);

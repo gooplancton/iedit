@@ -111,7 +111,7 @@ impl Editor {
 
                 self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
-            },
+            }
             EditorCommand::RedoLastEdit => {
                 if let Some(new_pos) = self.document.redo_last_edit() {
                     self.cursor.update_pos(new_pos);
@@ -119,9 +119,12 @@ impl Editor {
 
                 self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
-            },
+            }
             EditorCommand::FindMatchForward => todo!(),
             EditorCommand::FindMatchBackward => todo!(),
+            EditorCommand::ExecuteFile(executor_key) => {
+                self.execute_file(executor_key);
+            }
             _ => {}
         }
 
@@ -153,6 +156,10 @@ impl Editor {
             }),
             Input::Keypress(Key::Ctrl('}')) => Some(C::MoveCursor {
                 movement: MoveCursor::NextParagraph,
+                with_selection: self.is_selection_locked,
+            }),
+            Input::Keypress(Key::Ctrl('p')) => Some(C::MoveCursor {
+                movement: MoveCursor::MatchingParenthesis,
                 with_selection: self.is_selection_locked,
             }),
             Input::Keypress(Key::Char(ch)) => match self.cursor.get_highlighted_range() {
@@ -254,7 +261,11 @@ impl Editor {
                     with_selection: self.is_selection_locked,
                 })
             }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('x'), executor_key]) => {
+                Some(C::ExecuteFile(executor_key))
+            }
             _ => None,
         }
     }
 }
+
