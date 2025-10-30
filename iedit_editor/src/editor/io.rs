@@ -108,7 +108,8 @@ impl Editor {
             self.canonicalized_file_path = canonicalized_file_path;
         }
 
-        self.save_file(false);
+        // TODO: handle this
+        let _ = self.save_file(false);
 
         CommandExecutionResult::Continue
     }

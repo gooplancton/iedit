@@ -1,6 +1,6 @@
-use std::{any::Any, cmp::min};
+use std::cmp::min;
 
-use iedit_document::{DocumentLine, EditOperation};
+use iedit_document::DocumentLine;
 use termion::event::Key;
 
 use crate::{
@@ -73,7 +73,6 @@ impl Editor {
     }
 
     pub fn prompt_mode_parse_command(&self, input: Input) -> Option<EditorCommand> {
-        use EditOperation as E;
         use EditorCommand as C;
         use EditorMode as M;
 

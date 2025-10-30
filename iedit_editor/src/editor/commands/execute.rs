@@ -8,12 +8,12 @@ use termion::event::Key;
 
 use crate::{
     Editor,
-    editor::{NOTIFICATION_SENDER, commands::notify::send_notification},
+    editor::{commands::notify::send_notification},
 };
 
 impl Editor {
     pub fn execute_file(&mut self, executor_key: Key) {
-        if let Err(err) = self.save_file(false) {
+        if let Err(_) = self.save_file(false) {
             self.status_bar
                 .update_notification("Could not save file for execution");
             return;
@@ -33,7 +33,7 @@ impl Editor {
 
         self.is_executing_file = true;
 
-        let handle: JoinHandle<()> = spawn(move || {
+        let _handle: JoinHandle<()> = spawn(move || {
             if let Err(e) = run_command(&command) {
                 send_notification(format!("Error executing command: {}", e));
             }

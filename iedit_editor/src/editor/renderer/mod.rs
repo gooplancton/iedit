@@ -9,31 +9,61 @@ mod status;
 
 use termion::{
     cursor::{DetectCursorPos, Goto, HideCursor},
-    raw::{IntoRawMode, RawTerminal},
+    raw::RawTerminal,
     terminal_size,
 };
 
 use crate::{
     Editor,
-    editor::config::EditorConfig,
-    terminal::{CLEAR_BELOW_CURSOR, H_BAR},
+    terminal::{
+        CLEAR_BELOW_CURSOR, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, H_BAR, HIGHLIGHT_END,
+    },
 };
 
-pub struct Renderer {
-    pub term: BufWriter<HideCursor<RawTerminal<Stdout>>>,
+#[derive(Clone)]
+pub struct UI {
     pub ui_origin: (u16, u16),
-    pub editor_lines: u16,
     pub term_width: u16,
     pub term_height: u16,
+    pub editor_lines: u16,
     pub horizontal_bar: String,
-    pub dirty_lines: Vec<usize>,
-    pub needs_full_rerender: bool,
 }
 
-impl Renderer {
+impl UI {
+    pub fn new(editor_lines: u16) -> io::Result<Self> {
+        let (term_width, term_height) = terminal_size()?;
+        let horizontal_bar = str::repeat(H_BAR, term_width as usize);
+
+        Ok(UI {
+            ui_origin: (1, 1), // Will be set properly by Renderer
+            term_width,
+            term_height,
+            editor_lines,
+            horizontal_bar,
+        })
+    }
+}
+
+pub struct Renderer<'editor, Term: Write> {
+    term: BufWriter<&'editor mut Term>,
+    ui: UI,
+}
+
+impl<'term, Term: Write> Renderer<'term, Term> {
+    pub fn new(term: &'term mut Term, ui: UI) -> Self {
+        Self {
+            term: BufWriter::new(term),
+            ui,
+        }
+    }
+
     #[inline]
     pub fn reset_cursor(&mut self) -> std::io::Result<()> {
-        write!(self.term, "{}", Goto(self.ui_origin.0, self.ui_origin.1))
+        write!(
+            self.term,
+            "{}",
+            Goto(self.ui.ui_origin.0, self.ui.ui_origin.1)
+        )
     }
 
     #[inline]
@@ -43,63 +73,62 @@ impl Renderer {
 
     #[inline]
     pub fn add_horizontal_bar(&mut self) -> std::io::Result<()> {
-        self.term.write_all(self.horizontal_bar.as_ref())
+        self.term.write_all(self.ui.horizontal_bar.as_ref())
     }
 
-    pub fn new(editor_lines: u16) -> io::Result<Self> {
-        let (term_width, term_height) = terminal_size()?;
-        let horizontal_bar = str::repeat(H_BAR, term_width as usize);
-        let mut term = HideCursor::from(std::io::stdout().into_raw_mode()?);
-        let mut ui_origin = term.cursor_pos()?;
-
-        let ui_start_y = ui_origin.1;
-        let max_scroll = if editor_lines == 0 {
-            term_height / 2
-        } else {
-            editor_lines + 2
-        };
-        let mut real_estate = term_height.saturating_sub(ui_start_y);
-        let offset = max_scroll.saturating_sub(real_estate);
-        if offset > 0 {
-            real_estate = min(max_scroll, term_height);
-            let newlines = "\n".repeat(real_estate as usize);
-            write!(term, "{}{}", newlines, termion::cursor::Up(offset))?;
-            term.flush()?;
-        }
-
-        // NOTE: 2 lines are reserved for the status bar
-        let editor_lines = real_estate.saturating_sub(2);
-
-        term.activate_raw_mode()?;
-        ui_origin.1 -= offset;
-
-        Ok(Renderer {
-            term: BufWriter::new(term),
-            ui_origin,
-            term_width,
-            term_height,
-            editor_lines,
-            horizontal_bar,
-            dirty_lines: vec![],
-            needs_full_rerender: true,
-        })
-    }
-    // pub fn from_editor_config(&)
-}
-
-impl Editor {
-    pub fn render(&mut self) -> std::io::Result<()> {
-        self.renderer.reset_cursor()?;
-        self.render_edit_buffer()?;
-        self.render_status()?;
-        self.renderer.term.flush()?;
+    #[inline]
+    pub fn next_line(&mut self) -> std::io::Result<()> {
+        self.add(CURSOR_DOWN1)?;
+        self.add(CURSOR_TO_COL1)?;
+        self.add(CLEAR_LINE)?;
+        self.add(HIGHLIGHT_END)?;
 
         Ok(())
     }
 
     pub fn cleanup(&mut self) -> std::io::Result<()> {
-        self.renderer.reset_cursor()?;
-        self.renderer.add(CLEAR_BELOW_CURSOR)?;
+        self.reset_cursor()?;
+        self.add(CLEAR_BELOW_CURSOR)?;
+
+        Ok(())
+    }
+
+    pub fn initialize_ui(
+        term: &mut HideCursor<RawTerminal<Stdout>>,
+        ui: &mut UI,
+    ) -> io::Result<()> {
+        let ui_origin = term.cursor_pos()?;
+        let ui_start_y = ui_origin.1;
+        let max_scroll = if ui.editor_lines == 0 {
+            ui.term_height / 2
+        } else {
+            ui.editor_lines + 2
+        };
+
+        let mut real_estate = ui.term_height.saturating_sub(ui_start_y);
+        let offset = max_scroll.saturating_sub(real_estate);
+        if offset > 0 {
+            real_estate = min(max_scroll, ui.term_height);
+            let newlines = "\n".repeat(real_estate as usize);
+            write!(term, "{}{}", newlines, termion::cursor::Up(offset))?;
+            term.flush()?;
+        }
+
+        ui.editor_lines = real_estate.saturating_sub(2);
+        ui.ui_origin = (ui_origin.0, ui_origin.1 - offset);
+
+        term.activate_raw_mode()?;
+        Ok(())
+    }
+
+    pub fn render<'editor>(&mut self, editor: &'editor Editor) -> std::io::Result<()>
+    where
+        'term: 'editor,
+    {
+        self.reset_cursor()?;
+        editor.render_edit_buffer(self)?;
+        editor.render_status(self)?;
+        self.term.flush()?;
 
         Ok(())
     }

@@ -71,7 +71,7 @@ impl Cursor {
     pub fn get_highlighted_range(&self) -> Option<((usize, usize), (usize, usize))> {
         let cursor_pos = self.pos();
 
-        self.selection_anchor.map(|(anchor_pos)| {
+        self.selection_anchor.map(|anchor_pos| {
             if anchor_pos.1 < cursor_pos.1
                 || (anchor_pos.1 == cursor_pos.1 && anchor_pos.0 < cursor_pos.0)
             {

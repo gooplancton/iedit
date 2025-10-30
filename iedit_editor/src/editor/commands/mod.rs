@@ -2,7 +2,7 @@ mod execute;
 mod move_cursor;
 mod notify;
 
-use crate::{Editor, editor::modes::EditorMode};
+use crate::{editor::modes::EditorMode};
 use iedit_document::EditOperation;
 pub use move_cursor::MoveCursor;
 use termion::event::Key;

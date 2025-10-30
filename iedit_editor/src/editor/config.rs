@@ -1,9 +1,4 @@
-use std::{
-    cmp::min,
-    io::{Stdout, Write},
-};
 
-use termion::{cursor::HideCursor, raw::RawTerminal};
 
 use iedit_macros::ConfigParse;
 
@@ -32,7 +27,4 @@ impl Default for EditorConfig {
             edit_debounce_time_secs: 1,
         }
     }
-}
-
-impl EditorConfig {
 }

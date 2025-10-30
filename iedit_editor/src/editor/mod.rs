@@ -1,9 +1,7 @@
-#![allow(unused)]
-
 use std::{
     fmt::Display,
     fs::File,
-    io::{BufWriter, Stdout, Write, stdin, stdout},
+    io::Write,
     path::{Path, PathBuf},
     sync::{
         Arc,
@@ -14,22 +12,12 @@ use std::{
 use config::EditorConfig;
 use iedit_document::Document;
 use signal_hook::{consts::SIGWINCH, flag};
-use termion::{
-    cursor::{DetectCursorPos, Goto, HideCursor},
-    event::Key,
-    input::TermRead,
-    raw::{IntoRawMode, RawTerminal},
-    screen::IntoAlternateScreen,
-    terminal_size,
-};
 
 use crate::{
     editor::{
-        commands::CommandExecutionResult, cursor::Cursor, io::read_file, modes::EditorMode,
-        renderer::Renderer, status::StatusBar, viewport::Viewport,
+        commands::CommandExecutionResult, cursor::Cursor, io::read_file, modes::EditorMode, renderer::{Renderer, UI}, status::StatusBar, viewport::Viewport
     },
     input::InputParser,
-    terminal::H_BAR,
 };
 
 use crossbeam_channel::unbounded;
@@ -53,9 +41,11 @@ pub struct Editor {
     status_bar: StatusBar,
     cursor: Cursor,
     viewport: Viewport,
-    renderer: Renderer,
+    ui: UI,
+    dirty_lines: Vec<usize>,
 
     // could be a bitfield?
+    needs_full_rerender: bool,
     is_selection_locked: bool,
     first_quit_sent: bool,
     is_executing_file: bool,
@@ -81,9 +71,9 @@ impl Editor {
         let open_at_line = file.as_ref().map(|_| open_at_line).unwrap_or_default();
         let cur_y = open_at_line.saturating_sub(1);
 
+        let ui = UI::new(config.n_lines)?;
         let document = Document::new(file_lines);
-        let renderer = Renderer::new(config.n_lines)?;
-        let viewport = Viewport::new(renderer.editor_lines, open_at_line);
+        let viewport = Viewport::new(ui.editor_lines, open_at_line);
 
         Ok(Self {
             file,
@@ -93,8 +83,10 @@ impl Editor {
             config,
             status_bar: StatusBar::default(),
             cursor: Cursor::new((0, cur_y)),
-            renderer,
+            ui,
             viewport,
+            dirty_lines: vec![],
+            needs_full_rerender: true,
             is_selection_locked: false,
             first_quit_sent: false,
             is_executing_file: false,
@@ -105,11 +97,12 @@ impl Editor {
         // need to figure something out here
     }
 
-    pub fn run(&mut self) -> std::io::Result<()> {
-        self.render()?;
+    pub fn run<Term: Write>(&mut self, mut term: Term) -> std::io::Result<()> {
+        let mut renderer = Renderer::new(&mut term, self.ui.clone());
+        renderer.render(self)?;
 
         let window_resized = Arc::<AtomicBool>::new(AtomicBool::new(false));
-        flag::register(SIGWINCH, window_resized.clone());
+        let _ = flag::register(SIGWINCH, window_resized.clone());
 
         let (notification_sender, notification_receiver) = unbounded();
 
@@ -142,10 +135,11 @@ impl Editor {
 
             self.adjust_viewport();
 
-            self.render()?;
+            renderer.render(self)?;
         }
 
-        self.cleanup()?;
+        renderer.cleanup()?;
+
         Ok(())
     }
 

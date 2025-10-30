@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use crate::{Editor, editor::commands::CommandExecutionResult};
 
 type SubmitAction = Box<dyn FnOnce(&mut Editor, String) -> CommandExecutionResult>;

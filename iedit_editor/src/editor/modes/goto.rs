@@ -1,4 +1,3 @@
-use iedit_document::EditOperation;
 use termion::event::Key;
 
 use crate::{
@@ -49,7 +48,7 @@ impl Editor {
 
     pub fn goto_mode_parse_command(&self, input: Input) -> Option<EditorCommand> {
         use EditorCommand as C;
-        use EditorMode as M;
+        
 
         match input {
             Input::Keypress(Key::Char('\n')) | Input::Keypress(Key::Char('\r')) => {
