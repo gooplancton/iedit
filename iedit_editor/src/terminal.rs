@@ -1,17 +1,11 @@
-#![allow(dead_code, unused)]
-
 use std::{
     cmp::min,
-    io::{self, Stdout, Write, stdout},
+    io::{self, Write},
     ops::DerefMut,
     os::fd::AsFd,
 };
 
-use termion::{
-    cursor::{DetectCursorPos, HideCursor},
-    raw::{IntoRawMode, RawTerminal},
-    terminal_size,
-};
+use termion::{cursor::DetectCursorPos, raw::RawTerminal, terminal_size};
 
 pub static CURSOR_UP1: &str = "\x1b[1A";
 pub static CURSOR_DOWN1: &str = "\x1b[1B";
