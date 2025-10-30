@@ -9,21 +9,22 @@ use std::{
     },
 };
 
-use config::EditorConfig;
+use crate::config::EditorConfig;
 use iedit_document::Document;
 use signal_hook::{consts::SIGWINCH, flag};
 
 use crate::{
     editor::{
-        commands::CommandExecutionResult, cursor::Cursor, io::read_file, modes::EditorMode, renderer::{Renderer, UI}, status::StatusBar, viewport::Viewport
+        commands::CommandExecutionResult, cursor::Cursor, io::read_file, modes::EditorMode,
+        renderer::Renderer, status::StatusBar, viewport::Viewport,
     },
     input::InputParser,
+    terminal::UILayout,
 };
 
 use crossbeam_channel::unbounded;
 
 mod commands;
-mod config;
 mod cursor;
 mod highlight;
 mod io;
@@ -41,7 +42,7 @@ pub struct Editor {
     status_bar: StatusBar,
     cursor: Cursor,
     viewport: Viewport,
-    ui: UI,
+    ui: UILayout,
     dirty_lines: Vec<usize>,
 
     // could be a bitfield?
@@ -58,20 +59,17 @@ lazy_static::lazy_static! {
 }
 
 impl Editor {
-    pub fn new(path: impl AsRef<Path>, open_at_line: usize) -> std::io::Result<Self> {
-        let (file, canonicalized_file_path, file_lines) = read_file(path)?;
-
-        let config = if let Some(mut path) = std::env::home_dir() {
-            path.push(".iedit.conf");
-            EditorConfig::from_file(path).unwrap_or_default()
-        } else {
-            EditorConfig::default()
-        };
+    pub fn new(
+        file_path: impl AsRef<Path>,
+        open_at_line: usize,
+        config: EditorConfig,
+        ui: UILayout,
+    ) -> std::io::Result<Self> {
+        let (file, canonicalized_file_path, file_lines) = read_file(file_path)?;
 
         let open_at_line = file.as_ref().map(|_| open_at_line).unwrap_or_default();
         let cur_y = open_at_line.saturating_sub(1);
 
-        let ui = UI::new(config.n_lines)?;
         let document = Document::new(file_lines);
         let viewport = Viewport::new(ui.editor_lines, open_at_line);
 
@@ -97,8 +95,8 @@ impl Editor {
         // need to figure something out here
     }
 
-    pub fn run<Term: Write>(&mut self, mut term: Term) -> std::io::Result<()> {
-        let mut renderer = Renderer::new(&mut term, self.ui.clone());
+    pub fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<()> {
+        let mut renderer = Renderer::new(term, self.ui.clone());
         renderer.render(self)?;
 
         let window_resized = Arc::<AtomicBool>::new(AtomicBool::new(false));
@@ -136,6 +134,11 @@ impl Editor {
             self.adjust_viewport();
 
             renderer.render(self)?;
+
+            self.dirty_lines.truncate(0);
+            self.status_bar.notification.truncate(0);
+            // TODO: set to false once we figure out dirty_lines
+            self.needs_full_rerender = true;
         }
 
         renderer.cleanup()?;

@@ -18,9 +18,6 @@ impl Editor {
         renderer.add(&self.status_bar.notification)?;
         renderer.next_line()?;
 
-        // move into Editor::run
-        // self.status_bar.notification.truncate(0);
-
         Ok(())
     }
 

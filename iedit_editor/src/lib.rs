@@ -1,8 +1,9 @@
 pub mod editor;
 pub mod input;
+pub mod config;
 
 #[macro_use]
-mod terminal;
+pub mod terminal;
 
 pub use editor::Editor;
 

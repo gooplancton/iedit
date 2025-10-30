@@ -8,9 +8,7 @@ use crate::{
         highlight::SelectionHighlight,
         renderer::{Renderer, legacy_line_renderer::LineRenderer},
     },
-    terminal::{
-        self, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, EMPTY_CURSOR, HIGHLIGHT_END, V_BAR,
-    },
+    terminal::{self, CLEAR_LINE, EMPTY_CURSOR, HIGHLIGHT_END, V_BAR},
 };
 
 impl Editor {
@@ -108,13 +106,8 @@ impl Editor {
             let with_cursor = empty_line_idx == 0 && self.cursor.cur_y >= self.document.lines.len();
             self.render_empty_line(renderer, with_cursor)?;
 
-            renderer.add(CURSOR_DOWN1.as_bytes())?;
-            renderer.add(CURSOR_TO_COL1.as_bytes())?;
+            renderer.next_line()?;
         }
-
-        // set in Editor::run
-        // renderer.dirty_lines.truncate(0);
-        // renderer.needs_full_rerender = false;
 
         Ok(())
     }
