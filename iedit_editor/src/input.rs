@@ -1,5 +1,5 @@
 use crossbeam_channel::{Receiver, select, unbounded};
-use std::{fs, thread};
+use std::fs;
 use termion::{event::Key, input::TermRead};
 
 #[non_exhaustive]
@@ -28,7 +28,7 @@ impl InputParser {
     pub fn new(notifications: Receiver<String>) -> Self {
         let (sender, receiver) = unbounded();
 
-        thread::spawn(move || {
+        smol::spawn(async move {
             let tty = get_tty();
             let keys = tty.keys();
 
@@ -40,7 +40,8 @@ impl InputParser {
                     break;
                 }
             }
-        });
+        })
+        .detach();
 
         Self {
             keys: receiver,

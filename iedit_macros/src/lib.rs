@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
+use syn::{Data, DeriveInput, Fields, parse_macro_input};
 
 #[proc_macro_derive(ConfigParse)]
 pub fn derive_config_parse(input: TokenStream) -> TokenStream {
@@ -47,8 +47,8 @@ pub fn derive_config_parse(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         impl #name {
             /// Load config from a file, falling back to defaults for missing values
-            pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> std::io::Result<Self> {
-                let contents = std::fs::read_to_string(path)?;
+            pub async fn from_file<P: AsRef<std::path::Path>>(path: P) -> smol::io::Result<Self> {
+                let contents = smol::fs::read_to_string(path).await?;
                 Ok(Self::parse(&contents))
             }
 
@@ -58,7 +58,7 @@ pub fn derive_config_parse(input: TokenStream) -> TokenStream {
 
                 for line in contents.lines() {
                     let line = line.trim();
-                    
+
                     // Skip empty lines and comments
                     if line.is_empty() || line.starts_with('#') {
                         continue;
@@ -80,8 +80,8 @@ pub fn derive_config_parse(input: TokenStream) -> TokenStream {
             }
 
             /// Load config from file if it exists, otherwise return defaults
-            pub fn load_or_default<P: AsRef<std::path::Path>>(path: P) -> Self {
-                Self::from_file(path).unwrap_or_default()
+            pub async fn load_or_default<P: AsRef<std::path::Path>>(path: P) -> Self {
+                Self::from_file(path).await.unwrap_or_default()
             }
         }
     };

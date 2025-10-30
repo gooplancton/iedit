@@ -54,10 +54,10 @@ pub struct Editor {
 }
 
 // Store sender in a static or global location for access anywhere
-lazy_static::lazy_static! {
-    pub static ref NOTIFICATION_SENDER: std::sync::Mutex<Option<crossbeam_channel::Sender<String>>> =
-        std::sync::Mutex::new(None);
-}
+pub static NOTIFICATION_SENDER: std::sync::Mutex<Option<crossbeam_channel::Sender<String>>> =
+    std::sync::Mutex::new(None);
+
+pub static FILE_EXECUTION_OUTPUT: std::sync::Mutex<Option<Document>> = std::sync::Mutex::new(None);
 
 impl Editor {
     pub fn new(
@@ -102,7 +102,7 @@ impl Editor {
         // need to figure something out here
     }
 
-    pub fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<()> {
+    pub async fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<()> {
         let mut renderer = Renderer::new(term, self.ui.clone());
         renderer.render(self)?;
 

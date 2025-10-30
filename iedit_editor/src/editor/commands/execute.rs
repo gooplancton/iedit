@@ -6,10 +6,7 @@ use std::{
 
 use termion::event::Key;
 
-use crate::{
-    Editor,
-    editor::{commands::notify::send_notification},
-};
+use crate::{Editor, editor::commands::notify::send_notification};
 
 impl Editor {
     pub fn execute_file(&mut self, executor_key: Key) {
@@ -33,8 +30,8 @@ impl Editor {
 
         self.is_executing_file = true;
 
-        let _handle: JoinHandle<()> = spawn(move || {
-            if let Err(e) = run_command(&command) {
+        let _handle = smol::spawn(async move {
+            if let Err(e) = run_command(&command).await {
                 send_notification(format!("Error executing command: {}", e));
             }
         });
@@ -59,7 +56,7 @@ impl Editor {
     }
 }
 
-fn run_command(command: &str) -> std::io::Result<()> {
+async fn run_command(command: &str) -> smol::io::Result<()> {
     let mut child = Command::new("sh")
         .arg("-c")
         .arg(command)

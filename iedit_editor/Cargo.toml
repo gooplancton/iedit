@@ -9,8 +9,8 @@ iedit_document = { workspace = true }
 termion = { workspace = true }
 regex-lite = { workspace = true }
 crossbeam-channel = "0.5.15"
-lazy_static = "1.5.0"
 signal-hook = { version = "0.3.18", features = [] }
+smol = "2.0.2"
 
 [[bin]]
 name = "iedit"
