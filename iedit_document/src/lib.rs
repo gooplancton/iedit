@@ -9,15 +9,17 @@ pub struct Document {
     undo_stack: Vec<EditOperation>,
     redo_stack: Vec<EditOperation>,
     pub has_been_edited: bool,
+    pub tab_size: u16,
 }
 
 impl Document {
-    pub fn new(lines: Vec<String>) -> Self {
+    pub fn new(lines: Vec<String>, tab_size: Option<u16>) -> Self {
         Self {
             lines,
             undo_stack: vec![],
             redo_stack: vec![],
             has_been_edited: false,
+            tab_size: tab_size.unwrap_or(4),
         }
     }
 
@@ -49,12 +51,12 @@ impl Document {
         };
 
         let n_chars = line.n_chars();
-        let mut next_word_x = x;
+        let mut next_word_x = x + 1;
 
         // Skip word
         while next_word_x <= n_chars
             && line
-                .get_nth_char(next_word_x + 1)
+                .get_nth_char(next_word_x)
                 .is_some_and(char::is_alphanumeric)
         {
             next_word_x += 1;
@@ -63,7 +65,7 @@ impl Document {
         // Skip whitespace
         while next_word_x <= n_chars
             && line
-                .get_nth_char(next_word_x + 1)
+                .get_nth_char(next_word_x)
                 .is_some_and(char::is_whitespace)
         {
             next_word_x += 1;
@@ -82,12 +84,12 @@ impl Document {
             return (x, y.saturating_sub(1));
         }
 
-        let mut previous_word_x = x;
+        let mut previous_word_x = x - 1;
 
         // Skip whitespace backwards
         while previous_word_x > 0
             && line
-                .get_nth_char(previous_word_x - 1)
+                .get_nth_char(previous_word_x)
                 .is_some_and(char::is_whitespace)
         {
             previous_word_x -= 1;
@@ -96,8 +98,8 @@ impl Document {
         // Skip word backwards
         while previous_word_x > 0
             && line
-                .get_nth_char(previous_word_x - 1)
-                .is_some_and(char::is_alphanumeric)
+                .get_nth_char(previous_word_x)
+                .is_some_and(|ch| !ch.is_whitespace())
         {
             previous_word_x -= 1;
         }

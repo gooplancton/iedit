@@ -97,7 +97,8 @@ fn run_command(command: &str) -> std::io::Result<()> {
         }
     }
 
-    let output = Document::new(output_lines);
+    // TODO: figure out tabsize here or set a sensible default
+    let output = Document::new(output_lines, Some(4));
 
     if let Ok(mut file_execution_output) = FILE_EXECUTION_OUTPUT.lock() {
         if file_execution_output.is_none() {

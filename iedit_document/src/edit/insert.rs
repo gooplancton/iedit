@@ -8,6 +8,18 @@ impl Document {
         Some((x + 1, y))
     }
 
+    pub fn insert_tab_at(&mut self, (x, y): (usize, usize)) -> EditResult {
+        // TODO: need to handle inserting real tab stops
+        let tab_size = self.tab_size;
+        let line = self.get_or_add_line(y)?;
+
+        for _ in 0..tab_size {
+            line.insert_char_at(' ', x);
+        }
+
+        Some((x + tab_size as usize, y))
+    }
+
     pub fn insert_string_at(
         &mut self,
         (x, y): (usize, usize),
@@ -39,9 +51,7 @@ impl Document {
             let (left, right) = line.split_chars_at(x);
 
             // Create the new first line
-            let mut first_line = String::with_capacity(
-                left.n_chars() + lines[0].n_chars(),
-            );
+            let mut first_line = String::with_capacity(left.n_chars() + lines[0].n_chars());
             first_line.push_str(left);
             first_line.push_str(&lines[0]);
 
@@ -76,6 +86,7 @@ impl Document {
     }
 
     pub fn insert_newline_at(&mut self, (x, y): (usize, usize)) -> EditResult {
+        // TODO: match indentation level of previous line if possible
         let line = self.get_or_add_line(y)?;
 
         let current_line = if x < line.n_chars() {

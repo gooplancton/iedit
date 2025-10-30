@@ -69,7 +69,7 @@ impl Editor {
         let open_at_line = file.as_ref().map(|_| open_at_line).unwrap_or_default();
         let cur_y = open_at_line.saturating_sub(1);
 
-        let document = Document::new(file_lines);
+        let document = Document::new(file_lines, Some(config.tab_size));
         let viewport = Viewport::new(ui.editor_lines, open_at_line);
 
         Ok(Self {
@@ -94,6 +94,7 @@ impl Editor {
     pub fn toggle_execution_output(&mut self) {
         if let Ok(mut execution_output) = FILE_EXECUTION_OUTPUT.lock() {
             if let Some(execution_output) = execution_output.as_mut() {
+                self.is_readonly = !self.is_readonly;
                 self.swap_docuemnt(execution_output);
             }
         }

@@ -73,6 +73,23 @@ impl Document {
             }
             Op::Insertion {
                 pos,
+                text: T::Char(newline),
+            } if newline == '\t' => {
+                let new_pos = self.insert_tab_at(pos)?;
+                push_inverse!(
+                    self,
+                    inverse_stack,
+                    Op::Replacement {
+                        pos_from: pos,
+                        pos_to: new_pos,
+                        text: T::Empty
+                    }
+                );
+
+                Some(new_pos)
+            }
+            Op::Insertion {
+                pos,
                 text: T::Char(ch),
             } => {
                 let new_pos = self.insert_char_at(pos, ch)?;
