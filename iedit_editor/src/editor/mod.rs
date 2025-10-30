@@ -48,6 +48,7 @@ pub struct Editor {
     // could be a bitfield?
     needs_full_rerender: bool,
     is_selection_locked: bool,
+    is_readonly: bool,
     first_quit_sent: bool,
     is_executing_file: bool,
 }
@@ -85,10 +86,16 @@ impl Editor {
             viewport,
             dirty_lines: vec![],
             needs_full_rerender: true,
+            is_readonly: false,
             is_selection_locked: false,
             first_quit_sent: false,
             is_executing_file: false,
         })
+    }
+
+    pub fn swap_docuemnt(&mut self, new_doc: &mut Document) {
+        std::mem::swap(&mut self.document, new_doc);
+        self.needs_full_rerender = true;
     }
 
     pub fn reset_ui(&mut self) {

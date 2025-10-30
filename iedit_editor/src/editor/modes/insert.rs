@@ -96,7 +96,7 @@ impl Editor {
                 self.is_selection_locked = false;
                 self.cursor.selection_anchor = None;
             }
-            EditorCommand::Edit(op) => {
+            EditorCommand::Edit(op) if !self.is_readonly => {
                 if let Some(new_pos) = self.document.apply_edit(op, S::Undo) {
                     self.cursor.update_pos(new_pos);
                 }
@@ -104,7 +104,7 @@ impl Editor {
                 self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
             }
-            EditorCommand::UndoLastEdit => {
+            EditorCommand::UndoLastEdit if !self.is_readonly => {
                 if let Some(new_pos) = self.document.undo_last_edit() {
                     self.cursor.update_pos(new_pos);
                 }
@@ -112,7 +112,7 @@ impl Editor {
                 self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
             }
-            EditorCommand::RedoLastEdit => {
+            EditorCommand::RedoLastEdit if !self.is_readonly => {
                 if let Some(new_pos) = self.document.redo_last_edit() {
                     self.cursor.update_pos(new_pos);
                 }
@@ -268,4 +268,3 @@ impl Editor {
         }
     }
 }
-
