@@ -4,11 +4,12 @@ use std::{
     thread::{JoinHandle, spawn},
 };
 
+use iedit_document::Document;
 use termion::event::Key;
 
 use crate::{
     Editor,
-    editor::{commands::notify::send_notification},
+    editor::{FILE_EXECUTION_OUTPUT, commands::notify::send_notification},
 };
 
 impl Editor {
@@ -79,34 +80,37 @@ fn run_command(command: &str) -> std::io::Result<()> {
     let stdout_reader = BufReader::new(stdout);
     let stderr_reader = BufReader::new(stderr);
 
+    let mut output_lines = vec![];
+
     // Process stdout and stderr concurrently
-    let stdout_handle = spawn(move || {
-        for line in stdout_reader.lines() {
-            if let Ok(line) = line {
-                send_notification(format!("stdout: {}", line));
-            }
+    output_lines.push("// STDOUT //".to_owned());
+    for line in stdout_reader.lines() {
+        if let Ok(line) = line {
+            output_lines.push(line);
         }
-    });
+    }
 
-    let stderr_handle = spawn(move || {
-        for line in stderr_reader.lines() {
-            if let Ok(line) = line {
-                send_notification(format!("stderr: {}", line));
-            }
+    output_lines.push("// STDERR //".to_owned());
+    for line in stderr_reader.lines() {
+        if let Ok(line) = line {
+            output_lines.push(line);
         }
-    });
+    }
 
-    // Wait for output processing to complete
-    stdout_handle
-        .join()
-        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "stdout thread panicked"))?;
-    stderr_handle
-        .join()
-        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "stderr thread panicked"))?;
+    let output = Document::new(output_lines);
+
+    if let Ok(mut file_execution_output) = FILE_EXECUTION_OUTPUT.lock() {
+        if file_execution_output.is_none() {
+            *file_execution_output = Some(output)
+        }
+    }
 
     // Wait for the process to complete
     let status = child.wait()?;
-    send_notification(format!("Process exited with status: {}", status));
+    send_notification(format!(
+        "Process exited with status: {}, To view output: Ctrl+k v o",
+        status
+    ));
 
     Ok(())
 }

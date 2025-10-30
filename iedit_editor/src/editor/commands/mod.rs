@@ -38,6 +38,7 @@ pub enum EditorCommand {
     FindMatchBackward,
     ExecuteFile(Key),
     DisplayExternalNotification(String),
+    ViewExecutionOutput,
 }
 
 #[non_exhaustive]

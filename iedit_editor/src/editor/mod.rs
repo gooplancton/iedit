@@ -4,7 +4,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
 };
@@ -22,7 +22,7 @@ use crate::{
     terminal::UILayout,
 };
 
-use crossbeam_channel::unbounded;
+use crossbeam_channel::{Sender, unbounded};
 
 mod commands;
 mod cursor;
@@ -54,10 +54,8 @@ pub struct Editor {
 }
 
 // Store sender in a static or global location for access anywhere
-lazy_static::lazy_static! {
-    pub static ref NOTIFICATION_SENDER: std::sync::Mutex<Option<crossbeam_channel::Sender<String>>> =
-        std::sync::Mutex::new(None);
-}
+pub static NOTIFICATION_SENDER: Mutex<Option<Sender<String>>> = Mutex::new(None);
+pub static FILE_EXECUTION_OUTPUT: Mutex<Option<Document>> = Mutex::new(None);
 
 impl Editor {
     pub fn new(
@@ -91,6 +89,14 @@ impl Editor {
             first_quit_sent: false,
             is_executing_file: false,
         })
+    }
+
+    pub fn toggle_execution_output(&mut self) {
+        if let Ok(mut execution_output) = FILE_EXECUTION_OUTPUT.lock() {
+            if let Some(execution_output) = execution_output.as_mut() {
+                self.swap_docuemnt(execution_output);
+            }
+        }
     }
 
     pub fn swap_docuemnt(&mut self, new_doc: &mut Document) {

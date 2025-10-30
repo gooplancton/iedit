@@ -65,6 +65,10 @@ impl Iterator for InputParser {
                         self.keychord_buf[0] = Key::Ctrl('k');
                         Some(Input::NoOp)
                     }
+                    Ok(Key::Esc) if self.keychord_buf[0] != Key::Null => {
+                        self.keychord_buf = [Key::Null; 3];
+                        Some(Input::NoOp)
+                    }
                     Ok(key) if self.keychord_buf[1] != Key::Null => {
                         self.keychord_buf[2] = key;
                         let input = Input::KeyChord(self.keychord_buf);

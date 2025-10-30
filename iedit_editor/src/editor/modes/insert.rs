@@ -125,6 +125,9 @@ impl Editor {
             EditorCommand::ExecuteFile(executor_key) => {
                 self.execute_file(executor_key);
             }
+            EditorCommand::ViewExecutionOutput => {
+                self.toggle_execution_output();
+            }
             _ => {}
         }
 
@@ -263,6 +266,9 @@ impl Editor {
             }
             Input::KeyChord([Key::Ctrl('k'), Key::Char('x'), executor_key]) => {
                 Some(C::ExecuteFile(executor_key))
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('v'), Key::Char('o')]) => {
+                Some(C::ViewExecutionOutput)
             }
             _ => None,
         }
