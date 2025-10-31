@@ -1,5 +1,3 @@
-
-
 use iedit_macros::ConfigParse;
 
 #[derive(ConfigParse)]
@@ -11,7 +9,7 @@ pub struct EditorConfig {
     pub show_line_numbers: bool,
     pub show_keybindings: bool,
     pub confirm_quit_unsaved_changes: bool,
-    pub edit_debounce_time_secs: u64,
+    pub tab_emit_spaces: bool,
 }
 
 impl Default for EditorConfig {
@@ -24,7 +22,7 @@ impl Default for EditorConfig {
             show_line_numbers: true,
             show_keybindings: true,
             confirm_quit_unsaved_changes: true,
-            edit_debounce_time_secs: 1,
+            tab_emit_spaces: true,
         }
     }
 }

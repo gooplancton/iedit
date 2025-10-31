@@ -68,12 +68,14 @@ fn run_command(command: &str) -> std::io::Result<()> {
         .stderr(Stdio::piped())
         .spawn()?;
 
-    let stdout = child.stdout.take().ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::Other, "Failed to capture stdout")
-    })?;
-    let stderr = child.stderr.take().ok_or_else(|| {
-        std::io::Error::new(std::io::ErrorKind::Other, "Failed to capture stderr")
-    })?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| std::io::Error::other("Failed to capture stdout"))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| std::io::Error::other("Failed to capture stderr"))?;
 
     send_notification(format!("Executing: {}", command));
 
@@ -97,13 +99,12 @@ fn run_command(command: &str) -> std::io::Result<()> {
         }
     }
 
-    // TODO: figure out tabsize here or set a sensible default
-    let output = Document::new(output_lines, Some(4));
+    let output = Document::new(output_lines);
 
-    if let Ok(mut file_execution_output) = FILE_EXECUTION_OUTPUT.lock() {
-        if file_execution_output.is_none() {
-            *file_execution_output = Some(output)
-        }
+    if let Ok(mut file_execution_output) = FILE_EXECUTION_OUTPUT.lock()
+        && file_execution_output.is_none()
+    {
+        *file_execution_output = Some(output)
     }
 
     // Wait for the process to complete

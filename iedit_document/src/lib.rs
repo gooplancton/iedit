@@ -9,17 +9,15 @@ pub struct Document {
     undo_stack: Vec<EditOperation>,
     redo_stack: Vec<EditOperation>,
     pub has_been_edited: bool,
-    pub tab_size: u16,
 }
 
 impl Document {
-    pub fn new(lines: Vec<String>, tab_size: Option<u16>) -> Self {
+    pub fn new(lines: Vec<String>) -> Self {
         Self {
             lines,
             undo_stack: vec![],
             redo_stack: vec![],
             has_been_edited: false,
-            tab_size: tab_size.unwrap_or(4),
         }
     }
 
@@ -99,7 +97,7 @@ impl Document {
         while previous_word_x > 0
             && line
                 .get_nth_char(previous_word_x)
-                .is_some_and(|ch| !ch.is_whitespace())
+                .is_some_and(char::is_alphanumeric)
         {
             previous_word_x -= 1;
         }
@@ -113,10 +111,10 @@ impl Document {
         ch: char,
     ) -> Option<(usize, usize)> {
         // Search current line from position
-        if let Some(line) = self.lines.get(y) {
-            if let Some(idx) = line[x..].find(ch) {
-                return Some((x + idx, y));
-            }
+        if let Some(line) = self.lines.get(y)
+            && let Some(idx) = line[x..].find(ch)
+        {
+            return Some((x + idx, y));
         }
 
         // Search subsequent lines
@@ -135,18 +133,18 @@ impl Document {
         ch: char,
     ) -> Option<(usize, usize)> {
         // Search current line backwards from position
-        if let Some(line) = self.lines.get(y) {
-            if let Some(idx) = line[..x].rfind(ch) {
-                return Some((idx, y));
-            }
+        if let Some(line) = self.lines.get(y)
+            && let Some(idx) = line[..x].rfind(ch)
+        {
+            return Some((idx, y));
         }
 
         // Search previous lines backwards
         for line_idx in (0..y).rev() {
-            if let Some(line) = self.lines.get(line_idx) {
-                if let Some(idx) = line.rfind(ch) {
-                    return Some((idx, line_idx));
-                }
+            if let Some(line) = self.lines.get(line_idx)
+                && let Some(idx) = line.rfind(ch)
+            {
+                return Some((idx, line_idx));
             }
         }
 

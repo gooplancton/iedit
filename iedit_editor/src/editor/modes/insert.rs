@@ -165,17 +165,26 @@ impl Editor {
                 movement: MoveCursor::MatchingParenthesis,
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Char(ch)) => match self.cursor.get_highlighted_range() {
-                None => Some(C::Edit(Op::Insertion {
-                    pos: self.cursor.pos(),
-                    text: T::Char(ch),
-                })),
-                Some((pos_from, pos_to)) => Some(C::Edit(Op::Replacement {
-                    pos_from,
-                    pos_to,
-                    text: Text::Char(ch),
-                })),
-            },
+            Input::Keypress(Key::Char(ch)) => {
+                let text = if ch == '\t' && self.config.tab_emit_spaces {
+                    let n_spaces = self.config.tab_size as usize
+                        - (self.cursor.cur_x % self.config.tab_size as usize);
+                    T::String(" ".repeat(n_spaces))
+                } else {
+                    T::Char(ch)
+                };
+                match self.cursor.get_highlighted_range() {
+                    None => Some(C::Edit(Op::Insertion {
+                        pos: self.cursor.pos(),
+                        text,
+                    })),
+                    Some((pos_from, pos_to)) => Some(C::Edit(Op::Replacement {
+                        pos_from,
+                        pos_to,
+                        text,
+                    })),
+                }
+            }
             Input::Keypress(Key::Backspace) | Input::Keypress(Key::Delete) => {
                 match self.cursor.get_highlighted_range() {
                     None => Some(C::Edit(Op::Deletion {

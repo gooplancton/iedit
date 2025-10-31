@@ -52,8 +52,8 @@ impl Editor {
             EditorMode::Search => todo!(),
         };
 
-        let mut line_renderer =
-            LineRenderer::new(content).with_display_range(0..self.ui.term_width as usize);
+        let mut line_renderer = LineRenderer::new(content, &renderer.tab_string)
+            .with_display_range(0..self.ui.term_width as usize);
 
         if !matches!(self.mode, EditorMode::Insert) {
             let x = self.status_bar.cursor_pos;

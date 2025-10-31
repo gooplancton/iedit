@@ -1,24 +1,35 @@
-
 use std::{cmp::min, io::Write, ops::Range};
 
 use crate::{
+    editor::highlight::SelectionHighlight,
     line::{CharacterEditable, DocumentLine},
     terminal::{HIGHLIGHT_END, HIGHLIGHT_START},
-    editor::highlight::SelectionHighlight
 };
 
 pub struct LineRenderer<'line> {
     pub line: &'line String,
     pub display_range: Range<usize>,
     pub selection_highlight: SelectionHighlight,
+    pub tab_string: &'line str,
+}
+
+macro_rules! write_char {
+    ( $writer:expr, $ch:expr, $tab_string:expr ) => {
+        if $ch == '\t' {
+            write!($writer, "{}", $tab_string)
+        } else {
+            write!($writer, "{}", $ch)
+        }
+    };
 }
 
 impl<'line> LineRenderer<'line> {
-    pub fn new(line: &'line String) -> Self {
+    pub fn new(line: &'line String, tab_string: &'line str) -> Self {
         Self {
             line,
             display_range: (0..line.n_chars()),
             selection_highlight: SelectionHighlight::None,
+            tab_string,
         }
     }
 
@@ -36,18 +47,17 @@ impl<'line> LineRenderer<'line> {
 
     pub fn render_to(&mut self, writer: &mut impl Write) -> std::io::Result<()> {
         let content = self.line.get_chars(self.display_range.clone());
-
         match self.selection_highlight {
             SelectionHighlight::None => {
                 content
                     .iter_chars()
-                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+                    .try_for_each(|ch| write_char!(writer, ch, self.tab_string))?;
             }
             SelectionHighlight::WholeLine => {
                 writer.write_all(HIGHLIGHT_START.as_bytes())?;
                 content
                     .iter_chars()
-                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+                    .try_for_each(|ch| write_char!(writer, ch, self.tab_string))?;
                 writer.write_all(HIGHLIGHT_END.as_bytes())?;
             }
             SelectionHighlight::Before(highlight_x) => {
@@ -57,11 +67,11 @@ impl<'line> LineRenderer<'line> {
                 writer.write_all(HIGHLIGHT_START.as_bytes())?;
                 highlighted
                     .iter_chars()
-                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+                    .try_for_each(|ch| write_char!(writer, ch, self.tab_string))?;
                 writer.write_all(HIGHLIGHT_END.as_bytes())?;
                 unhighlighted
                     .iter_chars()
-                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+                    .try_for_each(|ch| write_char!(writer, ch, self.tab_string))?;
             }
             SelectionHighlight::After(highlight_x) => {
                 let x = min(highlight_x, content.n_chars());
@@ -70,11 +80,11 @@ impl<'line> LineRenderer<'line> {
                 writer.write_all(HIGHLIGHT_END.as_bytes())?;
                 unhighlighted
                     .iter_chars()
-                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+                    .try_for_each(|ch| write_char!(writer, ch, self.tab_string))?;
                 writer.write_all(HIGHLIGHT_START.as_bytes())?;
                 highlighted
                     .iter_chars()
-                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+                    .try_for_each(|ch| write_char!(writer, ch, self.tab_string))?;
             }
             SelectionHighlight::Range(highlight_start_x, highlight_end_x) => {
                 let x1 = min(highlight_start_x, content.n_chars());
@@ -88,19 +98,19 @@ impl<'line> LineRenderer<'line> {
 
                 unhighlighted1
                     .iter_chars()
-                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+                    .try_for_each(|ch| write_char!(writer, ch, self.tab_string))?;
 
                 writer.write_all(HIGHLIGHT_START.as_bytes())?;
 
                 highlighted
                     .iter_chars()
-                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+                    .try_for_each(|ch| write_char!(writer, ch, self.tab_string))?;
 
                 writer.write_all(HIGHLIGHT_END.as_bytes())?;
 
                 unhighlighted2
                     .iter_chars()
-                    .try_for_each(|ch| write!(writer, "{}", ch))?;
+                    .try_for_each(|ch| write_char!(writer, ch, self.tab_string))?;
             }
         };
 

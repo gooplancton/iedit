@@ -19,6 +19,9 @@ impl Default for Text {
 
 #[derive(Debug)]
 pub enum EditOperation {
+    LineRemoval {
+        idx: usize,
+    },
     Deletion {
         pos: (usize, usize),
     },
@@ -41,15 +44,6 @@ pub enum InverseStack {
     Redo,
 }
 
-macro_rules! push_inverse {
-    ( $self:expr, $stack:expr, $op:expr ) => {{
-        match $stack {
-            crate::edit::InverseStack::Redo => $self.redo_stack.push($op),
-            crate::edit::InverseStack::Undo => $self.undo_stack.push($op),
-        }
-    }};
-}
-
 impl Document {
     pub fn apply_edit(&mut self, op: EditOperation, inverse_stack: InverseStack) -> EditResult {
         use EditOperation as Op;
@@ -67,24 +61,8 @@ impl Document {
                 text: T::Char(newline),
             } if newline == '\n' || newline == '\r' => {
                 let new_pos = self.insert_newline_at(pos)?;
-                push_inverse!(self, inverse_stack, Op::Deletion { pos: new_pos });
-
-                Some(new_pos)
-            }
-            Op::Insertion {
-                pos,
-                text: T::Char(newline),
-            } if newline == '\t' => {
-                let new_pos = self.insert_tab_at(pos)?;
-                push_inverse!(
-                    self,
-                    inverse_stack,
-                    Op::Replacement {
-                        pos_from: pos,
-                        pos_to: new_pos,
-                        text: T::Empty
-                    }
-                );
+                self.get_inverse_stack(inverse_stack)
+                    .push(Op::Deletion { pos: new_pos });
 
                 Some(new_pos)
             }
@@ -93,7 +71,8 @@ impl Document {
                 text: T::Char(ch),
             } => {
                 let new_pos = self.insert_char_at(pos, ch)?;
-                push_inverse!(self, inverse_stack, Op::Deletion { pos: new_pos });
+                self.get_inverse_stack(inverse_stack)
+                    .push(Op::Deletion { pos: new_pos });
 
                 Some(new_pos)
             }
@@ -102,15 +81,11 @@ impl Document {
                 text: T::String(string),
             } => {
                 let new_pos = self.insert_string_at(pos, string)?;
-                push_inverse!(
-                    self,
-                    inverse_stack,
-                    Op::Replacement {
-                        pos_from: pos,
-                        pos_to: new_pos,
-                        text: T::Empty,
-                    }
-                );
+                self.get_inverse_stack(inverse_stack).push(Op::Replacement {
+                    pos_from: pos,
+                    pos_to: new_pos,
+                    text: T::Empty,
+                });
 
                 Some(new_pos)
             }
@@ -119,40 +94,28 @@ impl Document {
                 text: T::Lines(lines),
             } => {
                 let new_pos = self.insert_lines_at(pos, lines)?;
-                push_inverse!(
-                    self,
-                    inverse_stack,
-                    Op::Replacement {
-                        pos_from: pos,
-                        pos_to: new_pos,
-                        text: T::Empty,
-                    }
-                );
+                self.get_inverse_stack(inverse_stack).push(Op::Replacement {
+                    pos_from: pos,
+                    pos_to: new_pos,
+                    text: T::Empty,
+                });
 
                 Some(new_pos)
             }
             Op::Deletion { pos } => match self.delete_char_at(pos) {
                 (newline, Some(new_pos)) if newline == '\n' || newline == '\r' => {
-                    push_inverse!(
-                        self,
-                        inverse_stack,
-                        Op::Insertion {
-                            pos: new_pos,
-                            text: T::Char(newline),
-                        }
-                    );
+                    self.get_inverse_stack(inverse_stack).push(Op::Insertion {
+                        pos: new_pos,
+                        text: T::Char(newline),
+                    });
 
                     Some(new_pos)
                 }
                 (ch, Some(new_pos)) => {
-                    push_inverse!(
-                        self,
-                        inverse_stack,
-                        Op::Insertion {
-                            pos,
-                            text: T::Char(ch),
-                        }
-                    );
+                    self.get_inverse_stack(inverse_stack).push(Op::Insertion {
+                        pos,
+                        text: T::Char(ch),
+                    });
 
                     Some(new_pos)
                 }
@@ -171,15 +134,11 @@ impl Document {
                     T::Lines(lines) => self.insert_lines_at(pos_from, lines),
                 }?;
 
-                push_inverse!(
-                    self,
-                    inverse_stack,
-                    Op::Replacement {
-                        pos_from,
-                        pos_to: new_pos,
-                        text: deleted_text
-                    }
-                );
+                self.get_inverse_stack(inverse_stack).push(Op::Replacement {
+                    pos_from,
+                    pos_to: new_pos,
+                    text: deleted_text,
+                });
 
                 Some(new_pos)
             }
@@ -197,5 +156,17 @@ impl Document {
         let op = self.redo_stack.pop()?;
 
         self.apply_edit(op, InverseStack::Undo)
+    }
+
+    pub fn get_inverse_stack(
+        &mut self,
+        inverse_stack: InverseStack,
+    ) -> &mut std::vec::Vec<EditOperation> {
+        let inverse_stack: &mut Vec<EditOperation> = match inverse_stack {
+            InverseStack::Undo => self.undo_stack.as_mut(),
+            InverseStack::Redo => self.redo_stack.as_mut(),
+        };
+
+        inverse_stack
     }
 }

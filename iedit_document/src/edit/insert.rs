@@ -8,18 +8,6 @@ impl Document {
         Some((x + 1, y))
     }
 
-    pub fn insert_tab_at(&mut self, (x, y): (usize, usize)) -> EditResult {
-        // TODO: need to handle inserting real tab stops
-        let tab_size = self.tab_size;
-        let line = self.get_or_add_line(y)?;
-
-        for _ in 0..tab_size {
-            line.insert_char_at(' ', x);
-        }
-
-        Some((x + tab_size as usize, y))
-    }
-
     pub fn insert_string_at(
         &mut self,
         (x, y): (usize, usize),

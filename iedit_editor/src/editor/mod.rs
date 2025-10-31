@@ -69,7 +69,7 @@ impl Editor {
         let open_at_line = file.as_ref().map(|_| open_at_line).unwrap_or_default();
         let cur_y = open_at_line.saturating_sub(1);
 
-        let document = Document::new(file_lines, Some(config.tab_size));
+        let document = Document::new(file_lines);
         let viewport = Viewport::new(ui.editor_lines, open_at_line);
 
         Ok(Self {
@@ -92,11 +92,11 @@ impl Editor {
     }
 
     pub fn toggle_execution_output(&mut self) {
-        if let Ok(mut execution_output) = FILE_EXECUTION_OUTPUT.lock() {
-            if let Some(execution_output) = execution_output.as_mut() {
-                self.is_readonly = !self.is_readonly;
-                self.swap_docuemnt(execution_output);
-            }
+        if let Ok(mut execution_output) = FILE_EXECUTION_OUTPUT.lock()
+            && let Some(execution_output) = execution_output.as_mut()
+        {
+            self.is_readonly = !self.is_readonly;
+            self.swap_docuemnt(execution_output);
         }
     }
 
@@ -110,7 +110,7 @@ impl Editor {
     }
 
     pub fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<()> {
-        let mut renderer = Renderer::new(term, self.ui.clone());
+        let mut renderer = Renderer::new(term, self.ui.clone(), self.config.tab_size as usize);
         renderer.render(self)?;
 
         let window_resized = Arc::<AtomicBool>::new(AtomicBool::new(false));
