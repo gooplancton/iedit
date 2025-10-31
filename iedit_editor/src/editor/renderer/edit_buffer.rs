@@ -48,7 +48,7 @@ impl Editor {
             SelectionHighlight::None
         };
 
-        LineRenderer::new(line, &renderer.tab_string)
+        LineRenderer::new(line, renderer.tab_size)
             .with_display_range(display_start..display_end)
             .with_selection_highlight(selection_highlight)
             .render_to(&mut renderer.term)?;

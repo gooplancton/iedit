@@ -18,19 +18,18 @@ pub struct Renderer<'editor, Term: Write> {
     term: BufWriter<&'editor mut Term>,
     ui: UILayout,
     horizontal_bar: String,
-    tab_string: String,
+    tab_size: usize,
 }
 
 impl<'term, Term: Write> Renderer<'term, Term> {
     pub fn new(term: &'term mut Term, ui: UILayout, tab_size: usize) -> Self {
         let horizontal_bar = str::repeat(H_BAR, ui.term_width as usize);
-        let tab_string = str::repeat(" ", tab_size);
 
         Self {
             term: BufWriter::new(term),
             ui,
             horizontal_bar,
-            tab_string,
+            tab_size,
         }
     }
 

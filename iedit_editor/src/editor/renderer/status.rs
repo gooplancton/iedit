@@ -52,7 +52,7 @@ impl Editor {
             EditorMode::Search => todo!(),
         };
 
-        let mut line_renderer = LineRenderer::new(content, &renderer.tab_string)
+        let mut line_renderer = LineRenderer::new(content, renderer.tab_size)
             .with_display_range(0..self.ui.term_width as usize);
 
         if !matches!(self.mode, EditorMode::Insert) {
