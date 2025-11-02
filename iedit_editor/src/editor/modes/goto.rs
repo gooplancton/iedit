@@ -42,6 +42,7 @@ impl Editor {
                 self.status_bar.prompt_line.truncate(0);
                 self.cursor.update_pos(original_pos);
                 self.mode = mode;
+                self.search_item = None;
                 R::Continue
             }
             _ => R::Continue,

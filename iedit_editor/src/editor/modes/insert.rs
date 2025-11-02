@@ -130,6 +130,7 @@ impl Editor {
                     (pos_from.0, pos_to.0)
                 } else if self.cursor.selection_anchor.is_some() {
                     let (pos_from, pos_to) = self.cursor.get_highlighted_range().unwrap();
+                    self.cursor.selection_anchor = None;
                     if pos_from.1 != pos_to.1 {
                         send_notification("Can't yet match across lines");
                         return R::Continue;
@@ -158,13 +159,14 @@ impl Editor {
                         }
                     });
 
-                if let Some(next_cursor_pos) = next_cursor_pos {
+                if let Some((next_x, next_y)) = next_cursor_pos {
                     self.search_item = Some(SearchItem::DocumentRange {
                         pos_from: (x_from, self.cursor.cur_y),
                         pos_to: (x_to, self.cursor.cur_y),
                     });
 
-                    self.cursor.update_pos(next_cursor_pos);
+                    // FIXME: why is it matching one index behind?
+                    self.cursor.update_pos((next_x + 1, next_y));
                 } else if matches!(command, EditorCommand::FindMatchForward) {
                     send_notification("Already at last match");
                 } else if matches!(command, EditorCommand::FindMatchBackward) {
@@ -223,6 +225,7 @@ impl Editor {
                 movement: MoveCursor::MatchingParenthesis,
                 with_selection: self.is_selection_locked,
             }),
+            Input::Keypress(Key::Ctrl('n')) => Some(C::FindMatchForward),
             Input::Keypress(Key::Char(ch)) => {
                 let text = if ch == '\t' && self.config.tab_emit_spaces {
                     let n_spaces = self.config.tab_size as usize

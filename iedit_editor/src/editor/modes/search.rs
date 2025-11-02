@@ -4,10 +4,13 @@ use regex_lite::Regex;
 use termion::event::Key;
 
 use crate::{
+    Editor,
     editor::{
-        commands::{send_notification, CommandExecutionResult, EditorCommand},
+        commands::{CommandExecutionResult, EditorCommand, send_notification},
+        modes::EditorMode,
         search::SearchItem,
-    }, input::Input, Editor
+    },
+    input::Input,
 };
 
 impl Editor {
@@ -21,7 +24,14 @@ impl Editor {
         use EditorCommand as C;
 
         match command {
-            C::SubmitPrompt => {
+            C::SubmitPrompt if self.search_submit_sent => {
+                self.search_submit_sent = false;
+                self.search_item = None;
+                self.status_bar.prompt_line.truncate(0);
+                self.mode = EditorMode::Insert;
+                R::Continue
+            }
+            C::SubmitPrompt if !self.search_submit_sent => {
                 let maybe_parsed_regex = Regex::from_str(&self.status_bar.prompt_line);
                 let next_cursor_pos = match (&maybe_parsed_regex, is_backwards) {
                     (Ok(regex), false) => {
@@ -39,6 +49,7 @@ impl Editor {
                 };
 
                 if let Some(next_cursor_pos) = next_cursor_pos {
+                    self.search_submit_sent = true;
                     self.cursor.update_pos(next_cursor_pos);
                     if let Ok(regex) = maybe_parsed_regex {
                         self.search_item = Some(SearchItem::Regex(regex))
@@ -88,7 +99,10 @@ impl Editor {
             C::InsertCharPrompt { pos_x: _, ch: _ }
             | C::DeleteCharPrompt { pos_x: _ }
             | C::MovePromptCursorLeft
-            | C::MovePromptCursorRight => self.prompt_mode_execute_command(command),
+            | C::MovePromptCursorRight => {
+                self.search_submit_sent = false;
+                self.prompt_mode_execute_command(command)
+            },
             _ => self.goto_mode_execute_command(command, original_pos),
         }
     }

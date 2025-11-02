@@ -52,6 +52,7 @@ pub struct Editor {
     is_selection_locked: bool,
     is_readonly: bool,
     first_quit_sent: bool,
+    search_submit_sent: bool,
     is_executing_file: bool,
 }
 
@@ -90,6 +91,7 @@ impl Editor {
             is_readonly: false,
             is_selection_locked: false,
             first_quit_sent: false,
+            search_submit_sent: false,
             is_executing_file: false,
         })
     }

@@ -137,18 +137,18 @@ impl Document {
         let left_boundary = line
             .get_chars(0..(x + 1))
             .char_indices()
-            .rfind(|(_idx, ch)| !ch.is_whitespace())
+            .rfind(|(_idx, ch)| ch.is_whitespace())
             .map(|(idx, _ch)| idx + 1)
             .unwrap_or_default();
 
         let right_boundary = line
-            .get_chars(0..(x + 1))
+            .get_chars(x..)
             .char_indices()
-            .find(|(_idx, ch)| !ch.is_whitespace())
+            .find(|(_idx, ch)| ch.is_whitespace())
             .map(|(idx, _ch)| idx.saturating_sub(1))
-            .unwrap_or(line.n_chars());
+            .unwrap_or(line.n_chars() - x);
 
-        Some((left_boundary, right_boundary))
+        Some((left_boundary, right_boundary + x))
     }
 
     pub fn get_previous_occurrence_of_char(
@@ -200,7 +200,7 @@ impl Document {
     ) -> Option<(usize, usize)> {
         for y in from_pos.1..self.n_lines() {
             let line = if y == from_pos.1 {
-                self.lines.get(y).map(|line| line.get_chars(from_pos.0..))
+                self.lines.get(y).map(|line| line.get_chars(from_pos.0 + 1..))
             } else {
                 self.lines.get(y).map(|line| line.as_str())
             }?;
@@ -222,7 +222,7 @@ impl Document {
     ) -> Option<(usize, usize)> {
         for y in from_pos.1..self.n_lines() {
             let line = if y == from_pos.1 {
-                self.lines.get(y).map(|line| line.get_chars(from_pos.0..))
+                self.lines.get(y).map(|line| line.get_chars(from_pos.0 + 1..))
             } else {
                 self.lines.get(y).map(|line| line.as_str())
             }?;
@@ -265,7 +265,7 @@ impl Document {
     ) -> Option<(usize, usize)> {
         for y in (0..=from_pos.1).rev() {
             let line = if y == from_pos.1 {
-                self.lines.get(y).map(|line| line.get_chars(from_pos.0..))
+                self.lines.get(y).map(|line| line.get_chars(..from_pos.0))
             } else {
                 self.lines.get(y).map(|line| line.as_str())
             }?;
