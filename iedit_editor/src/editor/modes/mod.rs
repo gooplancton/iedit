@@ -11,13 +11,16 @@ mod insert;
 mod prompt;
 mod search;
 
-type OriginalCursorPos = (usize, usize);
-
 pub enum EditorMode {
     Insert,
     Prompt(&'static str),
-    Goto(OriginalCursorPos),
-    Search,
+    Goto {
+        original_cursor_pos: (usize, usize),
+    },
+    Search {
+        original_cursor_pos: (usize, usize),
+        is_backwards: bool,
+    },
 }
 
 static UNSAVED_CHANGES_WARNING: &str =
@@ -54,7 +57,8 @@ impl Editor {
                 CommandExecutionResult::Continue
             }
             C::ScrollViewportDown => {
-                if self.viewport.top_line + (self.ui.editor_lines as usize) < self.document.n_lines()
+                if self.viewport.top_line + (self.ui.editor_lines as usize)
+                    < self.document.n_lines()
                 {
                     self.viewport.vertical_offset += 1;
                 }
@@ -63,10 +67,13 @@ impl Editor {
             _ => match self.mode {
                 EditorMode::Insert => self.insert_mode_execute_command(command),
                 EditorMode::Prompt(_) => self.prompt_mode_execute_command(command),
-                EditorMode::Goto(original_pos) => {
-                    self.goto_mode_execute_command(command, original_pos)
-                }
-                EditorMode::Search => self.search_mode_execute_command(command),
+                EditorMode::Goto {
+                    original_cursor_pos,
+                } => self.goto_mode_execute_command(command, original_cursor_pos),
+                EditorMode::Search {
+                    original_cursor_pos,
+                    is_backwards,
+                } => self.search_mode_execute_command(command, original_cursor_pos, is_backwards),
             },
         }
     }
@@ -82,8 +89,13 @@ impl Editor {
             _ => match self.mode {
                 EditorMode::Insert => self.insert_mode_parse_command(input),
                 EditorMode::Prompt(_) => self.prompt_mode_parse_command(input),
-                EditorMode::Goto(_) => self.goto_mode_parse_command(input),
-                EditorMode::Search => self.search_mode_parse_command(input),
+                EditorMode::Goto {
+                    original_cursor_pos: _,
+                } => self.goto_mode_parse_command(input),
+                EditorMode::Search {
+                    original_cursor_pos: _,
+                    is_backwards: _,
+                } => self.search_mode_parse_command(input),
             },
         }
     }

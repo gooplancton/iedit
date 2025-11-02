@@ -1,11 +1,12 @@
-use iedit_document::{EditOperation, Text};
+use iedit_document::{DocumentLine, EditOperation, Text};
 use termion::event::Key;
 
 use crate::{
     Editor,
     editor::{
-        commands::{CommandExecutionResult, EditorCommand, MoveCursor},
+        commands::{CommandExecutionResult, EditorCommand, MoveCursor, send_notification},
         modes::EditorMode,
+        search::SearchItem,
     },
     input::Input,
 };
@@ -95,6 +96,7 @@ impl Editor {
             EditorCommand::ClearSelection => {
                 self.is_selection_locked = false;
                 self.cursor.selection_anchor = None;
+                self.search_item = None;
             }
             EditorCommand::Edit(op) if !self.is_readonly => {
                 if let Some(new_pos) = self.document.apply_edit(op, S::Undo) {
@@ -120,8 +122,55 @@ impl Editor {
                 self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
             }
-            EditorCommand::FindMatchForward => todo!(),
-            EditorCommand::FindMatchBackward => todo!(),
+            EditorCommand::FindMatchForward | EditorCommand::FindMatchBackward => {
+                let (x_from, x_to) = if let Some(SearchItem::DocumentRange { pos_from, pos_to }) =
+                    self.search_item
+                    && pos_from.1 == pos_to.1
+                {
+                    (pos_from.0, pos_to.0)
+                } else if self.cursor.selection_anchor.is_some() {
+                    let (pos_from, pos_to) = self.cursor.get_highlighted_range().unwrap();
+                    if pos_from.1 != pos_to.1 {
+                        send_notification("Can't yet match across lines");
+                        return R::Continue;
+                    }
+                    (pos_from.0, pos_to.0)
+                } else if let Some(word_range) =
+                    self.document.get_word_boundaries(self.cursor.pos())
+                {
+                    word_range
+                } else {
+                    return R::Continue;
+                };
+
+                let next_cursor_pos = self
+                    .document
+                    .lines
+                    .get(self.cursor.cur_y)
+                    .map(|line| line.get_chars(x_from..=x_to))
+                    .and_then(|lit| {
+                        if matches!(command, EditorCommand::FindMatchForward) {
+                            self.document
+                                .get_next_literal_match_pos(self.cursor.pos(), lit)
+                        } else {
+                            self.document
+                                .get_previous_literal_match_pos(self.cursor.pos(), lit)
+                        }
+                    });
+
+                if let Some(next_cursor_pos) = next_cursor_pos {
+                    self.search_item = Some(SearchItem::DocumentRange {
+                        pos_from: (x_from, self.cursor.cur_y),
+                        pos_to: (x_to, self.cursor.cur_y),
+                    });
+
+                    self.cursor.update_pos(next_cursor_pos);
+                } else if matches!(command, EditorCommand::FindMatchForward) {
+                    send_notification("Already at last match");
+                } else if matches!(command, EditorCommand::FindMatchBackward) {
+                    send_notification("Already at first match");
+                }
+            }
             EditorCommand::ExecuteFile(executor_key) => {
                 self.execute_file(executor_key);
             }
@@ -144,8 +193,17 @@ impl Editor {
             Input::Keypress(Key::Esc) => Some(C::ClearSelection),
             Input::Keypress(Key::Ctrl('z')) => Some(C::UndoLastEdit),
             Input::Keypress(Key::Ctrl('r')) => Some(C::RedoLastEdit),
-            Input::Keypress(Key::Ctrl('f')) => Some(C::SwitchMode(M::Search)),
-            Input::Keypress(Key::Ctrl('g')) => Some(C::SwitchMode(M::Goto(self.cursor.pos()))),
+            Input::Keypress(Key::Ctrl('f')) => Some(C::SwitchMode(M::Search {
+                original_cursor_pos: self.cursor.pos(),
+                is_backwards: false,
+            })),
+            Input::Keypress(Key::Ctrl('b')) => Some(C::SwitchMode(M::Search {
+                original_cursor_pos: self.cursor.pos(),
+                is_backwards: true,
+            })),
+            Input::Keypress(Key::Ctrl('g')) => Some(C::SwitchMode(M::Goto {
+                original_cursor_pos: self.cursor.pos(),
+            })),
             Input::Keypress(Key::Ctrl('l')) => Some(C::ToggleLockSelection),
             Input::Keypress(Key::CtrlDown) => Some(C::ScrollViewportDown),
             Input::Keypress(Key::CtrlUp) => Some(C::ScrollViewportUp),

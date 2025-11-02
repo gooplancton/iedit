@@ -15,8 +15,7 @@ use crate::{
 impl Editor {
     pub fn execute_file(&mut self, executor_key: Key) {
         if let Err(_) = self.save_file(false) {
-            self.status_bar
-                .update_notification("Could not save file for execution");
+            send_notification("Could not save file for execution");
             return;
         };
 

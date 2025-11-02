@@ -26,7 +26,9 @@ impl Editor {
             | C::MovePromptCursorRight => {
                 self.prompt_mode_execute_command(command);
                 let maybe_parsed_line_num = str::parse::<usize>(&self.status_bar.prompt_line);
-                if let Ok(line_num) = maybe_parsed_line_num && line_num > 0 {
+                if let Ok(line_num) = maybe_parsed_line_num
+                    && line_num > 0
+                {
                     self.cursor.update_pos((0, line_num - 1));
                 }
                 R::Continue
@@ -48,7 +50,6 @@ impl Editor {
 
     pub fn goto_mode_parse_command(&self, input: Input) -> Option<EditorCommand> {
         use EditorCommand as C;
-        
 
         match input {
             Input::Keypress(Key::Char('\n')) | Input::Keypress(Key::Char('\r')) => {

@@ -9,7 +9,7 @@ use std::{
     },
 };
 
-use crate::config::EditorConfig;
+use crate::{config::EditorConfig, editor::search::SearchItem};
 use iedit_document::Document;
 use signal_hook::{consts::SIGWINCH, flag};
 
@@ -30,6 +30,7 @@ mod highlight;
 mod io;
 mod modes;
 mod renderer;
+mod search;
 mod status;
 mod viewport;
 
@@ -44,6 +45,7 @@ pub struct Editor {
     viewport: Viewport,
     ui: UILayout,
     dirty_lines: Vec<usize>,
+    search_item: Option<SearchItem>,
 
     // could be a bitfield?
     needs_full_rerender: bool,
@@ -82,6 +84,7 @@ impl Editor {
             cursor: Cursor::new((0, cur_y)),
             ui,
             viewport,
+            search_item: None,
             dirty_lines: vec![],
             needs_full_rerender: true,
             is_readonly: false,

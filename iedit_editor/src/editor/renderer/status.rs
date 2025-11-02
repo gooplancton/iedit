@@ -45,11 +45,23 @@ impl Editor {
                 renderer.add(prompt)?;
                 &self.status_bar.prompt_line
             }
-            EditorMode::Goto(_) => {
+            EditorMode::Goto {
+                original_cursor_pos: _,
+            } => {
                 renderer.add("GOTO ")?;
                 &self.status_bar.prompt_line
             }
-            EditorMode::Search => todo!(),
+            EditorMode::Search {
+                original_cursor_pos: _,
+                is_backwards,
+            } => {
+                if is_backwards {
+                    renderer.add("BACK_")?;
+                }
+                renderer.add("SEARCH ")?;
+
+                &self.status_bar.prompt_line
+            }
         };
 
         let mut line_renderer = LineRenderer::new(content, renderer.tab_size)

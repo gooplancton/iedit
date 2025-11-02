@@ -3,6 +3,7 @@ mod line;
 
 pub use edit::{EditOperation, InverseStack, Text};
 pub use line::{CharacterEditable, DocumentLine};
+use regex_lite::Regex;
 
 pub struct Document {
     pub lines: Vec<String>,
@@ -127,6 +128,29 @@ impl Document {
         None
     }
 
+    pub fn get_word_boundaries(&self, (x, y): (usize, usize)) -> Option<(usize, usize)> {
+        let line = self.lines.get(y)?;
+        if line.get_nth_char(x).is_none_or(char::is_whitespace) {
+            return None;
+        };
+
+        let left_boundary = line
+            .get_chars(0..(x + 1))
+            .char_indices()
+            .rfind(|(_idx, ch)| !ch.is_whitespace())
+            .map(|(idx, _ch)| idx + 1)
+            .unwrap_or_default();
+
+        let right_boundary = line
+            .get_chars(0..(x + 1))
+            .char_indices()
+            .find(|(_idx, ch)| !ch.is_whitespace())
+            .map(|(idx, _ch)| idx.saturating_sub(1))
+            .unwrap_or(line.n_chars());
+
+        Some((left_boundary, right_boundary))
+    }
+
     pub fn get_previous_occurrence_of_char(
         &self,
         (x, y): (usize, usize),
@@ -167,6 +191,92 @@ impl Document {
             }
         }
         0
+    }
+
+    pub fn get_next_literal_match_pos(
+        &self,
+        from_pos: (usize, usize),
+        lit: &str,
+    ) -> Option<(usize, usize)> {
+        for y in from_pos.1..self.n_lines() {
+            let line = if y == from_pos.1 {
+                self.lines.get(y).map(|line| line.get_chars(from_pos.0..))
+            } else {
+                self.lines.get(y).map(|line| line.as_str())
+            }?;
+
+            let offset = from_pos.0 * (y == from_pos.1) as usize;
+            if let Some(idx) = line.find(lit) {
+                let x = line.char_idx_at_byte(idx)?;
+                return Some((x + offset, y));
+            }
+        }
+
+        None
+    }
+
+    pub fn get_next_regex_match_pos(
+        &self,
+        from_pos: (usize, usize),
+        regex: &Regex,
+    ) -> Option<(usize, usize)> {
+        for y in from_pos.1..self.n_lines() {
+            let line = if y == from_pos.1 {
+                self.lines.get(y).map(|line| line.get_chars(from_pos.0..))
+            } else {
+                self.lines.get(y).map(|line| line.as_str())
+            }?;
+
+            let offset = from_pos.0 * (y == from_pos.1) as usize;
+            if let Some(reg_match) = regex.find(line) {
+                let x = line.char_idx_at_byte(reg_match.start())?;
+                return Some((x + offset, y));
+            }
+        }
+
+        None
+    }
+
+    pub fn get_previous_literal_match_pos(
+        &self,
+        from_pos: (usize, usize),
+        lit: &str,
+    ) -> Option<(usize, usize)> {
+        for y in (0..=from_pos.1).rev() {
+            let line = if y == from_pos.1 {
+                self.lines.get(y).map(|line| line.get_chars(..from_pos.0))
+            } else {
+                self.lines.get(y).map(|line| line.as_str())
+            }?;
+
+            if let Some(idx) = line.rfind(lit) {
+                let x = line.char_idx_at_byte(idx)?;
+                return Some((x, y));
+            }
+        }
+
+        None
+    }
+
+    pub fn get_previous_regex_match_pos(
+        &self,
+        from_pos: (usize, usize),
+        regex: &Regex,
+    ) -> Option<(usize, usize)> {
+        for y in (0..=from_pos.1).rev() {
+            let line = if y == from_pos.1 {
+                self.lines.get(y).map(|line| line.get_chars(from_pos.0..))
+            } else {
+                self.lines.get(y).map(|line| line.as_str())
+            }?;
+
+            if let Some(reg_match) = regex.find_iter(line).last() {
+                let x = line.char_idx_at_byte(reg_match.start())?;
+                return Some((x, y));
+            }
+        }
+
+        None
     }
 
     pub fn get_matching_paren_pos(&self, (x, y): (usize, usize)) -> Option<(usize, usize)> {
