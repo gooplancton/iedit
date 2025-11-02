@@ -74,17 +74,21 @@ impl Document {
     }
 
     pub fn insert_newline_at(&mut self, (x, y): (usize, usize)) -> EditResult {
-        // TODO: match indentation level of previous line if possible
         let line = self.get_or_add_line(y)?;
 
-        let current_line = if x < line.n_chars() {
-            line.split_chars_off_at(x)
-        } else {
-            String::new()
-        };
+        let first_nonwhitespace_x = line
+            .iter_chars()
+            .position(|char| !char.is_whitespace())
+            .unwrap_or_default();
 
-        self.lines.insert(y + 1, current_line);
+        let mut to_append = String::from(line.get_chars(0..first_nonwhitespace_x));
 
-        Some((0, y + 1))
+        if x < line.n_chars() {
+            to_append.merge_at_end(&mut line.split_chars_off_at(x).trim_start().to_owned())
+        }
+
+        self.lines.insert(y + 1, to_append);
+
+        Some((first_nonwhitespace_x, y + 1))
     }
 }

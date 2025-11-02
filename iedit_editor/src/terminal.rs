@@ -68,8 +68,9 @@ impl UILayout {
             term.flush()?;
         }
 
+        // FIXME: status line does not display if the terminal size is too small
         let editor_lines = real_estate.saturating_sub(2);
-        let ui_origin = (ui_origin.0, ui_origin.1 - offset);
+        let ui_origin = (ui_origin.0, ui_origin.1.saturating_sub(offset));
 
         term.activate_raw_mode()?;
 
