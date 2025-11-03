@@ -32,7 +32,7 @@ dependencies = [
 
 [[package]]
 name = "iedit_editor"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "crossbeam-channel",
  "iedit_document",
