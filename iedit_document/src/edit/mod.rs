@@ -46,6 +46,10 @@ pub enum InverseStack {
 
 impl Document {
     pub fn apply_edit(&mut self, op: EditOperation, inverse_stack: InverseStack) -> EditResult {
+        if self.is_readonly {
+            return None;
+        }
+
         use EditOperation as Op;
         use Text as T;
 

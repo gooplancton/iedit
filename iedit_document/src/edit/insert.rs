@@ -79,7 +79,7 @@ impl Document {
         let first_nonwhitespace_x = line
             .iter_chars()
             .position(|char| !char.is_whitespace())
-            .unwrap_or_default();
+            .unwrap_or(line.n_chars());
 
         let mut to_append = String::from(line.get_chars(0..first_nonwhitespace_x));
 

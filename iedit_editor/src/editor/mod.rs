@@ -1,8 +1,8 @@
 use std::{
+    cmp::min,
     fmt::Display,
-    fs::File,
     io::Write,
-    path::{Path, PathBuf},
+    path::Path,
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
@@ -15,8 +15,8 @@ use signal_hook::{consts::SIGWINCH, flag};
 
 use crate::{
     editor::{
-        commands::CommandExecutionResult, cursor::Cursor, io::read_file, modes::EditorMode,
-        renderer::Renderer, status::StatusBar, viewport::Viewport,
+        commands::CommandExecutionResult, cursor::Cursor, modes::EditorMode, renderer::Renderer,
+        status::StatusBar, viewport::Viewport,
     },
     input::InputParser,
     terminal::UILayout,
@@ -36,9 +36,7 @@ mod viewport;
 
 pub struct Editor {
     config: EditorConfig,
-    file: Option<File>,
     document: Document,
-    canonicalized_file_path: PathBuf,
     mode: EditorMode,
     status_bar: StatusBar,
     cursor: Cursor,
@@ -47,13 +45,13 @@ pub struct Editor {
     dirty_lines: Vec<usize>,
     search_item: Option<SearchItem>,
 
-    // could be a bitfield?
+    // TODO: turn into EditorFlags bitfield
     needs_full_rerender: bool,
     is_selection_locked: bool,
-    is_readonly: bool,
     first_quit_sent: bool,
     search_submit_sent: bool,
     is_executing_file: bool,
+    is_viewing_execution_output: bool,
 }
 
 // Store sender in a static or global location for access anywhere
@@ -67,17 +65,12 @@ impl Editor {
         config: EditorConfig,
         ui: UILayout,
     ) -> std::io::Result<Self> {
-        let (file, canonicalized_file_path, file_lines) = read_file(file_path)?;
-
-        let open_at_line = file.as_ref().map(|_| open_at_line).unwrap_or_default();
-        let cur_y = open_at_line.saturating_sub(1);
-
-        let document = Document::new(file_lines);
+        let document = Document::from_file(file_path)?;
         let viewport = Viewport::new(ui.editor_lines, open_at_line);
 
+        let cur_y = min(open_at_line.saturating_sub(1), document.n_lines());
+
         Ok(Self {
-            file,
-            canonicalized_file_path,
             document,
             mode: EditorMode::Insert,
             config,
@@ -88,11 +81,11 @@ impl Editor {
             search_item: None,
             dirty_lines: vec![],
             needs_full_rerender: true,
-            is_readonly: false,
             is_selection_locked: false,
             first_quit_sent: false,
             search_submit_sent: false,
             is_executing_file: false,
+            is_viewing_execution_output: false,
         })
     }
 
@@ -100,7 +93,7 @@ impl Editor {
         if let Ok(mut execution_output) = FILE_EXECUTION_OUTPUT.lock()
             && let Some(execution_output) = execution_output.as_mut()
         {
-            self.is_readonly = !self.is_readonly;
+            self.is_viewing_execution_output = !self.is_viewing_execution_output;
             self.swap_docuemnt(execution_output);
         }
     }
@@ -166,12 +159,15 @@ impl Editor {
     }
 
     pub fn get_displayable_file_path(&self) -> impl Display {
-        if self.canonicalized_file_path.as_os_str().is_empty() {
+        if self.document.canonicalized_file_path.as_os_str().is_empty() {
             "[Unnamed Buffer]".to_owned()
         } else {
             format!(
                 "{}{}",
-                self.canonicalized_file_path.as_os_str().to_string_lossy(),
+                self.document
+                    .canonicalized_file_path
+                    .as_os_str()
+                    .to_string_lossy(),
                 if self.document.has_been_edited {
                     "*"
                 } else {

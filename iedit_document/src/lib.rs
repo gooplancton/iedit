@@ -1,25 +1,65 @@
 mod edit;
+mod io;
 mod line;
+
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 pub use edit::{EditOperation, InverseStack, Text};
 pub use line::{CharacterEditable, DocumentLine};
 use regex_lite::Regex;
 
+use crate::io::read_file;
+
 pub struct Document {
     pub lines: Vec<String>,
+    pub file: Option<File>,
+    pub canonicalized_file_path: PathBuf,
     undo_stack: Vec<EditOperation>,
     redo_stack: Vec<EditOperation>,
+
     pub has_been_edited: bool,
+    pub is_readonly: bool,
 }
 
 impl Document {
-    pub fn new(lines: Vec<String>) -> Self {
+    pub fn from_lines(lines: Vec<String>, name: impl Into<PathBuf>, is_readonly: bool) -> Self {
         Self {
             lines,
+            file: None,
+            canonicalized_file_path: name.into(),
             undo_stack: vec![],
             redo_stack: vec![],
             has_been_edited: false,
+            is_readonly,
         }
+    }
+
+    pub fn from_file(file_path: impl AsRef<Path>) -> std::io::Result<Self> {
+        let (file, canonicalized_file_path, lines) = read_file(file_path)?;
+        let is_readonly = if let Some(file) = &file
+            && let Ok(metadata) = file.metadata()
+        {
+            metadata.permissions().readonly()
+        } else {
+            false
+        };
+
+        Ok(Self {
+            lines,
+            file,
+            canonicalized_file_path,
+            undo_stack: vec![],
+            redo_stack: vec![],
+            has_been_edited: false,
+            is_readonly,
+        })
+    }
+
+    pub fn get_name(&self) -> Option<&str> {
+        None
     }
 
     #[inline]
@@ -200,7 +240,9 @@ impl Document {
     ) -> Option<(usize, usize)> {
         for y in from_pos.1..self.n_lines() {
             let line = if y == from_pos.1 {
-                self.lines.get(y).map(|line| line.get_chars(from_pos.0 + 1..))
+                self.lines
+                    .get(y)
+                    .map(|line| line.get_chars(from_pos.0 + 1..))
             } else {
                 self.lines.get(y).map(|line| line.as_str())
             }?;
@@ -222,7 +264,9 @@ impl Document {
     ) -> Option<(usize, usize)> {
         for y in from_pos.1..self.n_lines() {
             let line = if y == from_pos.1 {
-                self.lines.get(y).map(|line| line.get_chars(from_pos.0 + 1..))
+                self.lines
+                    .get(y)
+                    .map(|line| line.get_chars(from_pos.0 + 1..))
             } else {
                 self.lines.get(y).map(|line| line.as_str())
             }?;

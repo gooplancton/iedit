@@ -98,7 +98,7 @@ impl Editor {
                 self.cursor.selection_anchor = None;
                 self.search_item = None;
             }
-            EditorCommand::Edit(op) if !self.is_readonly => {
+            EditorCommand::Edit(op) => {
                 if let Some(new_pos) = self.document.apply_edit(op, S::Undo) {
                     self.cursor.update_pos(new_pos);
                 }
@@ -106,7 +106,7 @@ impl Editor {
                 self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
             }
-            EditorCommand::UndoLastEdit if !self.is_readonly => {
+            EditorCommand::UndoLastEdit => {
                 if let Some(new_pos) = self.document.undo_last_edit() {
                     self.cursor.update_pos(new_pos);
                 }
@@ -114,7 +114,7 @@ impl Editor {
                 self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
             }
-            EditorCommand::RedoLastEdit if !self.is_readonly => {
+            EditorCommand::RedoLastEdit => {
                 if let Some(new_pos) = self.document.redo_last_edit() {
                     self.cursor.update_pos(new_pos);
                 }

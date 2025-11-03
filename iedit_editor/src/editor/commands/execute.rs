@@ -1,3 +1,5 @@
+#![allow(clippy::manual_flatten)]
+
 use std::{
     io::{BufRead, BufReader},
     process::{Command, Stdio},
@@ -14,7 +16,12 @@ use crate::{
 
 impl Editor {
     pub fn execute_file(&mut self, executor_key: Key) {
-        if let Err(_) = self.save_file(false) {
+        if self.is_viewing_execution_output {
+            send_notification("Not an executable file");
+            return;
+        }
+
+        if let Err(_err) = self.save_file(false) {
             send_notification("Could not save file for execution");
             return;
         };
@@ -28,7 +35,7 @@ impl Editor {
         let command = format!(
             "{} {}",
             executor,
-            self.canonicalized_file_path.as_path().display()
+            self.document.canonicalized_file_path.as_path().display()
         );
 
         self.is_executing_file = true;
@@ -98,20 +105,21 @@ fn run_command(command: &str) -> std::io::Result<()> {
         }
     }
 
-    let output = Document::new(output_lines);
-
-    if let Ok(mut file_execution_output) = FILE_EXECUTION_OUTPUT.lock()
-        && file_execution_output.is_none()
-    {
-        *file_execution_output = Some(output)
-    }
-
-    // Wait for the process to complete
     let status = child.wait()?;
-    send_notification(format!(
-        "Process exited with status: {}, To view output: Ctrl+k v o",
-        status
-    ));
+    let output = Document::from_lines(output_lines, command, true);
+
+    if let Ok(mut file_execution_output) = FILE_EXECUTION_OUTPUT.lock() {
+        *file_execution_output = Some(output);
+        send_notification(format!(
+            "Process exited with status: {}. To view output: Ctrl+k v o",
+            status
+        ));
+    } else {
+        send_notification(format!(
+            "Process exited with status: {}. Output cannot be displayed",
+            status
+        ));
+    }
 
     Ok(())
 }
