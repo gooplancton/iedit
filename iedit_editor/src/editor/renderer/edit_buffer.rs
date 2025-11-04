@@ -51,6 +51,8 @@ impl Editor {
             renderer.tab_size,
         );
 
+        line_renderer.add_syntax_highlight(&self.document.syntax, &renderer.highlighter);
+
         if let Some(highlighted_range) = highlighted_range {
             let highlight = SelectionHighlight::new(line_idx, &highlighted_range);
             line_renderer.add_selection_highlight(highlight);

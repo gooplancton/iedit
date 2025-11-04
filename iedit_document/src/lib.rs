@@ -10,6 +10,7 @@ use std::{
 pub use edit::{EditOperation, InverseStack, Text};
 pub use line::{CharacterEditable, DocumentLine};
 use regex_lite::Regex;
+use syntect::parsing::{SyntaxReference, SyntaxSet, SyntaxSetBuilder};
 
 use crate::io::read_file;
 
@@ -19,6 +20,7 @@ pub struct Document {
     pub canonicalized_file_path: PathBuf,
     undo_stack: Vec<EditOperation>,
     redo_stack: Vec<EditOperation>,
+    pub syntax: SyntaxReference,
 
     pub has_been_edited: bool,
     pub is_readonly: bool,
@@ -26,10 +28,17 @@ pub struct Document {
 
 impl Document {
     pub fn from_lines(lines: Vec<String>, name: impl Into<PathBuf>, is_readonly: bool) -> Self {
+        let mut builder = SyntaxSetBuilder::new();
+
+        builder.add_plain_text_syntax();
+        let syntax_set = builder.build();
+        let canonicalized_file_path = name.into();
+
         Self {
             lines,
             file: None,
-            canonicalized_file_path: name.into(),
+            canonicalized_file_path,
+            syntax: syntax_set.find_syntax_plain_text().clone(),
             undo_stack: vec![],
             redo_stack: vec![],
             has_been_edited: false,
@@ -37,7 +46,7 @@ impl Document {
         }
     }
 
-    pub fn from_file(file_path: impl AsRef<Path>) -> std::io::Result<Self> {
+    pub fn from_file(syntax_set: &SyntaxSet, file_path: impl AsRef<Path>) -> std::io::Result<Self> {
         let (file, canonicalized_file_path, lines) = read_file(file_path)?;
         let is_readonly = if let Some(file) = &file
             && let Ok(metadata) = file.metadata()
@@ -47,10 +56,17 @@ impl Document {
             false
         };
 
+        let syntax = canonicalized_file_path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .and_then(|ext| syntax_set.find_syntax_by_extension(ext))
+            .unwrap_or_else(|| syntax_set.find_syntax_plain_text());
+
         Ok(Self {
             lines,
             file,
             canonicalized_file_path,
+            syntax: syntax.clone(),
             undo_stack: vec![],
             redo_stack: vec![],
             has_been_edited: false,

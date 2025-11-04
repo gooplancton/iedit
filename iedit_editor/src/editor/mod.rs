@@ -12,6 +12,7 @@ use std::{
 use crate::{config::EditorConfig, editor::search::SearchItem};
 use iedit_document::Document;
 use signal_hook::{consts::SIGWINCH, flag};
+use syntect::parsing::SyntaxSet;
 
 use crate::{
     editor::{
@@ -65,13 +66,15 @@ impl Editor {
         config: EditorConfig,
         ui: UILayout,
     ) -> std::io::Result<Self> {
-        let document = Document::from_file(file_path)?;
+        let syntax_set = SyntaxSet::load_defaults_newlines();
+        let document = Document::from_file(&syntax_set, file_path)?;
         let viewport = Viewport::new(ui.editor_lines, open_at_line);
 
         let cur_y = min(open_at_line.saturating_sub(1), document.n_lines());
 
         Ok(Self {
             document,
+            syntax_set,
             mode: EditorMode::Insert,
             config,
             status_bar: StatusBar::default(),
@@ -108,7 +111,11 @@ impl Editor {
     }
 
     pub fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<()> {
-        let mut renderer = Renderer::new(term, self.ui.clone(), self.config.tab_size as usize);
+        let mut renderer = Renderer::new(
+            term,
+            self.ui.clone(),
+            self.config.tab_size as usize,
+        );
         renderer.render(self)?;
 
         let window_resized = Arc::<AtomicBool>::new(AtomicBool::new(false));

@@ -4,10 +4,12 @@ mod edit_buffer;
 mod line;
 mod status;
 
+use syntect::parsing::SyntaxSet;
 use termion::cursor::Goto;
 
 use crate::{
     Editor,
+    editor::highlight::SyntectHighlighter,
     terminal::{CLEAR_BELOW_CURSOR, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, H_BAR, UILayout},
 };
 
@@ -16,17 +18,25 @@ pub struct Renderer<'editor, Term: Write> {
     ui: UILayout,
     horizontal_bar: String,
     tab_size: usize,
+    pub highlighter: SyntectHighlighter,
 }
 
 impl<'term, Term: Write> Renderer<'term, Term> {
-    pub fn new(term: &'term mut Term, ui: UILayout, tab_size: usize) -> Self {
+    pub fn new<'theme_name: 'term>(
+        term: &'term mut Term,
+        ui: UILayout,
+        tab_size: usize,
+    ) -> Self {
         let horizontal_bar = str::repeat(H_BAR, ui.term_width as usize);
+        let syntax_set = SyntaxSet::load_defaults_newlines();
+        let highlighter = SyntectHighlighter::new(syntax_set);
 
         Self {
             term: BufWriter::new(term),
             ui,
             horizontal_bar,
             tab_size,
+            highlighter,
         }
     }
 

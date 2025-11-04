@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 regex-lite = { workspace = true }
+syntect = { workspace = true }

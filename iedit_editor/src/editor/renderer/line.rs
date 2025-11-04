@@ -1,16 +1,20 @@
 use std::io::Write;
 
 use iedit_document::CharacterEditable;
+use syntect::parsing::SyntaxReference;
 
-use crate::{editor::highlight::SelectionHighlight, terminal::EMPTY_CURSOR};
+use crate::{
+    editor::highlight::{SelectionHighlight, SyntectHighlighter},
+    terminal::EMPTY_CURSOR,
+};
 use termion::color;
 
 pub struct ColorRange {
-    start: usize,
+    pub start: usize,
     /// (inclusive)
-    end: usize,
-    is_bg: bool,
-    color_str: &'static str,
+    pub end: usize,
+    pub is_bg: bool,
+    pub color_str: String, // changed from &'static str
 }
 
 pub struct LineRenderer<'line, 'writer, Writer: Write> {
@@ -78,6 +82,34 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
         Ok(())
     }
 
+    pub fn add_syntax_highlight(
+        &mut self,
+        syntax: &SyntaxReference,
+        highlighter: &SyntectHighlighter,
+    ) {
+        let spans = highlighter.highlight_line(syntax, self.line);
+        for s in spans {
+            // convert to ColorRange (fg)
+            self.color_ranges
+                .push(crate::editor::renderer::line::ColorRange {
+                    start: s.start,
+                    end: s.end,
+                    is_bg: false,
+                    color_str: s.fg_escape,
+                });
+            // optional background
+            if let Some(bg) = s.bg_escape {
+                self.color_ranges
+                    .push(crate::editor::renderer::line::ColorRange {
+                        start: s.start,
+                        end: s.end,
+                        is_bg: true,
+                        color_str: bg,
+                    });
+            }
+        }
+    }
+
     pub fn add_selection_highlight(&mut self, selection_highlight: SelectionHighlight) {
         match selection_highlight {
             SelectionHighlight::None => {}
@@ -86,7 +118,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     start,
                     end: self.line.n_chars(),
                     is_bg: true,
-                    color_str: color::LightBlue.bg_str(),
+                    color_str: color::LightBlue.bg_str().to_owned(),
                 });
             }
             SelectionHighlight::Before(end) => {
@@ -94,7 +126,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     start: 0,
                     end,
                     is_bg: true,
-                    color_str: color::LightBlue.bg_str(),
+                    color_str: color::LightBlue.bg_str().to_owned(),
                 });
             }
             SelectionHighlight::WholeLine => {
@@ -102,7 +134,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     start: 0,
                     end: self.line.n_chars(),
                     is_bg: true,
-                    color_str: color::LightBlue.bg_str(),
+                    color_str: color::LightBlue.bg_str().to_owned(),
                 });
             }
             SelectionHighlight::Range(start, end) => {
@@ -110,7 +142,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     start,
                     end,
                     is_bg: true,
-                    color_str: color::LightBlue.bg_str(),
+                    color_str: color::LightBlue.bg_str().to_owned(),
                 });
             }
         }
@@ -134,7 +166,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     start: range_to_split.start,
                     end: cursor_x.saturating_sub(1),
                     is_bg: range_to_split.is_bg,
-                    color_str: range_to_split.color_str,
+                    color_str: range_to_split.color_str.clone(),
                 };
                 let right_range = ColorRange {
                     start: cursor_x + 1,
@@ -156,13 +188,13 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
             start: cursor_x,
             end: cursor_x,
             is_bg: false,
-            color_str: color::Black.fg_str(),
+            color_str: color::Black.fg_str().to_owned(),
         });
         self.color_ranges.push(ColorRange {
             start: cursor_x,
             end: cursor_x,
             is_bg: true,
-            color_str: color::White.bg_str(),
+            color_str: color::White.bg_str().to_owned(),
         });
     }
 

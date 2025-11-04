@@ -8,6 +8,7 @@ regex-lite = "0.1.8"
 termion = "4.0"
 iedit_macros = { path = "./iedit_macros" }
 iedit_document = { path = "./iedit_document" }
+syntect = "5.3.0"
 
 # Proc macro dependencies (used by iedit_macros)
 syn = { version = "2.0", features = ["full"] }
