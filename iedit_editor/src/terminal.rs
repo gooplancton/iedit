@@ -37,29 +37,20 @@ pub struct UILayout {
 
 impl UILayout {
     pub fn new<W: Write + AsFd>(
-        editor_lines: u16,
+        min_lines: u16,
         term: &mut impl DerefMut<Target = RawTerminal<W>>,
     ) -> io::Result<UILayout> {
         let (term_width, term_height) = terminal_size()?;
         let ui_origin = term.cursor_pos()?;
 
         let ui_start_y = ui_origin.1;
-        let max_scroll = if editor_lines == 0 {
+        let max_scroll = if min_lines == 0 {
             term_height / 2
         } else {
-            editor_lines + 2
+            min_lines + 2
         };
 
         let mut real_estate = term_height.saturating_sub(ui_start_y);
-
-        if real_estate >= editor_lines + 2 {
-            return Ok(Self {
-                ui_origin,
-                term_width,
-                term_height,
-                editor_lines,
-            });
-        }
 
         let offset = max_scroll.saturating_sub(real_estate);
         if offset > 0 {

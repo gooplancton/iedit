@@ -19,7 +19,7 @@ fn main() -> std::io::Result<()> {
     };
 
     let mut terminal = HideCursor::from(stdout().into_raw_mode()?);
-    let ui = UILayout::new(editor_config.n_lines, &mut terminal)?;
+    let ui = UILayout::new(editor_config.min_lines, &mut terminal)?;
 
     let mut editor = Editor::new(path, open_at, editor_config, ui)?;
 
