@@ -42,7 +42,13 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
     fn render_line_char(&mut self, idx: usize, ch: char) -> std::io::Result<()> {
         self.color_ranges
             .iter()
-            .filter(|range| range.start == idx)
+            .filter(|range| {
+                if idx == self.display_range.0 {
+                    range.start <= idx
+                } else {
+                    range.start == idx
+                }
+            })
             .try_for_each(|range| write!(self.writer, "{}", range.color_str))?;
 
         if ch == '\t' {
@@ -164,14 +170,12 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
         write!(self.writer, "{}", color::Reset.fg_str())?;
         write!(self.writer, "{}", color::Reset.bg_str())?;
 
-        for (idx, ch) in self
-            .line
-            .char_indices()
-            .take(self.display_range.1.saturating_sub(self.display_range.0))
+        self.line
+            .chars()
+            .enumerate()
             .skip(self.display_range.0)
-        {
-            self.render_line_char(idx, ch)?;
-        }
+            .take(self.display_range.1 - self.display_range.0)
+            .try_for_each(|(idx, ch)| self.render_line_char(idx, ch))?;
 
         if self.cursor_at_end {
             write!(self.writer, "{}", EMPTY_CURSOR)?;

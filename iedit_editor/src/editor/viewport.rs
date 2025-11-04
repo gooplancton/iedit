@@ -1,5 +1,7 @@
 use std::cmp::{max, min};
 
+use iedit_document::CharacterEditable;
+
 use crate::editor::Editor;
 
 #[derive(Default)]
@@ -95,16 +97,24 @@ impl Editor {
         );
 
         let left_limit = self.viewport.left_col + horizontal_margin;
-        let right_limit = self.viewport.left_col + term_width - vertical_margin;
+        let right_limit = self.viewport.left_col + term_width - horizontal_margin;
+
+        let chars_beyond_viewport = if let Some(line) = self.document.lines.get(y) {
+            let n_chars = line.n_chars();
+
+            (n_chars + 1 * (x == n_chars) as usize)
+                .saturating_sub(self.viewport.left_col + term_width)
+        } else {
+            0
+        };
 
         if x < left_limit && x < past_x {
             let horizontal_scroll = left_limit.saturating_sub(x);
             self.viewport.left_col = self.viewport.left_col.saturating_sub(horizontal_scroll);
             self.needs_full_rerender = true;
-        } else if x > right_limit && x > past_x {
-            let horizontal_scroll = x.saturating_sub(right_limit);
-            self.viewport.left_col =
-                (self.viewport.left_col + term_width).saturating_sub(horizontal_scroll);
+        } else if x > right_limit && x > past_x && chars_beyond_viewport > 0 {
+            let horizontal_scroll = min(chars_beyond_viewport, x.saturating_sub(right_limit));
+            self.viewport.left_col += horizontal_scroll;
             self.needs_full_rerender = true;
         }
     }

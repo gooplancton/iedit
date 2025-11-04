@@ -19,6 +19,8 @@ impl Editor {
     ) -> std::io::Result<()> {
         let line = &self.document.lines[line_idx];
 
+        let mut ui_width = self.ui.term_width as usize;
+
         if self.config.show_line_numbers {
             let line_number_color = if line_idx == self.cursor.cur_y {
                 termion::color::White.fg_str()
@@ -33,11 +35,13 @@ impl Editor {
                 termion::color::Reset.fg_str(),
                 V_BAR,
             ))?;
+
+            ui_width = ui_width.saturating_sub(7);
         }
 
         let display_start = self.viewport.left_col;
-        let display_end =
-            (self.viewport.left_col + self.ui.term_width as usize).min(line.n_chars());
+        let display_end = (self.viewport.left_col + ui_width).min(line.n_chars());
+
         let highlighted_range = self.cursor.get_highlighted_range();
 
         let mut line_renderer = LineRenderer::new(
