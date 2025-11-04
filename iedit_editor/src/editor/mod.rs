@@ -74,7 +74,6 @@ impl Editor {
 
         Ok(Self {
             document,
-            syntax_set,
             mode: EditorMode::Insert,
             config,
             status_bar: StatusBar::default(),
