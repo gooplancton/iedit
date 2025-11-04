@@ -1,6 +1,5 @@
 mod string;
 
-use regex_lite::Regex;
 use std::ops::RangeBounds;
 
 pub trait CharacterEditable {
@@ -9,8 +8,6 @@ pub trait CharacterEditable {
     fn nth_char_idx(&self, idx: usize) -> usize;
     fn char_idx_at_byte(&self, byte_idx: usize) -> Option<usize>;
     fn iter_chars(&self) -> impl Iterator<Item = char>;
-    fn find_regex_from(&self, regex: &Regex, pos: usize) -> Option<(usize, usize)>;
-    fn find_last_match(&self, regex: &Regex) -> Option<(usize, usize)>;
     fn split_chars_at(&self, idx: usize) -> (&Self, &Self);
     fn split_chars_at_mut(&mut self, idx: usize) -> (&mut Self, &mut Self);
     fn as_str(&self) -> &str;
@@ -24,7 +21,6 @@ pub trait DocumentLine: Default {
     fn char_idx_at_byte(&self, byte_idx: usize) -> Option<usize>;
     fn from_str_trim_newline(string: &impl AsRef<str>) -> Self;
     fn as_str(&self) -> &str;
-    fn find_regex_from(&self, regex: &Regex, pos: usize) -> Option<(usize, usize)>;
     fn to_string(&self) -> String;
     fn iter_chars(&self) -> impl Iterator<Item = char>;
     fn merge_at_end(&mut self, other: &mut Self);

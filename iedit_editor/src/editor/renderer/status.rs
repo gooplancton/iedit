@@ -3,11 +3,9 @@ use std::io::Write;
 use crate::{
     Editor,
     editor::{
-        highlight::SelectionHighlight,
         modes::EditorMode,
-        renderer::{Renderer, legacy_line_renderer::LineRenderer},
+        renderer::{Renderer, line::LineRenderer},
     },
-    terminal::EMPTY_CURSOR,
 };
 
 impl Editor {
@@ -64,22 +62,18 @@ impl Editor {
             }
         };
 
-        let mut line_renderer = LineRenderer::new(content, renderer.tab_size)
-            .with_display_range(0..self.ui.term_width as usize);
+        let mut line_renderer = LineRenderer::new(
+            content.as_str(),
+            (0, self.ui.term_width as usize),
+            &mut renderer.term,
+            renderer.tab_size,
+        );
 
         if !matches!(self.mode, EditorMode::Insert) {
-            let x = self.status_bar.cursor_pos;
-            let selection_highlight = SelectionHighlight::Range(x, x + 1);
-            line_renderer = line_renderer.with_selection_highlight(selection_highlight);
+            line_renderer.add_cursor(self.status_bar.cursor_pos);
         }
 
-        line_renderer.render_to(&mut renderer.term)?;
-
-        let is_cursor_at_end_of_line =
-            !matches!(self.mode, EditorMode::Insert) && self.status_bar.cursor_pos == content.len();
-        if is_cursor_at_end_of_line {
-            renderer.add(EMPTY_CURSOR.as_bytes())?;
-        }
+        line_renderer.render()?;
 
         renderer.next_line()?;
 

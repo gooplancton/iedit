@@ -6,9 +6,9 @@ use crate::{
     Editor,
     editor::{
         highlight::SelectionHighlight,
-        renderer::{Renderer, legacy_line_renderer::LineRenderer},
+        renderer::{Renderer, line::LineRenderer},
     },
-    terminal::{self, CLEAR_LINE, EMPTY_CURSOR, HIGHLIGHT_END, V_BAR},
+    terminal::{CLEAR_LINE, EMPTY_CURSOR, V_BAR},
 };
 
 impl Editor {
@@ -40,24 +40,23 @@ impl Editor {
             (self.viewport.left_col + self.ui.term_width as usize).min(line.n_chars());
         let highlighted_range = self.cursor.get_highlighted_range();
 
-        let selection_highlight = if let Some(highlighted_range) = highlighted_range {
-            SelectionHighlight::new(line_idx, &highlighted_range)
-        } else if self.cursor.cur_y == line_idx {
-            SelectionHighlight::Range(self.cursor.cur_x, self.cursor.cur_x + 1)
-        } else {
-            SelectionHighlight::None
+        let mut line_renderer = LineRenderer::new(
+            line,
+            (display_start, display_end),
+            &mut renderer.term,
+            renderer.tab_size,
+        );
+
+        if let Some(highlighted_range) = highlighted_range {
+            let highlight = SelectionHighlight::new(line_idx, &highlighted_range);
+            line_renderer.add_selection_highlight(highlight);
         };
 
-        LineRenderer::new(line, renderer.tab_size)
-            .with_display_range(display_start..display_end)
-            .with_selection_highlight(selection_highlight)
-            .render_to(&mut renderer.term)?;
-
-        let is_cursor_at_end_of_line =
-            self.cursor.cur_y == line_idx && self.cursor.cur_x == line.n_chars();
-        if is_cursor_at_end_of_line && self.cursor.selection_anchor.is_none() {
-            renderer.add(terminal::EMPTY_CURSOR.as_bytes())?;
+        if self.cursor.cur_y == line_idx {
+            line_renderer.add_cursor(self.cursor.cur_x);
         }
+
+        line_renderer.render()?;
 
         Ok(())
     }
@@ -67,14 +66,14 @@ impl Editor {
         renderer: &'renderer mut Renderer<'term, Term>,
         with_cursor: bool,
     ) -> std::io::Result<()> {
-        renderer.add(CLEAR_LINE.as_bytes())?;
-        renderer.add(HIGHLIGHT_END.as_bytes())?;
+        renderer.add(CLEAR_LINE)?;
+        renderer.add(termion::color::Reset.bg_str())?;
 
         if self.config.show_line_numbers {
             renderer.add(format!("{: >5} {}", " ", V_BAR))?
         }
         let content = if with_cursor { EMPTY_CURSOR } else { "~" };
-        renderer.add(content.as_bytes())?;
+        renderer.add(content)?;
 
         Ok(())
     }

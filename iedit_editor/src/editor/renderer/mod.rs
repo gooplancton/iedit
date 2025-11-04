@@ -1,17 +1,14 @@
 use std::io::{BufWriter, Write};
 
 mod edit_buffer;
-mod legacy_line_renderer;
+mod line;
 mod status;
 
 use termion::cursor::Goto;
 
 use crate::{
     Editor,
-    terminal::{
-        CLEAR_BELOW_CURSOR, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, H_BAR, HIGHLIGHT_END,
-        UILayout,
-    },
+    terminal::{CLEAR_BELOW_CURSOR, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, H_BAR, UILayout},
 };
 
 pub struct Renderer<'editor, Term: Write> {
@@ -43,7 +40,7 @@ impl<'term, Term: Write> Renderer<'term, Term> {
 
         self.add(CURSOR_TO_COL1)?;
         self.add(CLEAR_LINE)?;
-        self.add(HIGHLIGHT_END)?;
+        self.add(termion::color::Reset.bg_str())?;
 
         Ok(())
     }
@@ -63,7 +60,7 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         self.add(CURSOR_DOWN1)?;
         self.add(CURSOR_TO_COL1)?;
         self.add(CLEAR_LINE)?;
-        self.add(HIGHLIGHT_END)?;
+        self.add(termion::color::Reset.bg_str())?;
 
         Ok(())
     }

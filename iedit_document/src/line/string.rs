@@ -1,22 +1,24 @@
 use std::ops::RangeBounds;
 
-use regex_lite::Regex;
-
 use crate::line::{CharacterEditable, DocumentLine};
 
 impl CharacterEditable for str {
+    #[inline]
     fn n_chars(&self) -> usize {
         self.chars().count()
     }
 
+    #[inline]
     fn is_empty(&self) -> bool {
         self.is_empty()
     }
 
+    #[inline]
     fn iter_chars(&self) -> impl Iterator<Item = char> {
         self.chars()
     }
 
+    #[inline]
     fn nth_char_idx(&self, n: usize) -> usize {
         self.char_indices()
             .nth(n)
@@ -24,6 +26,7 @@ impl CharacterEditable for str {
             .unwrap_or(self.len())
     }
 
+    #[inline]
     fn char_idx_at_byte(&self, byte_idx: usize) -> Option<usize> {
         self.char_indices()
             .enumerate()
@@ -43,73 +46,54 @@ impl CharacterEditable for str {
         self.split_at_mut(char_idx)
     }
 
+    #[inline]
     fn as_str(&self) -> &str {
         self
     }
 
+    #[inline]
     fn to_string(&self) -> String {
         self.to_owned()
-    }
-
-    fn find_regex_from(&self, regex: &Regex, idx: usize) -> Option<(usize, usize)> {
-        let char_idx = self.nth_char_idx(idx);
-
-        regex.find_at(self, char_idx).map(|m| {
-            let match_range = m.range();
-            let (start, end) = (match_range.start, match_range.end);
-
-            (
-                self.char_idx_at_byte(start).unwrap_or(start),
-                self.char_idx_at_byte(end).unwrap_or(end),
-            )
-        })
-    }
-
-    fn find_last_match(&self, regex: &Regex) -> Option<(usize, usize)> {
-        let (mut start_idx, mut end_idx) = self.find_regex_from(regex, 0)?;
-
-        loop {
-            let from_idx = self.nth_char_idx(start_idx + 1);
-
-            if let Some((last_start_idx, last_end_idx)) = self.find_regex_from(regex, from_idx) {
-                start_idx = last_start_idx;
-                end_idx = last_end_idx;
-            } else {
-                return Some((start_idx, end_idx));
-            }
-        }
     }
 }
 
 impl DocumentLine for String {
+    #[inline]
     fn n_chars(&self) -> usize {
         self.chars().count()
     }
 
+    #[inline]
     fn is_empty(&self) -> bool {
         self.is_empty()
     }
 
+    #[inline]
     fn as_str(&self) -> &str {
         self.as_str()
     }
 
+    #[inline]
     fn from_str_trim_newline(string: &impl AsRef<str>) -> Self {
         string.as_ref().trim_end_matches("\n").to_owned()
     }
 
+    #[inline]
     fn to_string(&self) -> String {
         self.clone()
     }
 
+    #[inline]
     fn iter_chars(&self) -> impl Iterator<Item = char> {
         self.chars()
     }
 
+    #[inline]
     fn merge_at_end(&mut self, other: &mut Self) {
         self.push_str(other.as_str());
     }
 
+    #[inline]
     fn nth_char_idx(&self, n: usize) -> usize {
         self.char_indices()
             .nth(n)
@@ -117,6 +101,7 @@ impl DocumentLine for String {
             .unwrap_or(self.len())
     }
 
+    #[inline]
     fn char_idx_at_byte(&self, byte_idx: usize) -> Option<usize> {
         self.char_indices()
             .find(|(char_idx, _)| *char_idx == byte_idx)
@@ -154,6 +139,7 @@ impl DocumentLine for String {
         None
     }
 
+    #[inline]
     fn push_char(&mut self, ch: char) {
         self.push(ch)
     }
@@ -191,10 +177,12 @@ impl DocumentLine for String {
         &self[start..end]
     }
 
+    #[inline]
     fn get_nth_char(&self, idx: usize) -> Option<char> {
         self.chars().nth(idx)
     }
 
+    #[inline]
     fn push_str(&mut self, string: &str) {
         self.push_str(string);
     }
@@ -213,19 +201,5 @@ impl DocumentLine for String {
         let char_idx = self.nth_char_idx(idx);
 
         self.insert_str(char_idx, string);
-    }
-
-    fn find_regex_from(&self, regex: &Regex, idx: usize) -> Option<(usize, usize)> {
-        let char_idx = self.nth_char_idx(idx);
-
-        regex.find_at(self, char_idx).map(|m| {
-            let match_range = m.range();
-            let (start, end) = (match_range.start, match_range.end);
-
-            (
-                self.char_idx_at_byte(start).unwrap_or(start),
-                self.char_idx_at_byte(end).unwrap_or(end),
-            )
-        })
     }
 }
