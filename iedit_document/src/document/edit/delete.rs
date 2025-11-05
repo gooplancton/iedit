@@ -1,4 +1,5 @@
-use crate::{Document, DocumentLine, Text, edit::EditResult};
+use crate::Document;
+use crate::document::edit::{EditResult, Text};
 
 impl Document {
     pub fn delete_char_at(&mut self, (x, y): (usize, usize)) -> (char, EditResult) {
@@ -9,16 +10,19 @@ impl Document {
         if x == 0 && y > 0 {
             // Merge with previous line
             let prev_line_len = self.lines.get(y - 1).map(|l| l.len()).unwrap_or_default();
-            let mut current_line = self.lines.remove(y);
-            self.lines[y - 1].merge_at_end(&mut current_line);
+            let current_line = self.lines.remove(y);
+            self.lines[y - 1].push_str(current_line.as_ref());
 
             return ('\n', Some((prev_line_len, y - 1)));
         }
 
         if let Some(line) = self.get_or_add_line(y) {
-            let ch = line.remove_char_at(x - 1);
+            let ch = line.remove(x - 1);
+            if ch.is_none() {
+                return ('0', None);
+            }
 
-            (ch, Some((x - 1, y)))
+            (ch.unwrap(), Some((x - 1, y)))
         } else {
             ('0', None)
         }
@@ -28,10 +32,9 @@ impl Document {
         if pos_from.1 == pos_to.1
             && let Some(line) = self.lines.get_mut(pos_from.1)
         {
-            return match line.delete_chars(pos_from.0..pos_to.0) {
-                Some(string) => Text::String(string),
-                None => Text::Empty,
-            };
+            let removed_text = line.remove_range(pos_from.0..pos_to.0);
+
+            return Text::String(removed_text);
         }
 
         fn inner(
@@ -42,15 +45,15 @@ impl Document {
             let mut deleted_text = Vec::<String>::new();
 
             let to_line = doc.get_or_add_line(pos_to.1)?;
-            let mut new_from_line_end = to_line.split_chars_off_at(pos_to.0);
+            let new_from_line_end = to_line.split_off(pos_to.0);
 
             let from_line = doc.get_or_add_line(pos_from.1)?;
 
-            deleted_text.push(from_line.split_chars_off_at(pos_from.0));
-            from_line.merge_at_end(&mut new_from_line_end);
+            deleted_text.push(from_line.split_off(pos_from.0).into());
+            from_line.push_str(new_from_line_end.as_ref());
 
             for line in doc.lines.drain((pos_from.1 + 1)..=pos_to.1) {
-                deleted_text.push(line);
+                deleted_text.push(line.into());
             }
 
             Some(Text::Lines(deleted_text))

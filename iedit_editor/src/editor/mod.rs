@@ -42,7 +42,6 @@ pub struct Editor {
     cursor: Cursor,
     viewport: Viewport,
     ui: UILayout,
-    dirty_lines: Vec<usize>,
     search_item: Option<SearchItem>,
 
     // TODO: turn into EditorFlags bitfield
@@ -79,7 +78,6 @@ impl Editor {
             ui,
             viewport,
             search_item: None,
-            dirty_lines: vec![],
             needs_full_rerender: true,
             is_selection_locked: false,
             first_quit_sent: false,
@@ -147,7 +145,9 @@ impl Editor {
 
             renderer.render(self)?;
 
-            self.dirty_lines.truncate(0);
+            self.document.clean_lines(
+                self.viewport.top_line..self.viewport.top_line + self.ui.editor_lines as usize,
+            );
             self.status_bar.notification.truncate(0);
             // TODO: set to false once we figure out dirty_lines
             self.needs_full_rerender = true;

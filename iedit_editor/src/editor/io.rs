@@ -37,7 +37,7 @@ impl Editor {
                 .iter()
                 .enumerate()
                 .try_for_each(|(line_idx, line)| {
-                    write!(file_writer, "{}", line)?;
+                    write!(file_writer, "{}", line.as_ref())?;
                     if line_idx != n_lines - 1 {
                         writeln!(file_writer)
                     } else {

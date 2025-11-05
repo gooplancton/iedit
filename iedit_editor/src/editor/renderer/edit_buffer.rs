@@ -1,7 +1,5 @@
 use std::io::Write;
 
-use iedit_document::CharacterEditable;
-
 use crate::{
     Editor,
     editor::{
@@ -40,12 +38,12 @@ impl Editor {
         }
 
         let display_start = self.viewport.left_col;
-        let display_end = (self.viewport.left_col + ui_width).min(line.n_chars());
+        let display_end = (self.viewport.left_col + ui_width).min(line.len());
 
         let highlighted_range = self.cursor.get_highlighted_range();
 
         let mut line_renderer = LineRenderer::new(
-            line,
+            line.as_ref(),
             (display_start, display_end),
             &mut renderer.term,
             renderer.tab_size,
@@ -95,7 +93,7 @@ impl Editor {
                 || line_idx == self.cursor.cur_y
                 || line_idx == self.cursor.past_y
                 || self.viewport.vertical_offset != 0
-                || self.dirty_lines.contains(&line_idx);
+                || self.document.is_line_dirty(line_idx);
 
             if should_render_line {
                 self.render_line(renderer, line_idx)?;

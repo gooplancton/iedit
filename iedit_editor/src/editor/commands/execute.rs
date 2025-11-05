@@ -56,7 +56,7 @@ impl Editor {
             Key::Char('x') => {
                 let shebang_line = self.document.lines.first()?;
                 if shebang_line.starts_with("#!") {
-                    return shebang_line.get(2..);
+                    return Some(shebang_line.get_range(2..));
                 }
 
                 None
@@ -106,7 +106,7 @@ fn run_command(command: &str) -> std::io::Result<()> {
     }
 
     let status = child.wait()?;
-    let output = Document::from_lines(output_lines, command, true);
+    let output = Document::from_strings(output_lines, command, true);
 
     if let Ok(mut file_execution_output) = FILE_EXECUTION_OUTPUT.lock() {
         *file_execution_output = Some(output);

@@ -1,6 +1,5 @@
 use std::cmp::min;
 
-use iedit_document::DocumentLine;
 use termion::event::Key;
 
 use crate::{
@@ -35,7 +34,7 @@ impl Editor {
                 R::Continue
             }
             C::InsertCharPrompt { pos_x, ch } => {
-                self.status_bar.prompt_line.insert_char_at(ch, pos_x);
+                self.status_bar.prompt_line.insert(pos_x, ch);
                 self.status_bar.cursor_pos = pos_x + 1;
 
                 R::Continue
@@ -45,7 +44,7 @@ impl Editor {
                     return R::Continue;
                 }
 
-                self.status_bar.prompt_line.remove_char_at(pos_x - 1);
+                self.status_bar.prompt_line.remove(pos_x - 1);
                 self.status_bar.cursor_pos = pos_x - 1;
 
                 R::Continue

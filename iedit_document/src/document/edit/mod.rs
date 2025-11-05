@@ -97,7 +97,7 @@ impl Document {
                 pos,
                 text: T::Lines(lines),
             } => {
-                let new_pos = self.insert_lines_at(pos, lines)?;
+                let new_pos = self.insert_strings_at(pos, lines)?;
                 self.get_inverse_stack(inverse_stack).push(Op::Replacement {
                     pos_from: pos,
                     pos_to: new_pos,
@@ -135,7 +135,7 @@ impl Document {
                     T::Empty => Some(pos_from),
                     T::Char(ch) => self.insert_char_at(pos_from, ch),
                     T::String(string) => self.insert_string_at(pos_from, string),
-                    T::Lines(lines) => self.insert_lines_at(pos_from, lines),
+                    T::Lines(lines) => self.insert_strings_at(pos_from, lines),
                 }?;
 
                 self.get_inverse_stack(inverse_stack).push(Op::Replacement {

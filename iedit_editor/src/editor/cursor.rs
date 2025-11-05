@@ -1,7 +1,5 @@
 use std::cmp::min;
 
-use iedit_document::CharacterEditable;
-
 use crate::Editor;
 
 pub struct Cursor {
@@ -89,7 +87,7 @@ impl Editor {
             .document
             .lines
             .get(self.cursor.cur_y)
-            .map_or(0, |line| line.n_chars());
+            .map_or(0, |line| line.len());
 
         self.cursor.cur_x = min(self.cursor.ideal_x, max_x);
         self.cursor.cur_y = min(self.cursor.cur_y, self.document.n_lines());

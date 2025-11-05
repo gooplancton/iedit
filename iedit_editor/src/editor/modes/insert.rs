@@ -1,4 +1,4 @@
-use iedit_document::{DocumentLine, EditOperation, Text};
+use iedit_document::{EditOperation, Text};
 use termion::event::Key;
 
 use crate::{
@@ -148,7 +148,7 @@ impl Editor {
                     .document
                     .lines
                     .get(self.cursor.cur_y)
-                    .map(|line| line.get_chars(x_from..=x_to))
+                    .map(|line| line.get_range(x_from..=x_to))
                     .and_then(|lit| {
                         if matches!(command, EditorCommand::FindMatchForward) {
                             self.document

@@ -1,8 +1,12 @@
-use std::{fs::{File, OpenOptions}, io::{self, BufRead, BufReader}, path::{Path, PathBuf}};
+use std::{
+    fs::{File, OpenOptions},
+    io::{self, BufRead, BufReader},
+    path::{Path, PathBuf},
+};
 
-use crate::DocumentLine;
+use crate::line::DocumentLine;
 
-type ReadFile = (Option<File>, PathBuf, Vec<String>);
+type ReadFile = (Option<File>, PathBuf, Vec<DocumentLine>);
 
 pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
     let file = OpenOptions::new()
@@ -30,7 +34,8 @@ pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
             let mut file_reader = BufReader::new(file);
             let mut file_line = String::default();
             while file_reader.read_line(&mut file_line)? > 0 {
-                file_lines.push(String::from_str_trim_newline(&file_line));
+                let trimmed = file_line.trim_end_matches(&['\n', '\r'][..]);
+                file_lines.push(DocumentLine::new(trimmed.to_string()));
                 file_line.truncate(0);
             }
 

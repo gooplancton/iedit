@@ -6,7 +6,3 @@ pub mod config;
 pub mod terminal;
 
 pub use editor::Editor;
-
-pub mod line {
-    pub use iedit_document::{CharacterEditable, DocumentLine};
-}

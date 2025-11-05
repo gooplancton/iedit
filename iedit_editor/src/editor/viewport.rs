@@ -1,7 +1,5 @@
 use std::cmp::{max, min};
 
-use iedit_document::CharacterEditable;
-
 use crate::editor::Editor;
 
 #[derive(Default)]
@@ -100,7 +98,7 @@ impl Editor {
         let right_limit = self.viewport.left_col + term_width - horizontal_margin;
 
         let chars_beyond_viewport = if let Some(line) = self.document.lines.get(y) {
-            let n_chars = line.n_chars();
+            let n_chars = line.len();
 
             (n_chars + 1 * (x == n_chars) as usize)
                 .saturating_sub(self.viewport.left_col + term_width)

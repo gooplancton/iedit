@@ -1,7 +1,5 @@
 use std::io::Write;
 
-use iedit_document::CharacterEditable;
-
 use crate::{editor::highlight::SelectionHighlight, terminal::EMPTY_CURSOR};
 use termion::color;
 
@@ -84,7 +82,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
             SelectionHighlight::After(start) => {
                 self.color_ranges.push(ColorRange {
                     start,
-                    end: self.line.n_chars(),
+                    end: self.line.len(),
                     is_bg: true,
                     color_str: color::LightBlue.bg_str(),
                 });
@@ -100,7 +98,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
             SelectionHighlight::WholeLine => {
                 self.color_ranges.push(ColorRange {
                     start: 0,
-                    end: self.line.n_chars(),
+                    end: self.line.len(),
                     is_bg: true,
                     color_str: color::LightBlue.bg_str(),
                 });
@@ -117,7 +115,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
     }
 
     pub fn add_cursor(&mut self, cursor_x: usize) {
-        if cursor_x >= self.line.n_chars() {
+        if cursor_x >= self.line.len() {
             self.cursor_at_end = true;
             return;
         }
