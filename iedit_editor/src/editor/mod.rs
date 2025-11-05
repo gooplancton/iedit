@@ -149,8 +149,7 @@ impl Editor {
                 self.viewport.top_line..self.viewport.top_line + self.ui.editor_lines as usize,
             );
             self.status_bar.notification.truncate(0);
-            // TODO: set to false once we figure out dirty_lines
-            self.needs_full_rerender = true;
+            self.needs_full_rerender = false;
         }
 
         renderer.cleanup()?;

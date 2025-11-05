@@ -16,6 +16,7 @@ pub struct Renderer<'editor, Term: Write> {
     ui: UILayout,
     horizontal_bar: String,
     tab_size: usize,
+    is_first_render: bool,
 }
 
 impl<'term, Term: Write> Renderer<'term, Term> {
@@ -27,6 +28,7 @@ impl<'term, Term: Write> Renderer<'term, Term> {
             ui,
             horizontal_bar,
             tab_size,
+            is_first_render: true,
         }
     }
 
@@ -59,6 +61,12 @@ impl<'term, Term: Write> Renderer<'term, Term> {
     pub fn next_line(&mut self) -> std::io::Result<()> {
         self.add(CURSOR_DOWN1)?;
         self.add(CURSOR_TO_COL1)?;
+
+        Ok(())
+    }
+
+    #[inline]
+    pub fn clear_line(&mut self) -> std::io::Result<()> {
         self.add(CLEAR_LINE)?;
         self.add(termion::color::Reset.bg_str())?;
 
@@ -80,6 +88,7 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         editor.render_edit_buffer(self)?;
         editor.render_status(self)?;
         self.term.flush()?;
+        self.is_first_render = false;
 
         Ok(())
     }

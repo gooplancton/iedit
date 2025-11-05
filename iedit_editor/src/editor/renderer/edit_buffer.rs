@@ -6,7 +6,7 @@ use crate::{
         highlight::SelectionHighlight,
         renderer::{Renderer, line::LineRenderer},
     },
-    terminal::{CLEAR_LINE, EMPTY_CURSOR, V_BAR},
+    terminal::{EMPTY_CURSOR, V_BAR},
 };
 
 impl Editor {
@@ -15,6 +15,8 @@ impl Editor {
         renderer: &'renderer mut Renderer<'term, Term>,
         line_idx: usize,
     ) -> std::io::Result<()> {
+        renderer.clear_line()?;
+
         let line = &self.document.lines[line_idx];
 
         let mut ui_width = self.ui.term_width as usize;
@@ -68,8 +70,7 @@ impl Editor {
         renderer: &'renderer mut Renderer<'term, Term>,
         with_cursor: bool,
     ) -> std::io::Result<()> {
-        renderer.add(CLEAR_LINE)?;
-        renderer.add(termion::color::Reset.bg_str())?;
+        renderer.clear_line()?;
 
         if self.config.show_line_numbers {
             renderer.add(format!("{: >5} {}", " ", V_BAR))?
@@ -92,7 +93,7 @@ impl Editor {
             let should_render_line = self.needs_full_rerender
                 || line_idx == self.cursor.cur_y
                 || line_idx == self.cursor.past_y
-                || self.viewport.vertical_offset != 0
+                || line_idx == row_span_low // FIXME:
                 || self.document.is_line_dirty(line_idx);
 
             if should_render_line {

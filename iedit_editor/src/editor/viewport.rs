@@ -100,8 +100,7 @@ impl Editor {
         let chars_beyond_viewport = if let Some(line) = self.document.lines.get(y) {
             let n_chars = line.len();
 
-            (n_chars + 1 * (x == n_chars) as usize)
-                .saturating_sub(self.viewport.left_col + term_width)
+            (n_chars + (x == n_chars) as usize).saturating_sub(self.viewport.left_col + term_width)
         } else {
             0
         };

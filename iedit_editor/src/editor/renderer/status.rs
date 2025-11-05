@@ -23,8 +23,11 @@ impl Editor {
         &self,
         renderer: &'renderer mut Renderer<'term, Term>,
     ) -> std::io::Result<()> {
-        renderer.add_horizontal_bar()?;
+        if renderer.is_first_render {
+            renderer.add_horizontal_bar()?;
+        }
         renderer.next_line()?;
+        renderer.clear_line()?;
 
         renderer.add("  ".as_bytes())?;
 
@@ -74,8 +77,6 @@ impl Editor {
         }
 
         line_renderer.render()?;
-
-        renderer.next_line()?;
 
         Ok(())
     }

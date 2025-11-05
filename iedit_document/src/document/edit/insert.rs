@@ -21,15 +21,19 @@ impl Document {
         Some((x + string.as_ref().n_chars(), y))
     }
 
-    pub fn insert_strings_at(&mut self, (x, y): (usize, usize), lines: Vec<String>) -> EditResult {
-        if lines.is_empty() {
+    pub fn insert_strings_at(
+        &mut self,
+        (x, y): (usize, usize),
+        strings: Vec<String>,
+    ) -> EditResult {
+        if strings.is_empty() {
             return Some((x, y));
         }
 
-        let n_lines = lines.len();
+        let n_strings = strings.len();
         let last_line_len = self
             .lines
-            .get(y + lines.len() - 1)
+            .get(y + strings.len() - 1)
             .map(|s| s.len())
             .unwrap_or(0);
 
@@ -41,14 +45,14 @@ impl Document {
             let (left, right) = line.split_at(x);
 
             // Create the new first line
-            let mut first_line = String::with_capacity(left.n_chars() + lines[0].n_chars());
+            let mut first_line = String::with_capacity(left.n_chars() + strings[0].n_chars());
             first_line.push_str(left);
-            first_line.push_str(&lines[0]);
+            first_line.push_str(&strings[0]);
 
             // Build the remaining lines to insert
-            let mut new_lines = Vec::with_capacity(lines.len());
+            let mut new_lines = Vec::with_capacity(strings.len());
             new_lines.push(first_line);
-            new_lines.extend_from_slice(&lines[1..]);
+            new_lines.extend_from_slice(&strings[1..]);
 
             // Modify the last inserted line to include the right part
             let last_line_len = if let Some(last_line) = new_lines.last_mut() {
@@ -66,7 +70,11 @@ impl Document {
                     .collect::<Vec<_>>(),
             );
 
-            let final_y = y + lines.len() - 1;
+            let final_y = y + strings.len() - 1;
+            for line in &mut self.lines[final_y..] {
+                line.is_dirty = true;
+            }
+
             let final_x = last_line_len - right.n_chars();
             return Some((final_x, final_y));
         }
@@ -74,12 +82,17 @@ impl Document {
         // Simple case: insert at beginning of line or beyond existing content
         if y < self.lines.len() {
             self.lines
-                .splice(y..y, lines.into_iter().map(DocumentLine::new));
+                .splice(y..y, strings.into_iter().map(DocumentLine::new));
+
+            for line in &mut self.lines[y..] {
+                line.is_dirty = true;
+            }
         } else {
-            self.lines.extend(lines.into_iter().map(DocumentLine::new));
+            self.lines
+                .extend(strings.into_iter().map(DocumentLine::new));
         }
 
-        Some((last_line_len, y + n_lines - 1))
+        Some((last_line_len, y + n_strings - 1))
     }
 
     pub fn insert_newline_at(&mut self, (x, y): (usize, usize)) -> EditResult {

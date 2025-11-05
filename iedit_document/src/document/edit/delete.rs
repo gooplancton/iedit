@@ -56,6 +56,12 @@ impl Document {
                 deleted_text.push(line.into());
             }
 
+            if pos_from.1 != pos_to.1 {
+                for line in &mut doc.lines[pos_from.1..] {
+                    line.is_dirty = true;
+                }
+            }
+
             Some(Text::Lines(deleted_text))
         }
 
