@@ -1,4 +1,4 @@
-pub enum MoveCursor {
+pub enum CursorMovement {
     AbsolutePos((usize, usize)),
     Up(usize),
     Down(usize),

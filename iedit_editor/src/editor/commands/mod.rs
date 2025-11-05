@@ -4,7 +4,7 @@ mod notify;
 
 use crate::{editor::modes::EditorMode};
 use iedit_document::EditOperation;
-pub use move_cursor::MoveCursor;
+pub use move_cursor::CursorMovement;
 use termion::event::Key;
 
 pub use notify::send_notification;
@@ -12,7 +12,7 @@ pub enum EditorCommand {
     Quit,
     Save,
     MoveCursor {
-        movement: MoveCursor,
+        movement: CursorMovement,
         with_selection: bool,
     },
     ToggleLockSelection,
