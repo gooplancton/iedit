@@ -43,10 +43,12 @@ impl Editor {
                 CommandExecutionResult::Continue
             }
             C::ToggleLockSelection => {
+                self.needs_full_rerender = true;
                 self.is_selection_locked = !self.is_selection_locked;
                 CommandExecutionResult::Continue
             }
             C::ToggleLineNumbers => {
+                self.needs_full_rerender = true;
                 self.config.show_line_numbers = !self.config.show_line_numbers;
                 CommandExecutionResult::Continue
             }

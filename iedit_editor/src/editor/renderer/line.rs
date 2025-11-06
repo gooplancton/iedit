@@ -4,6 +4,7 @@ use crate::{
     editor::highlight::{SelectionHighlight, SyntaxHighlight},
     terminal::EMPTY_CURSOR,
 };
+use iedit_document::CharacterIndexable;
 use termion::color;
 
 pub struct ColorRange<'renderer> {
@@ -118,21 +119,24 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
     }
 
     pub fn add_syntax_highlight(&mut self, syntax_highlight: &'writer SyntaxHighlight) {
-        let mut ranges = Vec::new();
-
         for rule in &syntax_highlight.rules {
-            for m in rule.pattern.find_iter(self.line) {
-                ranges.push(ColorRange {
-                    start: m.start(),
-                    end: m.end() - 1,
-                    is_bg: false,
-                    color_str: rule.color.as_str(),
+            for rx_match in rule.pattern.find_iter(self.line) {
+                let start_char = self
+                    .line
+                    .byte_to_char_idx(rx_match.start())
+                    .unwrap_or_default();
+                let end_char = self
+                    .line
+                    .byte_to_char_idx(rx_match.end())
+                    .unwrap_or(self.line.n_chars());
+                self.color_ranges.push(ColorRange {
+                    start: start_char,
+                    end: end_char,
+                    is_bg: rule.is_bg,
+                    color_str: &rule.color,
                 });
             }
         }
-
-        self.color_ranges.extend(ranges);
-        self.color_ranges.sort_by_key(|range| range.start);
     }
 
     pub fn add_cursor(&mut self, cursor_x: usize) {
@@ -193,7 +197,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
             .chars()
             .enumerate()
             .skip(self.display_range.0)
-            .take(self.display_range.1 - self.display_range.0)
+            .take(self.display_range.1.saturating_sub(self.display_range.0))
             .try_for_each(|(idx, ch)| self.render_line_char(idx, ch))?;
 
         if self.cursor_at_end {
