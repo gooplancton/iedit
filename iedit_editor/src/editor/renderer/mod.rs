@@ -31,7 +31,7 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         let horizontal_bar = str::repeat(H_BAR, ui.term_width as usize);
 
         Self {
-            term: BufWriter::new(term),
+            term: BufWriter::with_capacity(24 * 1024, term),
             ui,
             horizontal_bar,
             tab_size,
