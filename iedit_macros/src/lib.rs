@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Fields};
+use syn::{Data, DeriveInput, Fields, parse_macro_input};
 
 #[proc_macro_derive(ConfigParse)]
 pub fn derive_config_parse(input: TokenStream) -> TokenStream {
@@ -22,6 +22,7 @@ pub fn derive_config_parse(input: TokenStream) -> TokenStream {
 
         // Check if it's a bool type
         let is_bool = quote!(#field_type).to_string().contains("bool");
+        let is_option = quote!(#field_type).to_string().starts_with("Option <");
 
         if is_bool {
             quote! {
@@ -31,6 +32,12 @@ pub fn derive_config_parse(input: TokenStream) -> TokenStream {
                         "false" | "0" | "no" | "off" => false,
                         _ => config.#field_name,
                     };
+                }
+            }
+        } else if is_option {
+            quote! {
+                #field_name_str => {
+                    config.#field_name = Some(value.to_string());
                 }
             }
         } else {
@@ -58,7 +65,7 @@ pub fn derive_config_parse(input: TokenStream) -> TokenStream {
 
                 for line in contents.lines() {
                     let line = line.trim();
-                    
+
                     // Skip empty lines and comments
                     if line.is_empty() || line.starts_with('#') {
                         continue;

@@ -2,7 +2,7 @@ use std::{
     cmp::min,
     fmt::Display,
     io::Write,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
@@ -109,11 +109,21 @@ impl Editor {
     }
 
     pub fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<()> {
-        let syntax_highlight = self
-            .document
-            .canonicalized_file_path
-            .extension()
-            .and_then(SyntaxHighlight::infer_from_extension);
+        let syntax_highlight = if self.config.enable_syntax_highlighting {
+            let base_dir = self
+                .config
+                .syntax_highlighting_dir
+                .take()
+                .map(PathBuf::from);
+
+            self.document
+                .canonicalized_file_path
+                .extension()
+                .and_then(|ext| SyntaxHighlight::infer_from_extension(ext, base_dir))
+        } else {
+            None
+        };
+
         let mut renderer = Renderer::new(
             term,
             self.ui.clone(),

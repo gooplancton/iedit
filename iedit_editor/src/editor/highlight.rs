@@ -1,9 +1,9 @@
+use regex_lite::Regex;
 use std::{
     fs::File,
     io::{BufRead, BufReader},
-    path::Path,
+    path::{Path, PathBuf},
 };
-use regex_lite::Regex;
 
 pub type SelectionRage = ((usize, usize), (usize, usize));
 pub enum SelectionHighlight {
@@ -102,7 +102,10 @@ impl SyntaxHighlight {
 
         // Strings - soft orange
         rules.push(SyntaxRule {
-            pattern: Regex::new(r#"("""[\s\S]*?""")|'''[\s\S]*?'''|"([^"\\]|\\.)*"|'([^'\\]|\\.)*'"#).unwrap(),
+            pattern: Regex::new(
+                r#"("""[\s\S]*?""")|'''[\s\S]*?'''|"([^"\\]|\\.)*"|'([^'\\]|\\.)*'"#,
+            )
+            .unwrap(),
             color: termion::color::Rgb(208, 135, 112).fg_string(),
         });
 
@@ -139,24 +142,28 @@ impl SyntaxHighlight {
         Self { rules }
     }
 
-    pub fn infer_from_extension(ext: &std::ffi::OsStr) -> Option<Self> {
-        match ext.to_str().unwrap_or_default() {
-            // First try to load from user config
-            "rs" => Self::load_from_nanorc("syntax/rs.nanorc")
-                .ok()
-                .or_else(|| Some(Self::builtin_rust())),
-            "py" => Self::load_from_nanorc("syntax/py.nanorc")
-                .ok()
-                .or_else(|| Some(Self::builtin_python())),
-            "js" => Self::load_from_nanorc("syntax/js.nanorc")
-                .ok()
-                .or_else(|| Some(Self::builtin_javascript())),
-            "jsx" | "tsx" => Some(Self::builtin_javascript()),
+    pub fn infer_from_extension(ext: &std::ffi::OsStr, base_path: Option<PathBuf>) -> Option<Self> {
+        if let Some(base_path) = base_path {
+            if let Some(syntax_highlighter) = Self::load_from_nanorc(
+                base_path
+                    .join(format!("{}.nanorc", ext.to_str()?))
+                    .as_path(),
+            )
+            .ok()
+            {
+                return Some(syntax_highlighter);
+            }
+        }
+
+        match ext.to_str()? {
+            "rs" => Some(Self::builtin_rust()),
+            "py" => Some(Self::builtin_python()),
+            "js" | "jsx" | "ts" | "tsx" => Some(Self::builtin_javascript()),
             _ => None,
         }
     }
 
-    pub fn load_from_nanorc<P: AsRef<Path>>(path: P) -> std::io::Result<Self> {
+    pub fn load_from_nanorc(path: &Path) -> std::io::Result<Self> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let mut highlighter = Self::default();
@@ -193,12 +200,12 @@ impl SyntaxHighlight {
     fn parse_color(color: &str) -> String {
         // Using base16-ocean.dark inspired colors
         match color.to_lowercase().as_str() {
-            "red" => termion::color::Rgb(191, 97, 106).fg_string(),     // Soft red
-            "green" => termion::color::Rgb(163, 190, 140).fg_string(),  // Soft green
-            "blue" => termion::color::Rgb(143, 161, 179).fg_string(),   // Steel blue
+            "red" => termion::color::Rgb(191, 97, 106).fg_string(), // Soft red
+            "green" => termion::color::Rgb(163, 190, 140).fg_string(), // Soft green
+            "blue" => termion::color::Rgb(143, 161, 179).fg_string(), // Steel blue
             "yellow" => termion::color::Rgb(235, 203, 139).fg_string(), // Soft yellow
-            "magenta" => termion::color::Rgb(180, 142, 173).fg_string(),// Soft purple
-            "cyan" => termion::color::Rgb(150, 181, 180).fg_string(),   // Soft cyan
+            "magenta" => termion::color::Rgb(180, 142, 173).fg_string(), // Soft purple
+            "cyan" => termion::color::Rgb(150, 181, 180).fg_string(), // Soft cyan
             "orange" => termion::color::Rgb(208, 135, 112).fg_string(), // Soft orange
             // Support for RGB format remains the same
             _ if color.starts_with('#') && color.len() == 7 => {

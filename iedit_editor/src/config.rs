@@ -10,6 +10,8 @@ pub struct EditorConfig {
     pub show_keybindings: bool,
     pub confirm_quit_unsaved_changes: bool,
     pub tab_emit_spaces: bool,
+    pub enable_syntax_highlighting: bool,
+    pub syntax_highlighting_dir: Option<String>,
 }
 
 impl Default for EditorConfig {
@@ -23,6 +25,8 @@ impl Default for EditorConfig {
             show_keybindings: true,
             confirm_quit_unsaved_changes: true,
             tab_emit_spaces: true,
+            enable_syntax_highlighting: true,
+            syntax_highlighting_dir: None,
         }
     }
 }
