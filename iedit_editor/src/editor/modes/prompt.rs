@@ -1,5 +1,6 @@
 use std::cmp::min;
 
+use iedit_document::DocumentLine;
 use termion::event::Key;
 
 use crate::{
@@ -98,7 +99,7 @@ impl Editor {
     pub fn prompt_user(
         &mut self,
         prompt: &'static str,
-        callback: impl FnOnce(&mut Editor, String) -> CommandExecutionResult + 'static,
+        callback: impl FnOnce(&mut Editor, DocumentLine) -> CommandExecutionResult + 'static,
     ) {
         self.mode = EditorMode::Prompt(prompt);
         self.status_bar.submit_action = Some(Box::from(callback));

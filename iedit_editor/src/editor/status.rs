@@ -1,10 +1,12 @@
+use iedit_document::DocumentLine;
+
 use crate::{Editor, editor::commands::CommandExecutionResult};
 
-type SubmitAction = Box<dyn FnOnce(&mut Editor, String) -> CommandExecutionResult>;
+type SubmitAction = Box<dyn FnOnce(&mut Editor, DocumentLine) -> CommandExecutionResult>;
 
 #[derive(Default)]
 pub struct StatusBar {
-    pub prompt_line: String,
+    pub prompt_line: DocumentLine,
     pub notification: String,
     pub cursor_pos: usize,
 

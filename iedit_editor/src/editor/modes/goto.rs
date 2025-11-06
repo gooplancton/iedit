@@ -25,17 +25,20 @@ impl Editor {
             | C::MovePromptCursorLeft
             | C::MovePromptCursorRight => {
                 self.prompt_mode_execute_command(command);
-                let maybe_parsed_line_num = str::parse::<usize>(&self.status_bar.prompt_line);
+                let maybe_parsed_line_num =
+                    str::parse::<usize>(self.status_bar.prompt_line.as_ref());
                 if let Ok(line_num) = maybe_parsed_line_num
                     && line_num > 0
                 {
                     self.cursor.update_pos((0, line_num - 1));
+                    self.needs_full_rerender = true;
                 }
                 R::Continue
             }
             C::SubmitPrompt => {
                 self.status_bar.prompt_line.truncate(0);
                 self.mode = M::Insert;
+                self.needs_full_rerender = true;
                 R::Continue
             }
             C::SwitchMode(mode) => {
@@ -43,6 +46,7 @@ impl Editor {
                 self.cursor.update_pos(original_pos);
                 self.mode = mode;
                 self.search_item = None;
+                self.needs_full_rerender = true;
                 R::Continue
             }
             _ => R::Continue,

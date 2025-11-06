@@ -93,7 +93,6 @@ impl Editor {
             let should_render_line = self.needs_full_rerender
                 || line_idx == self.cursor.cur_y
                 || line_idx == self.cursor.past_y
-                || line_idx == row_span_low // FIXME:
                 || self.document.is_line_dirty(line_idx);
 
             if should_render_line {

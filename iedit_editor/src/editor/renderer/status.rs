@@ -35,7 +35,7 @@ impl Editor {
             return self.render_notification(renderer);
         }
 
-        let content: &String = match self.mode {
+        let content: &str = match self.mode {
             EditorMode::Insert => &format!(
                 "{} | Ln: {}, Col: {}",
                 self.get_displayable_file_path(),
@@ -44,13 +44,13 @@ impl Editor {
             ),
             EditorMode::Prompt(prompt) => {
                 renderer.add(prompt)?;
-                &self.status_bar.prompt_line
+                self.status_bar.prompt_line.as_ref()
             }
             EditorMode::Goto {
                 original_cursor_pos: _,
             } => {
                 renderer.add("GOTO ")?;
-                &self.status_bar.prompt_line
+                self.status_bar.prompt_line.as_ref()
             }
             EditorMode::Search {
                 original_cursor_pos: _,
@@ -61,12 +61,12 @@ impl Editor {
                 }
                 renderer.add("SEARCH ")?;
 
-                &self.status_bar.prompt_line
+                self.status_bar.prompt_line.as_ref()
             }
         };
 
         let mut line_renderer = LineRenderer::new(
-            content.as_str(),
+            content,
             (0, self.ui.term_width as usize),
             &mut renderer.term,
             renderer.tab_size,

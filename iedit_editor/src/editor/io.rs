@@ -4,6 +4,8 @@ use std::{
     path::PathBuf,
 };
 
+use iedit_document::DocumentLine;
+
 use crate::editor::commands::{CommandExecutionResult, send_notification};
 
 use super::Editor;
@@ -56,15 +58,15 @@ impl Editor {
         Ok(())
     }
 
-    pub fn set_file(&mut self, path: String) -> CommandExecutionResult {
+    pub fn set_file(&mut self, path: DocumentLine) -> CommandExecutionResult {
         let canonicalized_file_path = if path.starts_with("/") {
-            if let Ok(p) = PathBuf::from(path).canonicalize() {
+            if let Ok(p) = PathBuf::from(path.as_ref()).canonicalize() {
                 p
             } else {
                 return CommandExecutionResult::Continue;
             }
         } else if let Ok(mut p) = std::env::current_dir() {
-            p.push(path);
+            p.push(path.as_ref());
             p
         } else {
             return CommandExecutionResult::Continue;

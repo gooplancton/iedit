@@ -29,10 +29,11 @@ impl Editor {
                 self.search_item = None;
                 self.status_bar.prompt_line.truncate(0);
                 self.mode = EditorMode::Insert;
+                self.needs_full_rerender = true;
                 R::Continue
             }
             C::SubmitPrompt if !self.search_submit_sent => {
-                let maybe_parsed_regex = Regex::from_str(&self.status_bar.prompt_line);
+                let maybe_parsed_regex = Regex::from_str(self.status_bar.prompt_line.as_ref());
                 let next_cursor_pos = match (&maybe_parsed_regex, is_backwards) {
                     (Ok(regex), false) => {
                         self.document.get_next_regex_match_pos(original_pos, regex)
@@ -40,15 +41,18 @@ impl Editor {
                     (Ok(regex), true) => self
                         .document
                         .get_previous_regex_match_pos(original_pos, regex),
-                    (Err(_), false) => self
-                        .document
-                        .get_next_literal_match_pos(original_pos, &self.status_bar.prompt_line),
-                    (Err(_), true) => self
-                        .document
-                        .get_previous_literal_match_pos(original_pos, &self.status_bar.prompt_line),
+                    (Err(_), false) => self.document.get_next_literal_match_pos(
+                        original_pos,
+                        self.status_bar.prompt_line.as_ref(),
+                    ),
+                    (Err(_), true) => self.document.get_previous_literal_match_pos(
+                        original_pos,
+                        self.status_bar.prompt_line.as_ref(),
+                    ),
                 };
 
                 if let Some(next_cursor_pos) = next_cursor_pos {
+                    self.needs_full_rerender = true;
                     self.search_submit_sent = true;
                     self.cursor.update_pos(next_cursor_pos);
                     if let Ok(regex) = maybe_parsed_regex {
@@ -67,13 +71,15 @@ impl Editor {
                     Some(SearchItem::Regex(regex)) => {
                         self.document.get_next_regex_match_pos(original_pos, regex)
                     }
-                    Some(SearchItem::PromptString) => self
-                        .document
-                        .get_next_literal_match_pos(original_pos, &self.status_bar.prompt_line),
+                    Some(SearchItem::PromptString) => self.document.get_next_literal_match_pos(
+                        original_pos,
+                        self.status_bar.prompt_line.as_ref(),
+                    ),
                     _ => return R::Continue,
                 };
 
                 if let Some(next_cursor_pos) = next_cursor_pos {
+                    self.needs_full_rerender = true;
                     self.cursor.update_pos(next_cursor_pos);
                 }
 
@@ -84,13 +90,15 @@ impl Editor {
                     Some(SearchItem::Regex(regex)) => self
                         .document
                         .get_previous_regex_match_pos(original_pos, regex),
-                    Some(SearchItem::PromptString) => self
-                        .document
-                        .get_previous_literal_match_pos(original_pos, &self.status_bar.prompt_line),
+                    Some(SearchItem::PromptString) => self.document.get_previous_literal_match_pos(
+                        original_pos,
+                        self.status_bar.prompt_line.as_ref(),
+                    ),
                     _ => return R::Continue,
                 };
 
                 if let Some(next_cursor_pos) = next_cursor_pos {
+                    self.needs_full_rerender = true;
                     self.cursor.update_pos(next_cursor_pos);
                 }
 
@@ -102,7 +110,7 @@ impl Editor {
             | C::MovePromptCursorRight => {
                 self.search_submit_sent = false;
                 self.prompt_mode_execute_command(command)
-            },
+            }
             _ => self.goto_mode_execute_command(command, original_pos),
         }
     }

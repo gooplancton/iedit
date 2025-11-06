@@ -41,7 +41,6 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         )?;
 
         self.add(CURSOR_TO_COL1)?;
-        self.add(CLEAR_LINE)?;
         self.add(termion::color::Reset.bg_str())?;
 
         Ok(())
