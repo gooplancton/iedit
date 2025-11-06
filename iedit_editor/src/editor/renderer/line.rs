@@ -1,21 +1,24 @@
 use std::io::Write;
 
-use crate::{editor::highlight::SelectionHighlight, terminal::EMPTY_CURSOR};
+use crate::{
+    editor::highlight::{SelectionHighlight, SyntaxHighlight},
+    terminal::EMPTY_CURSOR,
+};
 use termion::color;
 
-pub struct ColorRange {
+pub struct ColorRange<'renderer> {
     start: usize,
     /// (inclusive)
     end: usize,
     is_bg: bool,
-    color_str: &'static str,
+    color_str: &'renderer str,
 }
 
 pub struct LineRenderer<'line, 'writer, Writer: Write> {
     pub line: &'line str,
     pub display_range: (usize, usize),
     pub writer: &'writer mut Writer,
-    pub color_ranges: Vec<ColorRange>,
+    pub color_ranges: Vec<ColorRange<'writer>>,
     pub tab_size: usize,
     pub cursor_at_end: bool,
 }
@@ -112,6 +115,24 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                 });
             }
         }
+    }
+
+    pub fn add_syntax_highlight(&mut self, syntax_highlight: &'writer SyntaxHighlight) {
+        let mut ranges = Vec::new();
+
+        for rule in &syntax_highlight.rules {
+            for m in rule.pattern.find_iter(self.line) {
+                ranges.push(ColorRange {
+                    start: m.start(),
+                    end: m.end() - 1,
+                    is_bg: false,
+                    color_str: rule.color.as_str(),
+                });
+            }
+        }
+
+        self.color_ranges.extend(ranges);
+        self.color_ranges.sort_by_key(|range| range.start);
     }
 
     pub fn add_cursor(&mut self, cursor_x: usize) {

@@ -27,9 +27,10 @@ impl Editor {
                 movement,
                 with_selection,
             } => {
-                if !with_selection {
-                    self.cursor.selection_anchor = None;
-                } else if self.cursor.selection_anchor.is_none() {
+                if !with_selection && self.cursor.selection_anchor.is_some() {
+								self.needs_full_rerender = true;
+                   	self.cursor.selection_anchor = None;
+                } else if with_selection && self.cursor.selection_anchor.is_none() {
                     self.cursor.selection_anchor = Some(self.cursor.pos())
                 }
 

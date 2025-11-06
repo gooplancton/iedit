@@ -9,7 +9,10 @@ use std::{
     },
 };
 
-use crate::{config::EditorConfig, editor::search::SearchItem};
+use crate::{
+    config::EditorConfig,
+    editor::{highlight::SyntaxHighlight, search::SearchItem},
+};
 use iedit_document::Document;
 use signal_hook::{consts::SIGWINCH, flag};
 
@@ -106,7 +109,17 @@ impl Editor {
     }
 
     pub fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<()> {
-        let mut renderer = Renderer::new(term, self.ui.clone(), self.config.tab_size as usize);
+        let syntax_highlight = self
+            .document
+            .canonicalized_file_path
+            .extension()
+            .and_then(SyntaxHighlight::infer_from_extension);
+        let mut renderer = Renderer::new(
+            term,
+            self.ui.clone(),
+            self.config.tab_size as usize,
+            syntax_highlight,
+        );
         renderer.render(self)?;
 
         let window_resized = Arc::<AtomicBool>::new(AtomicBool::new(false));
