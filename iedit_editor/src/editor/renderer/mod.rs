@@ -94,6 +94,14 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         self.reset_cursor()?;
         editor.render_edit_buffer(self)?;
         editor.render_status(self)?;
+
+        let cursor_rel_x = (editor.cursor.cur_x - editor.viewport.left_col) as u16
+            + self.ui.ui_origin.0
+            + 7u16 * editor.config.show_line_numbers as u16;
+        let cursor_rel_y =
+            (editor.cursor.cur_y - editor.viewport.top_line) as u16 + self.ui.ui_origin.1;
+
+        self.add(termion::cursor::Goto(cursor_rel_x, cursor_rel_y).to_string())?;
         self.term.flush()?;
         self.is_first_render = false;
 

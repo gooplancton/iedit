@@ -96,6 +96,7 @@ impl Editor {
             }
             EditorCommand::ClearSelection => {
                 self.is_selection_locked = false;
+                self.needs_full_rerender = true;
                 self.cursor.selection_anchor = None;
                 self.search_item = None;
             }

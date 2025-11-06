@@ -45,6 +45,10 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
         self.color_ranges
             .iter()
             .filter(|range| {
+                if range.end < range.start {
+                    return false
+                }
+
                 if idx == self.display_range.0 {
                     range.start <= idx
                 } else {
@@ -64,7 +68,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
 
         self.color_ranges
             .iter()
-            .filter(|range| range.end == idx)
+            .filter(|range| range.end == idx && range.end >= range.start)
             .try_for_each(|range| {
                 write!(
                     self.writer,
@@ -94,7 +98,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
             SelectionHighlight::Before(end) => {
                 self.color_ranges.push(ColorRange {
                     start: 0,
-                    end,
+                    end: end.saturating_sub(1),
                     is_bg: true,
                     color_str: color::LightBlue.bg_str(),
                 });
@@ -110,7 +114,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
             SelectionHighlight::Range(start, end) => {
                 self.color_ranges.push(ColorRange {
                     start,
-                    end,
+                    end: end.saturating_sub(1),
                     is_bg: true,
                     color_str: color::LightBlue.bg_str(),
                 });
@@ -143,36 +147,6 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
         if cursor_x >= self.line.len() {
             self.cursor_at_end = true;
             return;
-        }
-
-        let range_to_split_idx = self
-            .color_ranges
-            .iter()
-            .position(|color_range| cursor_x >= color_range.start && cursor_x <= color_range.end);
-
-        if let Some(range_to_split_idx) = range_to_split_idx {
-            let range_to_split = self.color_ranges.remove(range_to_split_idx);
-            if range_to_split.start != cursor_x || range_to_split.end != cursor_x {
-                let left_range = ColorRange {
-                    start: range_to_split.start,
-                    end: cursor_x.saturating_sub(1),
-                    is_bg: range_to_split.is_bg,
-                    color_str: range_to_split.color_str,
-                };
-                let right_range = ColorRange {
-                    start: cursor_x + 1,
-                    end: range_to_split.end,
-                    is_bg: range_to_split.is_bg,
-                    color_str: range_to_split.color_str,
-                };
-
-                if left_range.start <= left_range.end {
-                    self.color_ranges.push(left_range);
-                }
-                if right_range.start <= right_range.end {
-                    self.color_ranges.push(right_range);
-                }
-            }
         }
 
         self.color_ranges.push(ColorRange {

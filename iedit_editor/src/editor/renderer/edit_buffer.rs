@@ -62,10 +62,6 @@ impl Editor {
             line_renderer.add_selection_highlight(highlight);
         };
 
-        if self.cursor.cur_y == line_idx {
-            line_renderer.add_cursor(self.cursor.cur_x);
-        }
-
         line_renderer.render()?;
 
         Ok(())

@@ -1,7 +1,7 @@
 use std::io::stdout;
 
 use iedit_editor::{Editor, config::EditorConfig, terminal::UILayout};
-use termion::{cursor::HideCursor, raw::IntoRawMode};
+use termion::raw::IntoRawMode;
 
 fn main() -> std::io::Result<()> {
     let path = std::env::args().nth(1).unwrap_or_default();
@@ -18,7 +18,7 @@ fn main() -> std::io::Result<()> {
         EditorConfig::default()
     };
 
-    let mut terminal = HideCursor::from(stdout().into_raw_mode()?);
+    let mut terminal = stdout().into_raw_mode()?;
     let ui = UILayout::new(editor_config.min_lines, &mut terminal)?;
 
     let mut editor = Editor::new(path, open_at, editor_config, ui)?;

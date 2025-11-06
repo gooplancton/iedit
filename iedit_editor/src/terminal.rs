@@ -1,7 +1,6 @@
 use std::{
     cmp::min,
     io::{self, Write},
-    ops::DerefMut,
     os::fd::AsFd,
 };
 
@@ -12,9 +11,9 @@ pub static CURSOR_DOWN1: &str = "\x1b[1B";
 pub static CURSOR_RIGHT1: &str = "\x1b[1C";
 pub static CURSOR_LEFT1: &str = "\x1b[1D";
 pub static CURSOR_TO_LINE1: &str = "\x1b[1;1H";
+pub static CURSOR_TO_COL1: &str = "\r";
 pub static CLEAR_LINE: &str = "\x1b[2K";
 pub static CLEAR_BELOW_CURSOR: &str = "\x1b[J";
-pub static CURSOR_TO_COL1: &str = "\r";
 pub static SAVE_CURSOR: &str = "\x1b[s";
 pub static RESTORE_CURSOR: &str = "\x1b[u";
 pub static HIDE_CURSOR: &str = "\x1b[?25l";
@@ -38,7 +37,7 @@ pub struct UILayout {
 impl UILayout {
     pub fn new<W: Write + AsFd>(
         min_lines: u16,
-        term: &mut impl DerefMut<Target = RawTerminal<W>>,
+        term: &mut RawTerminal<W>,
     ) -> io::Result<UILayout> {
         let (term_width, term_height) = terminal_size()?;
         let ui_origin = term.cursor_pos()?;

@@ -109,6 +109,9 @@ impl Editor {
     }
 
     pub fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<()> {
+        // TODO: allow user to select cursor shape
+        // write!(term, "\x1b[5 q")?;
+
         let syntax_highlight = if self.config.enable_syntax_highlighting {
             let base_dir = self
                 .config
