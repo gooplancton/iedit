@@ -100,8 +100,9 @@ impl Document {
 
         let first_nonwhitespace_x = line
             .iter()
+            .take(x)
             .position(|char| !char.is_whitespace())
-            .unwrap_or(line.len());
+            .unwrap_or(x);
 
         let mut to_append =
             DocumentLine::new(String::from(line.get_range(0..first_nonwhitespace_x)));

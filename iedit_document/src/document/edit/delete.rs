@@ -13,6 +13,10 @@ impl Document {
             let current_line = self.lines.remove(y);
             self.lines[y - 1].push_str(current_line.as_ref());
 
+            for line in &mut self.lines[y - 1..] {
+                line.is_dirty = true;
+            }
+
             return ('\n', Some((prev_line_len, y - 1)));
         }
 
