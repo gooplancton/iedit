@@ -4,7 +4,7 @@ use crate::{
     editor::highlight::{SelectionHighlight, SyntaxHighlight},
     terminal::EMPTY_CURSOR,
 };
-use iedit_document::CharacterIndexable;
+use iedit_document::DocumentLine;
 use termion::color;
 
 pub struct ColorRange<'renderer> {
@@ -16,8 +16,10 @@ pub struct ColorRange<'renderer> {
 }
 
 pub struct LineRenderer<'line, 'writer, Writer: Write> {
-    pub line: &'line str,
-    pub display_range: (usize, usize),
+    pub line: &'line DocumentLine,
+    pub char_offset: usize,
+    pub visual_offset: usize,
+    pub ui_width: usize,
     pub writer: &'writer mut Writer,
     pub color_ranges: Vec<ColorRange<'writer>>,
     pub tab_size: usize,
@@ -26,14 +28,19 @@ pub struct LineRenderer<'line, 'writer, Writer: Write> {
 
 impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
     pub fn new(
-        line: &'line str,
-        display_range: (usize, usize),
+        line: &'line DocumentLine,
+        visual_offset: usize,
+        ui_width: usize,
         writer: &'writer mut Writer,
         tab_size: usize,
     ) -> Self {
+        let char_offset = line.visual_to_char_idx(visual_offset, tab_size);
+
         Self {
             line,
-            display_range,
+            char_offset,
+            visual_offset,
+            ui_width,
             color_ranges: vec![],
             writer,
             tab_size,
@@ -41,25 +48,29 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
         }
     }
 
-    fn render_line_char(&mut self, idx: usize, ch: char) -> std::io::Result<()> {
+    fn render_line_char(
+        &mut self,
+        ch: char,
+        char_idx: usize,
+        visual_idx: usize,
+    ) -> std::io::Result<()> {
         self.color_ranges
             .iter()
             .filter(|range| {
                 if range.end < range.start {
-                    return false
+                    return false;
                 }
 
-                if idx == self.display_range.0 {
-                    range.start <= idx
+                if char_idx == self.char_offset {
+                    range.start <= char_idx
                 } else {
-                    range.start == idx
+                    range.start == char_idx
                 }
             })
             .try_for_each(|range| write!(self.writer, "{}", range.color_str))?;
 
         if ch == '\t' {
-            // FIXME: need to handle tabs properly with respect to display range
-            let n_spaces = self.tab_size - (idx % self.tab_size);
+            let n_spaces = self.tab_size - (visual_idx % self.tab_size);
             let tab_string = " ".repeat(n_spaces);
             write!(self.writer, "{}", &tab_string)?;
         } else {
@@ -68,7 +79,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
 
         self.color_ranges
             .iter()
-            .filter(|range| range.end == idx && range.end >= range.start)
+            .filter(|range| range.end == char_idx && range.end >= range.start)
             .try_for_each(|range| {
                 write!(
                     self.writer,
@@ -124,7 +135,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
 
     pub fn add_syntax_highlight(&mut self, syntax_highlight: &'writer SyntaxHighlight) {
         for rule in &syntax_highlight.rules {
-            for rx_match in rule.pattern.find_iter(self.line) {
+            for rx_match in rule.pattern.find_iter(self.line.as_ref()) {
                 let start_char = self
                     .line
                     .byte_to_char_idx(rx_match.start())
@@ -132,7 +143,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                 let end_char = self
                     .line
                     .byte_to_char_idx(rx_match.end() - 1)
-                    .unwrap_or(self.line.n_chars());
+                    .unwrap_or(self.line.len());
                 self.color_ranges.push(ColorRange {
                     start: start_char,
                     end: end_char,
@@ -167,12 +178,24 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
         write!(self.writer, "{}", color::Reset.fg_str())?;
         write!(self.writer, "{}", color::Reset.bg_str())?;
 
-        self.line
-            .chars()
-            .enumerate()
-            .skip(self.display_range.0)
-            .take(self.display_range.1.saturating_sub(self.display_range.0))
-            .try_for_each(|(idx, ch)| self.render_line_char(idx, ch))?;
+        let mut partial_tab_length = 0;
+        if self.visual_offset % self.tab_size != 0 && self.line.at(self.char_offset) == Some('\t') {
+            let hidden_length = (self.visual_offset - self.char_offset) % self.tab_size;
+            partial_tab_length = self.tab_size - hidden_length;
+            write!(self.writer, "{}", " ".repeat(partial_tab_length))?;
+        }
+
+        for (char_idx, ch) in self.line.iter().enumerate() {
+            let visual_idx = self.line.char_to_visual_idx(char_idx, self.tab_size);
+
+            if visual_idx >= self.ui_width + self.visual_offset - partial_tab_length {
+                break;
+            }
+
+            if visual_idx >= self.visual_offset {
+                self.render_line_char(ch, char_idx, visual_idx)?;
+            }
+        }
 
         if self.cursor_at_end {
             write!(self.writer, "{}", EMPTY_CURSOR)?;

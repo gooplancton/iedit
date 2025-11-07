@@ -39,14 +39,12 @@ impl Editor {
             ui_width = ui_width.saturating_sub(7);
         }
 
-        let display_start = self.viewport.left_col;
-        let display_end = (self.viewport.left_col + ui_width).min(line.len());
-
         let highlighted_range = self.cursor.get_highlighted_range();
 
         let mut line_renderer = LineRenderer::new(
-            line.as_ref(),
-            (display_start, display_end),
+            line,
+            self.viewport.left_col,
+            ui_width,
             &mut renderer.term,
             renderer.tab_size,
         );

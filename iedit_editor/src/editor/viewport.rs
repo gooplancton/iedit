@@ -29,6 +29,7 @@ impl Editor {
         let x = self.cursor.cur_x;
         let past_x = self.cursor.past_x;
         let is_cursor_visible = self.viewport_contains_y(y);
+        let tab_size = self.config.tab_size as usize;
 
         if self.config.show_line_numbers {
             term_width -= 7;
@@ -97,20 +98,25 @@ impl Editor {
         let left_limit = self.viewport.left_col + horizontal_margin;
         let right_limit = self.viewport.left_col + term_width - horizontal_margin;
 
-        let chars_beyond_viewport = if let Some(line) = self.document.lines.get(y) {
+        let (cols_beyond_viewport, visual_x) = if let Some(line) = self.document.lines.get(y) {
             let n_chars = line.len();
+            let visual_len = line.char_to_visual_idx(n_chars, tab_size) + (x == n_chars) as usize;
+            let visual_x = line.char_to_visual_idx(x, tab_size);
 
-            (n_chars + (x == n_chars) as usize).saturating_sub(self.viewport.left_col + term_width)
+            (
+                visual_len.saturating_sub(self.viewport.left_col + term_width),
+                visual_x,
+            )
         } else {
-            0
+            (0, x)
         };
 
-        if x < left_limit && x < past_x {
-            let horizontal_scroll = left_limit.saturating_sub(x);
+        if visual_x < left_limit && x < past_x {
+            let horizontal_scroll = left_limit.saturating_sub(visual_x);
             self.viewport.left_col = self.viewport.left_col.saturating_sub(horizontal_scroll);
             self.needs_full_rerender = true;
-        } else if x > right_limit && x > past_x && chars_beyond_viewport > 0 {
-            let horizontal_scroll = min(chars_beyond_viewport, x.saturating_sub(right_limit));
+        } else if visual_x > right_limit && x > past_x && cols_beyond_viewport > 0 {
+            let horizontal_scroll = min(cols_beyond_viewport, visual_x.saturating_sub(right_limit));
             self.viewport.left_col += horizontal_scroll;
             self.needs_full_rerender = true;
         }

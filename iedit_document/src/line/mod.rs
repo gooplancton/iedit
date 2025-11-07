@@ -1,7 +1,7 @@
 mod char_indexable;
 
-use std::ops::RangeBounds;
 pub use char_indexable::CharacterIndexable;
+use std::ops::RangeBounds;
 
 /// A line in a document. This is mostly a wrapper around String with some additional metadata.
 /// All indexing operations are done in terms of characters, not bytes.
@@ -10,7 +10,7 @@ pub struct DocumentLine {
     /// NOTE: every line is considered dirty when created or modified.
     pub is_dirty: bool,
     // colors cache
-    // tabs
+    pub tab_stops: Vec<(usize, usize)>,
     // gap start and end
 }
 
@@ -18,6 +18,7 @@ impl Default for DocumentLine {
     fn default() -> Self {
         DocumentLine {
             buf: String::new(),
+            tab_stops: vec![],
             is_dirty: true,
         }
     }
@@ -27,6 +28,7 @@ impl DocumentLine {
     pub fn new(line: String) -> Self {
         DocumentLine {
             buf: line,
+            tab_stops: vec![],
             is_dirty: true,
         }
     }
@@ -132,6 +134,38 @@ impl DocumentLine {
             .enumerate()
             .find(|(_, (char_byte_idx, _))| *char_byte_idx == byte_idx)
             .map(|(char_idx, _)| char_idx)
+    }
+
+    #[inline]
+    pub fn char_to_visual_idx(&self, char_idx: usize, tab_size: usize) -> usize {
+        let mut visual_idx = 0;
+        for ch in self.iter().take(char_idx) {
+            if ch != '\t' {
+                visual_idx += 1;
+            } else {
+                visual_idx += tab_size - (visual_idx % tab_size)
+            }
+        }
+
+        visual_idx
+    }
+
+    #[inline]
+    pub fn visual_to_char_idx(&self, visual_idx: usize, tab_size: usize) -> usize {
+        let mut running_visual_idx = 0;
+        for (char_idx, ch) in self.iter().enumerate() {
+            running_visual_idx += if ch == '\t' {
+                tab_size - (running_visual_idx % tab_size)
+            } else {
+                1
+            };
+
+            if running_visual_idx > visual_idx {
+                return char_idx;
+            }
+        }
+
+        self.len()
     }
 
     #[inline(always)]

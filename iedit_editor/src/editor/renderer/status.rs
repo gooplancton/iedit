@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use iedit_document::DocumentLine;
+
 use crate::{
     Editor,
     editor::{
@@ -35,22 +37,22 @@ impl Editor {
             return self.render_notification(renderer);
         }
 
-        let content: &str = match self.mode {
-            EditorMode::Insert => &format!(
+        let content = match self.mode {
+            EditorMode::Insert => &DocumentLine::new(format!(
                 "{} | Ln: {}, Col: {}",
                 self.get_displayable_file_path(),
                 self.cursor.cur_y + 1,
                 self.cursor.cur_x + 1
-            ),
+            )),
             EditorMode::Prompt(prompt) => {
                 renderer.add(prompt)?;
-                self.status_bar.prompt_line.as_ref()
+                &self.status_bar.prompt_line
             }
             EditorMode::Goto {
                 original_cursor_pos: _,
             } => {
                 renderer.add("GOTO ")?;
-                self.status_bar.prompt_line.as_ref()
+                &self.status_bar.prompt_line
             }
             EditorMode::Search {
                 original_cursor_pos: _,
@@ -61,13 +63,14 @@ impl Editor {
                 }
                 renderer.add("SEARCH ")?;
 
-                self.status_bar.prompt_line.as_ref()
+                &self.status_bar.prompt_line
             }
         };
 
         let mut line_renderer = LineRenderer::new(
             content,
-            (0, self.ui.term_width as usize),
+            0,
+            self.ui.term_width as usize,
             &mut renderer.term,
             renderer.tab_size,
         );
