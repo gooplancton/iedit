@@ -6,7 +6,7 @@ use termion::event::Key;
 use crate::{
     Editor,
     editor::{
-        commands::{CommandExecutionResult, EditorCommand, send_notification},
+        commands::{CommandExecutionResult, EditorCommand},
         modes::EditorMode,
         search::SearchItem,
     },
@@ -24,15 +24,19 @@ impl Editor {
         use EditorCommand as C;
 
         match command {
-            C::SubmitPrompt if self.search_submit_sent => {
-                self.search_submit_sent = false;
+            C::SubmitPrompt => {
                 self.search_item = None;
                 self.status_bar.prompt_line.truncate(0);
                 self.mode = EditorMode::Insert;
                 self.needs_full_rerender = true;
                 R::Continue
             }
-            C::SubmitPrompt if !self.search_submit_sent => {
+            C::MovePromptCursorLeft | C::MovePromptCursorRight => {
+                self.prompt_mode_execute_command(command)
+            }
+            C::InsertCharPrompt { pos_x: _, ch: _ } | C::DeleteCharPrompt { pos_x: _ } => {
+                self.prompt_mode_execute_command(command);
+
                 let maybe_parsed_regex = Regex::from_str(self.status_bar.prompt_line.as_ref());
                 let next_cursor_pos = match (&maybe_parsed_regex, is_backwards) {
                     (Ok(regex), false) => {
@@ -53,26 +57,23 @@ impl Editor {
 
                 if let Some(next_cursor_pos) = next_cursor_pos {
                     self.needs_full_rerender = true;
-                    self.search_submit_sent = true;
                     self.cursor.update_pos(next_cursor_pos);
                     if let Ok(regex) = maybe_parsed_regex {
                         self.search_item = Some(SearchItem::Regex(regex))
                     } else {
                         self.search_item = Some(SearchItem::PromptString)
                     }
-                } else {
-                    send_notification("No matches");
                 }
 
                 R::Continue
             }
             C::FindMatchForward => {
                 let next_cursor_pos = match &self.search_item {
-                    Some(SearchItem::Regex(regex)) => {
-                        self.document.get_next_regex_match_pos(original_pos, regex)
-                    }
+                    Some(SearchItem::Regex(regex)) => self
+                        .document
+                        .get_next_regex_match_pos(self.cursor.pos(), regex),
                     Some(SearchItem::PromptString) => self.document.get_next_literal_match_pos(
-                        original_pos,
+                        self.cursor.pos(),
                         self.status_bar.prompt_line.as_ref(),
                     ),
                     _ => return R::Continue,
@@ -89,9 +90,9 @@ impl Editor {
                 let next_cursor_pos = match &self.search_item {
                     Some(SearchItem::Regex(regex)) => self
                         .document
-                        .get_previous_regex_match_pos(original_pos, regex),
+                        .get_previous_regex_match_pos(self.cursor.pos(), regex),
                     Some(SearchItem::PromptString) => self.document.get_previous_literal_match_pos(
-                        original_pos,
+                        self.cursor.pos(),
                         self.status_bar.prompt_line.as_ref(),
                     ),
                     _ => return R::Continue,
@@ -103,13 +104,6 @@ impl Editor {
                 }
 
                 R::Continue
-            }
-            C::InsertCharPrompt { pos_x: _, ch: _ }
-            | C::DeleteCharPrompt { pos_x: _ }
-            | C::MovePromptCursorLeft
-            | C::MovePromptCursorRight => {
-                self.search_submit_sent = false;
-                self.prompt_mode_execute_command(command)
             }
             _ => self.goto_mode_execute_command(command, original_pos),
         }

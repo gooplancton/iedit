@@ -51,7 +51,6 @@ pub struct Editor {
     needs_full_rerender: bool,
     is_selection_locked: bool,
     first_quit_sent: bool,
-    search_submit_sent: bool,
     is_executing_file: bool,
     is_viewing_execution_output: bool,
 }
@@ -84,7 +83,6 @@ impl Editor {
             needs_full_rerender: true,
             is_selection_locked: false,
             first_quit_sent: false,
-            search_submit_sent: false,
             is_executing_file: false,
             is_viewing_execution_output: false,
         })
