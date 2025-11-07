@@ -178,17 +178,21 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
         write!(self.writer, "{}", color::Reset.fg_str())?;
         write!(self.writer, "{}", color::Reset.bg_str())?;
 
-        let mut partial_tab_length = 0;
+        self.color_ranges
+            .iter()
+            .filter(|range| range.start <= range.end && range.start <= self.char_offset)
+            .try_for_each(|range| write!(self.writer, "{}", range.color_str))?;
+
         if self.visual_offset % self.tab_size != 0 && self.line.at(self.char_offset) == Some('\t') {
-            let hidden_length = (self.visual_offset - self.char_offset) % self.tab_size;
-            partial_tab_length = self.tab_size - hidden_length;
+            let hidden_length = self.visual_offset % self.tab_size;
+            let partial_tab_length = self.tab_size - hidden_length;
             write!(self.writer, "{}", " ".repeat(partial_tab_length))?;
         }
 
         for (char_idx, ch) in self.line.iter().enumerate() {
             let visual_idx = self.line.char_to_visual_idx(char_idx, self.tab_size);
 
-            if visual_idx >= self.ui_width + self.visual_offset - partial_tab_length {
+            if visual_idx >= self.ui_width + self.visual_offset {
                 break;
             }
 
