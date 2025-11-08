@@ -2,12 +2,17 @@ use crossbeam_channel::{Receiver, select, unbounded};
 use std::{fs, thread};
 use termion::{event::Key, input::TermRead};
 
+pub enum Notification {
+    Simple(String),
+    // others?...
+}
+
 #[non_exhaustive]
 pub enum Input {
     NoOp,
     Keypress(Key),
     KeyChord([Key; 3]),
-    ExternalNotification(String),
+    ExternalNotification(Notification),
 }
 
 pub fn get_tty() -> fs::File {
@@ -21,11 +26,11 @@ pub fn get_tty() -> fs::File {
 pub struct InputParser {
     pub keys: Receiver<Key>,
     pub keychord_buf: [Key; 3],
-    pub notifications: Receiver<String>,
+    pub notifications: Receiver<Notification>,
 }
 
 impl InputParser {
-    pub fn new(notifications: Receiver<String>) -> Self {
+    pub fn new(notifications: Receiver<Notification>) -> Self {
         let (sender, receiver) = unbounded();
 
         thread::spawn(move || {
@@ -63,7 +68,7 @@ impl Iterator for InputParser {
                     Ok(Key::Ctrl('k')) => {
                         self.keychord_buf = [Key::Null; 3];
                         self.keychord_buf[0] = Key::Ctrl('k');
-                        Some(Input::NoOp)
+                        Some(Input::KeyChord(self.keychord_buf))
                     }
                     Ok(Key::Esc) if self.keychord_buf[0] != Key::Null => {
                         self.keychord_buf = [Key::Null; 3];
@@ -78,7 +83,7 @@ impl Iterator for InputParser {
                     },
                     Ok(key) if self.keychord_buf[0] != Key::Null => {
                         self.keychord_buf[1] = key;
-                        Some(Input::NoOp)
+                        Some(Input::KeyChord(self.keychord_buf))
                     },
                     Ok(key) => Some(Input::Keypress(key)),
                     Err(_) => Some(Input::NoOp),

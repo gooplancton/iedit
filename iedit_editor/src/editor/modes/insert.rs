@@ -4,7 +4,7 @@ use termion::event::Key;
 use crate::{
     Editor,
     editor::{
-        commands::{CommandExecutionResult, CursorMovement, EditorCommand, send_notification},
+        commands::{CommandExecutionResult, CursorMovement, EditorCommand, send_simple_notification},
         modes::EditorMode,
         search::SearchItem,
     },
@@ -134,7 +134,7 @@ impl Editor {
                     let (pos_from, pos_to) = self.cursor.get_highlighted_range().unwrap();
                     self.cursor.selection_anchor = None;
                     if pos_from.1 != pos_to.1 {
-                        send_notification("Can't yet match across lines");
+                        send_simple_notification("Can't yet match across lines");
                         return R::Continue;
                     }
                     (pos_from.0, pos_to.0)
@@ -170,9 +170,9 @@ impl Editor {
                     // FIXME: why is it matching one index behind?
                     self.cursor.update_pos((next_x + 1, next_y));
                 } else if matches!(command, EditorCommand::FindMatchForward) {
-                    send_notification("Already at last match");
+                    send_simple_notification("Already at last match");
                 } else if matches!(command, EditorCommand::FindMatchBackward) {
-                    send_notification("Already at first match");
+                    send_simple_notification("Already at first match");
                 }
             }
             EditorCommand::ExecuteFile(executor_key) => {
@@ -219,7 +219,7 @@ impl Editor {
                 movement: CursorMovement::Up(self.ui.editor_lines as usize),
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Ctrl('}')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Ctrl('e')) => Some(C::MoveCursor {
                 movement: CursorMovement::NextParagraph,
                 with_selection: self.is_selection_locked,
             }),

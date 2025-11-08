@@ -1,6 +1,5 @@
 use std::{
     cmp::min,
-    fmt::Display,
     io::Write,
     path::{Path, PathBuf},
     sync::{
@@ -12,6 +11,7 @@ use std::{
 use crate::{
     config::EditorConfig,
     editor::{highlight::SyntaxHighlight, search::SearchItem},
+    input::Notification,
 };
 use iedit_document::Document;
 use signal_hook::{consts::SIGWINCH, flag};
@@ -31,6 +31,7 @@ mod commands;
 mod cursor;
 mod highlight;
 mod io;
+mod keybindings;
 mod modes;
 mod renderer;
 mod search;
@@ -46,6 +47,7 @@ pub struct Editor {
     viewport: Viewport,
     ui: UILayout,
     search_item: Option<SearchItem>,
+    displayed_popup: Option<&'static [&'static str]>,
 
     // TODO: turn into EditorFlags bitfield
     needs_full_rerender: bool,
@@ -56,7 +58,7 @@ pub struct Editor {
 }
 
 // Store sender in a static or global location for access anywhere
-pub static NOTIFICATION_SENDER: Mutex<Option<Sender<String>>> = Mutex::new(None);
+pub static NOTIFICATION_SENDER: Mutex<Option<Sender<Notification>>> = Mutex::new(None);
 pub static FILE_EXECUTION_OUTPUT: Mutex<Option<Document>> = Mutex::new(None);
 
 impl Editor {
@@ -80,6 +82,7 @@ impl Editor {
             ui,
             viewport,
             search_item: None,
+            displayed_popup: None,
             needs_full_rerender: true,
             is_selection_locked: false,
             first_quit_sent: false,
@@ -136,7 +139,7 @@ impl Editor {
         let window_resized = Arc::<AtomicBool>::new(AtomicBool::new(false));
         let _ = flag::register(SIGWINCH, window_resized.clone());
 
-        let (notification_sender, notification_receiver) = unbounded();
+        let (notification_sender, notification_receiver) = unbounded::<Notification>();
 
         *NOTIFICATION_SENDER.lock().unwrap() = Some(notification_sender);
 
@@ -173,30 +176,12 @@ impl Editor {
                 self.viewport.top_line..self.viewport.top_line + self.ui.editor_lines as usize,
             );
             self.status_bar.notification.truncate(0);
-            self.needs_full_rerender = false;
+            self.needs_full_rerender = self.displayed_popup.is_some();
+            self.displayed_popup = None;
         }
 
         renderer.cleanup()?;
 
         Ok(())
-    }
-
-    pub fn get_displayable_file_path(&self) -> impl Display {
-        if self.document.canonicalized_file_path.as_os_str().is_empty() {
-            "[Unnamed Buffer]".to_owned()
-        } else {
-            format!(
-                "{}{}",
-                self.document
-                    .canonicalized_file_path
-                    .as_os_str()
-                    .to_string_lossy(),
-                if self.document.has_been_edited {
-                    "*"
-                } else {
-                    ""
-                }
-            )
-        }
     }
 }

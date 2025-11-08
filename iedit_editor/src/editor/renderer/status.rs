@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use iedit_document::DocumentLine;
+use iedit_document::CharacterIndexable;
 
 use crate::{
     Editor,
@@ -37,13 +37,32 @@ impl Editor {
             return self.render_notification(renderer);
         }
 
-        let content = match self.mode {
-            EditorMode::Insert => &DocumentLine::new(format!(
-                "{} | Ln: {}, Col: {}",
-                self.get_displayable_file_path(),
+        if matches!(self.mode, EditorMode::Insert) {
+            let mut status_text_len = 0;
+            for chunk in self.get_status_text_chunks() {
+                status_text_len += chunk.n_chars();
+                renderer.add(chunk)?;
+            }
+
+            let cursor_pos_chunk = format!(
+                "{}:{} - {}%",
                 self.cursor.cur_y + 1,
-                self.cursor.cur_x + 1
-            )),
+                self.cursor.cur_x + 1,
+                (100 * self.cursor.cur_y / self.document.n_lines()).min(100)
+            );
+
+            let padding = (self.ui.term_width as usize)
+                .saturating_sub(4)
+                .saturating_sub(status_text_len)
+                .saturating_sub(cursor_pos_chunk.len());
+            renderer.add(" ".repeat(padding))?;
+            renderer.add(cursor_pos_chunk)?;
+
+            return Ok(());
+        }
+
+        let content = match self.mode {
+            EditorMode::Insert => unreachable!(),
             EditorMode::Prompt(prompt) => {
                 renderer.add(prompt)?;
                 &self.status_bar.prompt_line

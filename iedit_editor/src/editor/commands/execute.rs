@@ -11,18 +11,18 @@ use termion::event::Key;
 
 use crate::{
     Editor,
-    editor::{FILE_EXECUTION_OUTPUT, commands::notify::send_notification},
+    editor::{FILE_EXECUTION_OUTPUT, commands::notify::send_simple_notification},
 };
 
 impl Editor {
     pub fn execute_file(&mut self, executor_key: Key) {
         if self.is_viewing_execution_output {
-            send_notification("Not an executable file");
+            send_simple_notification("Not an executable file");
             return;
         }
 
         if let Err(_err) = self.save_file(false) {
-            send_notification("Could not save file for execution");
+            send_simple_notification("Could not save file for execution");
             return;
         };
 
@@ -42,7 +42,7 @@ impl Editor {
 
         let _handle: JoinHandle<()> = spawn(move || {
             if let Err(e) = run_command(&command) {
-                send_notification(format!("Error executing command: {}", e));
+                send_simple_notification(format!("Error executing command: {}", e));
             }
         });
     }
@@ -83,7 +83,7 @@ fn run_command(command: &str) -> std::io::Result<()> {
         .take()
         .ok_or_else(|| std::io::Error::other("Failed to capture stderr"))?;
 
-    send_notification(format!("Executing: {}", command));
+    send_simple_notification(format!("Executing: {}", command));
 
     let stdout_reader = BufReader::new(stdout);
     let stderr_reader = BufReader::new(stderr);
@@ -110,12 +110,12 @@ fn run_command(command: &str) -> std::io::Result<()> {
 
     if let Ok(mut file_execution_output) = FILE_EXECUTION_OUTPUT.lock() {
         *file_execution_output = Some(output);
-        send_notification(format!(
+        send_simple_notification(format!(
             "Process exited with status: {}. To view output: Ctrl+k v o",
             status
         ));
     } else {
-        send_notification(format!(
+        send_simple_notification(format!(
             "Process exited with status: {}. Output cannot be displayed",
             status
         ));

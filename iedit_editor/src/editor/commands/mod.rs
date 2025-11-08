@@ -7,7 +7,7 @@ use iedit_document::EditOperation;
 pub use move_cursor::CursorMovement;
 use termion::event::Key;
 
-pub use notify::send_notification;
+pub use notify::send_simple_notification;
 pub enum EditorCommand {
     Quit,
     Save,
@@ -37,7 +37,12 @@ pub enum EditorCommand {
     FindMatchForward,
     FindMatchBackward,
     ExecuteFile(Key),
-    DisplayExternalNotification(String),
+    DisplayMessage(String),
+    DisplayHelp,
+    DisplayChordsHelp,
+    DisplayExecuteChordHelp,
+    DisplayLineChordHelp,
+    DisplayViewChordHelp,
     ViewExecutionOutput,
 }
 

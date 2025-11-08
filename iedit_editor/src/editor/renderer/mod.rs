@@ -2,6 +2,7 @@ use std::io::{BufWriter, Write};
 
 mod edit_buffer;
 mod line;
+mod popup;
 mod status;
 
 use termion::cursor::Goto;
@@ -111,6 +112,10 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         self.reset_cursor()?;
         editor.render_edit_buffer(self)?;
         editor.render_status(self)?;
+
+        if let Some(popup_lines) = editor.displayed_popup {
+            self.render_popup(popup_lines)?;
+        }
 
         self.position_cursor(editor)?;
         self.term.flush()?;

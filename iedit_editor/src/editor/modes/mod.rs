@@ -2,8 +2,14 @@ use termion::event::Key;
 
 use crate::{
     Editor,
-    editor::commands::{CommandExecutionResult, EditorCommand},
-    input::Input,
+    editor::{
+        commands::{CommandExecutionResult, EditorCommand},
+        keybindings::{
+            CHORDS_POPUP_LINES, HELP_POPUP_LINES, L_CHORD_POPUP_LINES, V_CHORD_POPUP_LINES,
+            X_CHORD_POPUP_LINES,
+        },
+    },
+    input::{Input, Notification},
 };
 
 mod goto;
@@ -31,32 +37,42 @@ impl Editor {
         use EditorCommand as C;
 
         match command {
-            C::DisplayExternalNotification(notification) => {
-                self.status_bar.notification = notification;
-                CommandExecutionResult::Continue
+            C::DisplayHelp => {
+                self.displayed_popup = Some(&HELP_POPUP_LINES);
             }
-            C::Quit => self.quit(false),
+            C::DisplayChordsHelp => {
+                self.displayed_popup = Some(&CHORDS_POPUP_LINES);
+            }
+            C::DisplayLineChordHelp => {
+                self.displayed_popup = Some(&L_CHORD_POPUP_LINES);
+            }
+            C::DisplayExecuteChordHelp => {
+                self.displayed_popup = Some(&X_CHORD_POPUP_LINES);
+            }
+            C::DisplayViewChordHelp => {
+                self.displayed_popup = Some(&V_CHORD_POPUP_LINES);
+            }
+            C::DisplayMessage(notification) => {
+                self.status_bar.notification = notification;
+            }
+            C::Quit => return self.quit(false),
             C::Save => {
                 if let Err(err) = self.save_file(true) {
                     self.status_bar.update_notification(err.to_string());
                 };
-                CommandExecutionResult::Continue
             }
             C::ToggleLockSelection => {
                 self.needs_full_rerender = true;
                 self.is_selection_locked = !self.is_selection_locked;
-                CommandExecutionResult::Continue
             }
             C::ToggleLineNumbers => {
                 self.needs_full_rerender = true;
                 self.config.show_line_numbers = !self.config.show_line_numbers;
-                CommandExecutionResult::Continue
             }
             C::ScrollViewportUp => {
                 if self.viewport.top_line > 0 {
                     self.viewport.vertical_offset -= 1;
                 }
-                CommandExecutionResult::Continue
             }
             C::ScrollViewportDown => {
                 if self.viewport.top_line + (self.ui.editor_lines as usize)
@@ -64,30 +80,50 @@ impl Editor {
                 {
                     self.viewport.vertical_offset += 1;
                 }
-                CommandExecutionResult::Continue
             }
             _ => match self.mode {
-                EditorMode::Insert => self.insert_mode_execute_command(command),
-                EditorMode::Prompt(_) => self.prompt_mode_execute_command(command),
+                EditorMode::Insert => return self.insert_mode_execute_command(command),
+                EditorMode::Prompt(_) => return self.prompt_mode_execute_command(command),
                 EditorMode::Goto {
                     original_cursor_pos,
-                } => self.goto_mode_execute_command(command, original_cursor_pos),
+                } => return self.goto_mode_execute_command(command, original_cursor_pos),
                 EditorMode::Search {
                     original_cursor_pos,
                     is_backwards,
-                } => self.search_mode_execute_command(command, original_cursor_pos, is_backwards),
+                } => {
+                    return self.search_mode_execute_command(
+                        command,
+                        original_cursor_pos,
+                        is_backwards,
+                    );
+                }
             },
-        }
+        };
+
+        CommandExecutionResult::Continue
     }
 
     #[inline]
     pub fn parse_command(&self, input: Input) -> Option<EditorCommand> {
         match input {
-            Input::ExternalNotification(notification) => {
-                Some(EditorCommand::DisplayExternalNotification(notification))
+            Input::ExternalNotification(Notification::Simple(message)) => {
+                Some(EditorCommand::DisplayMessage(message))
             }
             Input::Keypress(Key::Ctrl('q')) => Some(EditorCommand::Quit),
             Input::Keypress(Key::Ctrl('s')) => Some(EditorCommand::Save),
+            Input::Keypress(Key::Ctrl('t')) => Some(EditorCommand::DisplayHelp),
+            Input::KeyChord([Key::Ctrl('k'), Key::Null, Key::Null]) => {
+                Some(EditorCommand::DisplayChordsHelp)
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('x'), Key::Null]) => {
+                Some(EditorCommand::DisplayExecuteChordHelp)
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('l'), Key::Null]) => {
+                Some(EditorCommand::DisplayLineChordHelp)
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('v'), Key::Null]) => {
+                Some(EditorCommand::DisplayViewChordHelp)
+            }
             _ => match self.mode {
                 EditorMode::Insert => self.insert_mode_parse_command(input),
                 EditorMode::Prompt(_) => self.prompt_mode_parse_command(input),

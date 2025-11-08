@@ -6,14 +6,14 @@ use std::{
 
 use iedit_document::DocumentLine;
 
-use crate::editor::commands::{CommandExecutionResult, send_notification};
+use crate::editor::commands::{CommandExecutionResult, send_simple_notification};
 
 use super::Editor;
 
 impl Editor {
     pub fn save_file(&mut self, display_notification: bool) -> std::io::Result<()> {
         if self.is_viewing_execution_output {
-            send_notification("Currently viewing execution output, won't save");
+            send_simple_notification("Currently viewing execution output, won't save");
             return Ok(());
         }
 
@@ -51,7 +51,7 @@ impl Editor {
 
             self.document.has_been_edited = false;
             if display_notification {
-                send_notification("File saved");
+                send_simple_notification("File saved");
             }
         }
 
