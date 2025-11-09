@@ -172,7 +172,7 @@ impl Document {
         };
 
         let left_boundary = line
-            .get_range(0..(x + 1))
+            .get_range(..x)
             .char_indices()
             .rfind(|(_idx, ch)| ch.is_whitespace())
             .map(|(idx, _ch)| idx + 1)
@@ -183,7 +183,7 @@ impl Document {
             .char_indices()
             .find(|(_idx, ch)| ch.is_whitespace())
             .map(|(idx, _ch)| idx.saturating_sub(1))
-            .unwrap_or(line.len() - x);
+            .unwrap_or(line.len() - x - 1);
 
         Some((left_boundary, right_boundary + x))
     }

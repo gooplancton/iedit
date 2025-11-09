@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::{cmp::max, io::Write};
 
 use iedit_document::CharacterIndexable;
 
@@ -44,11 +44,12 @@ impl Editor {
                 renderer.add(chunk)?;
             }
 
+            let document_lines = max(self.document.n_lines(), 1);
             let cursor_pos_chunk = format!(
                 "{}:{} - {}%",
                 self.cursor.cur_y + 1,
                 self.cursor.cur_x + 1,
-                (100 * self.cursor.cur_y / self.document.n_lines()).min(100)
+                (100 * self.cursor.cur_y / document_lines).min(100)
             );
 
             let padding = (self.ui.term_width as usize)

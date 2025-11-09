@@ -4,9 +4,10 @@ use termion::event::Key;
 use crate::{
     Editor,
     editor::{
-        commands::{CommandExecutionResult, CursorMovement, EditorCommand, send_simple_notification},
+        commands::{
+            CommandExecutionResult, CursorMovement, EditorCommand, send_simple_notification,
+        },
         modes::EditorMode,
-        search::SearchItem,
     },
     input::Input,
 };
@@ -28,8 +29,8 @@ impl Editor {
                 with_selection,
             } => {
                 if !with_selection && self.cursor.selection_anchor.is_some() {
-								self.needs_full_rerender = true;
-                   	self.cursor.selection_anchor = None;
+                    self.needs_full_rerender = true;
+                    self.cursor.selection_anchor = None;
                 } else if with_selection && self.cursor.selection_anchor.is_none() {
                     self.cursor.selection_anchor = Some(self.cursor.pos())
                 }
@@ -125,15 +126,11 @@ impl Editor {
                 self.cursor.selection_anchor = None;
             }
             EditorCommand::FindMatchForward | EditorCommand::FindMatchBackward => {
-                let (x_from, x_to) = if let Some(SearchItem::DocumentRange { pos_from, pos_to }) =
-                    self.search_item
-                    && pos_from.1 == pos_to.1
-                {
-                    (pos_from.0, pos_to.0)
-                } else if self.cursor.selection_anchor.is_some() {
+                let (x_from, x_to) = if self.cursor.selection_anchor.is_some() {
                     let (pos_from, pos_to) = self.cursor.get_highlighted_range().unwrap();
                     self.cursor.selection_anchor = None;
                     if pos_from.1 != pos_to.1 {
+                        // TODO: implement this
                         send_simple_notification("Can't yet match across lines");
                         return R::Continue;
                     }
@@ -162,13 +159,7 @@ impl Editor {
                     });
 
                 if let Some((next_x, next_y)) = next_cursor_pos {
-                    self.search_item = Some(SearchItem::DocumentRange {
-                        pos_from: (x_from, self.cursor.cur_y),
-                        pos_to: (x_to, self.cursor.cur_y),
-                    });
-
-                    // FIXME: why is it matching one index behind?
-                    self.cursor.update_pos((next_x + 1, next_y));
+                    self.cursor.update_pos((next_x, next_y));
                 } else if matches!(command, EditorCommand::FindMatchForward) {
                     send_simple_notification("Already at last match");
                 } else if matches!(command, EditorCommand::FindMatchBackward) {
