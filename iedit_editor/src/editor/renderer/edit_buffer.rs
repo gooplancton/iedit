@@ -39,7 +39,7 @@ impl Editor {
             ui_width = ui_width.saturating_sub(7);
         }
 
-        let highlighted_range = self.cursor.get_highlighted_range();
+        let highlighted_range = self.cursor.get_selected_range();
 
         let mut line_renderer = LineRenderer::new(
             line,

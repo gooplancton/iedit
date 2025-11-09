@@ -13,7 +13,7 @@ use crate::{
     editor::{highlight::SyntaxHighlight, search::SearchItem},
     input::Notification,
 };
-use iedit_document::Document;
+use iedit_document::{Document, Text};
 use signal_hook::{consts::SIGWINCH, flag};
 
 use crate::{
@@ -48,6 +48,7 @@ pub struct Editor {
     ui: UILayout,
     search_item: Option<SearchItem>,
     displayed_popup: Option<&'static [&'static str]>,
+    yanked_text: Option<Text>,
 
     // TODO: turn into EditorFlags bitfield
     needs_full_rerender: bool,
@@ -81,6 +82,7 @@ impl Editor {
             cursor: Cursor::new((0, cur_y)),
             ui,
             viewport,
+            yanked_text: None,
             search_item: None,
             displayed_popup: None,
             needs_full_rerender: true,

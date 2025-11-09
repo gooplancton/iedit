@@ -215,7 +215,7 @@ impl Document {
     }
 
     pub fn get_next_blank_line_idx(&self, pos_y: usize) -> usize {
-        for (idx, line) in self.lines.iter().enumerate().skip(pos_y) {
+        for (idx, line) in self.lines.iter().enumerate().skip(pos_y + 1) {
             if line.iter().all(char::is_whitespace) {
                 return idx;
             }

@@ -66,7 +66,7 @@ impl Cursor {
         (self.cur_x, self.cur_y)
     }
 
-    pub fn get_highlighted_range(&self) -> Option<((usize, usize), (usize, usize))> {
+    pub fn get_selected_range(&self) -> Option<((usize, usize), (usize, usize))> {
         let cursor_pos = self.pos();
 
         self.selection_anchor.map(|anchor_pos| {

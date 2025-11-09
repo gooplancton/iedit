@@ -1,13 +1,16 @@
-pub static HELP_POPUP_LINES: [&'static str; 10] = [
+pub static HELP_POPUP_LINES: [&'static str; 13] = [
     "^g: go to",
     "^f: find forward",
     "^b: find backward",
     "^k: enter chord",
     "^z: undo",
     "^r: redo",
+    "^y: yank (copy)",
+    "^x: cut",
+    "^p: paste",
     "^l: toggle selection",
-    "^p: go to matching paren",
     "^e: go to end of paragraph",
+    "^(: go to matching paren",
     "^n: go to next match",
 ];
 
@@ -19,10 +22,7 @@ pub static CHORDS_POPUP_LINES: [&'static str; 5] = [
     "v: view",
 ];
 
-pub static L_CHORD_POPUP_LINES: [&'static str; 2] = [
-    "d: delete",
-    "n: toggle numbers",
-];
+pub static L_CHORD_POPUP_LINES: [&'static str; 2] = ["d: delete", "n: toggle numbers"];
 
 pub static X_CHORD_POPUP_LINES: [&'static str; 5] = [
     "x: auto (shebang)",
@@ -32,7 +32,4 @@ pub static X_CHORD_POPUP_LINES: [&'static str; 5] = [
     "b: bash",
 ];
 
-pub static V_CHORD_POPUP_LINES: [&'static str; 1] = [
-    "o: output/original",
-];
-
+pub static V_CHORD_POPUP_LINES: [&'static str; 1] = ["o: output/original"];

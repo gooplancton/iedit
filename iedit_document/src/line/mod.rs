@@ -124,7 +124,7 @@ impl DocumentLine {
             .char_indices()
             .nth(char_idx)
             .map(|(i, _)| i)
-            .unwrap_or(self.len())
+            .unwrap_or(self.buf.len())
     }
 
     #[inline]
@@ -204,7 +204,7 @@ impl DocumentLine {
         let end = match range.end_bound() {
             std::ops::Bound::Included(&idx) => self.char_to_byte_idx(idx + 1),
             std::ops::Bound::Excluded(&idx) => self.char_to_byte_idx(idx),
-            std::ops::Bound::Unbounded => self.len(),
+            std::ops::Bound::Unbounded => self.buf.len(),
         };
         start..end
     }

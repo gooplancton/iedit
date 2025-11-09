@@ -1,4 +1,4 @@
-use iedit_document::{EditOperation, Text};
+use iedit_document::{CharacterIndexable, DocumentLine, EditOperation, Text};
 use termion::event::Key;
 
 use crate::{
@@ -24,6 +24,80 @@ impl Editor {
             EditorCommand::SwitchMode(mode) => {
                 self.mode = mode;
             }
+            EditorCommand::Paste => {
+                if let Some(yanked_text) = &self.yanked_text {
+                    let edit = EditOperation::Insertion {
+                        pos: self.cursor.pos(),
+                        text: yanked_text.clone(),
+                    };
+
+                    self.cursor.selection_anchor = None;
+                    if let Some(cursor_pos) = self.document.apply_edit(edit, S::Undo) {
+                        self.cursor.update_pos(cursor_pos);
+                    }
+                    match &yanked_text {
+                        Text::String(string) => send_simple_notification(format!(
+                            "Pasted {} characters",
+                            string.n_chars()
+                        )),
+                        Text::Lines(lines) => {
+                            send_simple_notification(format!("Pasted {} lines", lines.len()))
+                        }
+                        _ => {}
+                    };
+                }
+            }
+            EditorCommand::YankSelection | EditorCommand::CutSelection => {
+                if let Some((pos_from, pos_to)) = self.cursor.get_selected_range() {
+                    let text = if pos_from.1 == pos_to.1 {
+                        let string = self.document.lines[pos_from.1]
+                            .get_range(pos_from.0..pos_to.0)
+                            .to_string();
+
+                        send_simple_notification(format!("Yanked {} characters", string.n_chars()));
+                        Text::String(string)
+                    } else {
+                        let mut lines = vec![];
+                        for line_idx in pos_from.1..=pos_to.1 {
+                            let line = if line_idx == pos_from.1 {
+                                self.document
+                                    .lines
+                                    .get(line_idx)
+                                    .map(|line| line.get_range(pos_from.0..))
+                            } else if line_idx == pos_to.1 {
+                                self.document
+                                    .lines
+                                    .get(line_idx)
+                                    .map(|line| line.get_range(..pos_to.0))
+                            } else {
+                                self.document.lines.get(line_idx).map(DocumentLine::as_ref)
+                            };
+
+                            if let Some(line) = line {
+                                lines.push(line.to_owned());
+                            }
+                        }
+
+                        send_simple_notification(format!("Yanked {} lines", lines.len()));
+                        Text::Lines(lines)
+                    };
+
+                    self.yanked_text = Some(text);
+                    if matches!(command, EditorCommand::CutSelection) {
+                        self.cursor.selection_anchor = None;
+                        self.cursor.update_pos(pos_from);
+                        self.document.apply_edit(
+                            EditOperation::Replacement {
+                                pos_from,
+                                pos_to,
+                                text: Text::Empty,
+                            },
+                            S::Undo,
+                        );
+                    }
+                }
+            }
+
             EditorCommand::MoveCursor {
                 movement,
                 with_selection,
@@ -127,7 +201,7 @@ impl Editor {
             }
             EditorCommand::FindMatchForward | EditorCommand::FindMatchBackward => {
                 let (x_from, x_to) = if self.cursor.selection_anchor.is_some() {
-                    let (pos_from, pos_to) = self.cursor.get_highlighted_range().unwrap();
+                    let (pos_from, pos_to) = self.cursor.get_selected_range().unwrap();
                     self.cursor.selection_anchor = None;
                     if pos_from.1 != pos_to.1 {
                         // TODO: implement this
@@ -214,10 +288,13 @@ impl Editor {
                 movement: CursorMovement::NextParagraph,
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Ctrl('p')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Ctrl('(')) => Some(C::MoveCursor {
                 movement: CursorMovement::MatchingParenthesis,
                 with_selection: self.is_selection_locked,
             }),
+            Input::Keypress(Key::Ctrl('y')) => Some(C::YankSelection),
+            Input::Keypress(Key::Ctrl('x')) => Some(C::CutSelection),
+            Input::Keypress(Key::Ctrl('p')) => Some(C::Paste),
             Input::Keypress(Key::Ctrl('n')) => Some(C::FindMatchForward),
             Input::Keypress(Key::Char(ch)) => {
                 let text = if ch == '\t' && self.config.tab_emit_spaces {
@@ -227,7 +304,7 @@ impl Editor {
                 } else {
                     T::Char(ch)
                 };
-                match self.cursor.get_highlighted_range() {
+                match self.cursor.get_selected_range() {
                     None => Some(C::Edit(Op::Insertion {
                         pos: self.cursor.pos(),
                         text,
@@ -240,7 +317,7 @@ impl Editor {
                 }
             }
             Input::Keypress(Key::Backspace) | Input::Keypress(Key::Delete) => {
-                match self.cursor.get_highlighted_range() {
+                match self.cursor.get_selected_range() {
                     None => Some(C::Edit(Op::Deletion {
                         pos: self.cursor.pos(),
                     })),
@@ -252,7 +329,7 @@ impl Editor {
                 }
             }
             Input::Keypress(Key::Ctrl('h')) | Input::Keypress(Key::Ctrl('\x7F')) => {
-                match self.cursor.get_highlighted_range() {
+                match self.cursor.get_selected_range() {
                     None => {
                         let word_start_pos = self.document.get_previous_word_pos(self.cursor.pos());
                         Some(C::Edit(Op::Replacement {

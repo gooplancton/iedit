@@ -32,6 +32,11 @@ impl Document {
         }
     }
 
+    /// NOTE: pos_to is EXCLUSIVE in the sense that:
+    /// - (0, y) (self.lines\[y\].len(), y) will delete all the characters in the line and leave an empty line in its place
+    /// and return a Text::String with the contents of the deleted line
+    /// - (0, y) (0, y + 1) will delete line y and shift all lines up by 1
+    /// and return a Text::Lines with a vec like \[ self.lines\[y\], "" \]
     pub fn delete_range(&mut self, pos_from: (usize, usize), pos_to: (usize, usize)) -> Text {
         if pos_from.1 == pos_to.1
             && let Some(line) = self.lines.get_mut(pos_from.1)
@@ -41,34 +46,41 @@ impl Document {
             return Text::String(removed_text);
         }
 
-        fn inner(
-            doc: &mut Document,
-            pos_from: (usize, usize),
-            pos_to: (usize, usize),
-        ) -> Option<Text> {
-            let mut deleted_text = Vec::<String>::new();
+        let mut deleted_text = Vec::<String>::new();
 
-            let to_line = doc.get_or_add_line(pos_to.1)?;
-            let new_from_line_end = to_line.split_off(pos_to.0);
+        // splice first line: doc.lines[pos_from.1][..pos_from.0] + doc.lines[pos_to.1][pos_to.0..]
+        let deleted_last = {
+            let last_line = if pos_to.1 < self.n_lines() {
+                Some(self.lines.remove(pos_to.1))
+            } else {
+                None
+            };
 
-            let from_line = doc.get_or_add_line(pos_from.1)?;
+            let first_line = &mut self.lines[pos_from.1];
 
-            deleted_text.push(from_line.split_off(pos_from.0).into());
-            from_line.push_str(new_from_line_end.as_ref());
+            deleted_text.push(first_line.split_off(pos_from.0).into());
 
-            for line in doc.lines.drain((pos_from.1 + 1)..=pos_to.1) {
-                deleted_text.push(line.into());
+            if let Some(mut last_line) = last_line {
+                let to_append = last_line.split_off(pos_to.0);
+                first_line.push_str(to_append.as_ref());
+                Some(last_line)
+            } else {
+                None
             }
+        };
 
-            if pos_from.1 != pos_to.1 {
-                for line in &mut doc.lines[pos_from.1..] {
-                    line.is_dirty = true;
-                }
-            }
-
-            Some(Text::Lines(deleted_text))
+        for line in self.lines.drain((pos_from.1 + 1)..pos_to.1) {
+            deleted_text.push(line.into());
         }
 
-        inner(self, pos_from, pos_to).unwrap_or_default()
+        if let Some(deleted_last) = deleted_last {
+            deleted_text.push(deleted_last.into());
+        }
+
+        for line in &mut self.lines[pos_from.1..] {
+            line.is_dirty = true;
+        }
+
+        Text::Lines(deleted_text)
     }
 }

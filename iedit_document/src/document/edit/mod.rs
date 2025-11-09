@@ -3,7 +3,7 @@ use crate::Document;
 mod delete;
 mod insert;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Text {
     Empty,
     Char(char),
