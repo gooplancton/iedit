@@ -32,7 +32,7 @@ dependencies = [
 
 [[package]]
 name = "iedit_editor"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "crossbeam-channel",
  "iedit_document",
@@ -146,8 +146,6 @@ dependencies = [
 [[package]]
 name = "termion"
 version = "4.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3669a69de26799d6321a5aa713f55f7e2cd37bd47be044b50f2acafc42c122bb"
 dependencies = [
  "libc",
  "libredox",

@@ -307,11 +307,11 @@ impl Editor {
                 with_selection: true,
                 movement: CursorMovement::Right(1),
             }),
-            Input::Keypress(Key::ShiftUp) => Some(C::MoveCursor {
+            Input::Keypress(Key::ShiftUp) | Input::Keypress(Key::CtrlShiftUp) => Some(C::MoveCursor {
                 with_selection: true,
                 movement: CursorMovement::Up(1),
             }),
-            Input::Keypress(Key::ShiftDown) => Some(C::MoveCursor {
+            Input::Keypress(Key::ShiftDown) | Input::Keypress(Key::CtrlShiftDown) => Some(C::MoveCursor {
                 with_selection: true,
                 movement: CursorMovement::Down(1),
             }),
@@ -325,6 +325,18 @@ impl Editor {
                 Some(C::MoveCursor {
                     with_selection: self.is_selection_locked,
                     movement: CursorMovement::PreviousWord,
+                })
+            }
+            Input::Keypress(Key::CtrlShiftLeft) => {
+                Some(C::MoveCursor {
+                    with_selection: true,
+                    movement: CursorMovement::PreviousWord,
+                })
+            }
+            Input::Keypress(Key::CtrlShiftRight) => {
+                Some(C::MoveCursor {
+                    with_selection: true,
+                    movement: CursorMovement::NextWord,
                 })
             }
             Input::Keypress(Key::Ctrl('t')) => Some(EditorCommand::DisplayHelp),
