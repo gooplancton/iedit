@@ -89,6 +89,13 @@ impl<'term, Term: Write> Renderer<'term, Term> {
     }
 
     pub fn position_cursor<'editor>(&mut self, editor: &'editor Editor) -> std::io::Result<()> {
+        if editor.cursor.cur_y < editor.viewport.top_line {
+            return self.add(termion::cursor::Hide);
+        }
+
+        let cursor_rel_y =
+            (editor.cursor.cur_y - editor.viewport.top_line) as u16 + self.ui.ui_origin.1;
+
         let tab_size = editor.config.tab_size as usize;
         let cursor_visual_x: usize = editor
             .document
@@ -99,9 +106,8 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         let cursor_rel_x = (cursor_visual_x.saturating_sub(editor.viewport.left_col)) as u16
             + self.ui.ui_origin.0
             + 7 * editor.config.show_line_numbers as u16;
-        let cursor_rel_y = (editor.cursor.cur_y.saturating_sub(editor.viewport.top_line)) as u16
-            + self.ui.ui_origin.1;
 
+        self.add(termion::cursor::Show)?;
         self.add(termion::cursor::Goto(cursor_rel_x, cursor_rel_y).to_string())
     }
 
