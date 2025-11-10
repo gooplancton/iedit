@@ -8,6 +8,7 @@ pub enum Text {
     Empty,
     Char(char),
     String(String),
+    InverseString(String),
     Lines(Vec<String>),
 }
 
@@ -39,6 +40,7 @@ pub enum EditOperation {
 /// Cursor position following edit
 pub type EditResult = Option<(usize, usize)>;
 
+#[derive(PartialEq)]
 pub enum InverseStack {
     Undo,
     Redo,
@@ -53,12 +55,11 @@ impl Document {
         use EditOperation as Op;
         use Text as T;
 
-        if matches!(inverse_stack, InverseStack::Undo) {
+        if inverse_stack == InverseStack::Undo {
             self.redo_stack.clear();
         }
 
         self.has_been_edited = true;
-
         match op {
             Op::Insertion {
                 pos,
@@ -75,8 +76,39 @@ impl Document {
                 text: T::Char(ch),
             } => {
                 let new_pos = self.insert_char_at(pos, ch)?;
-                self.get_inverse_stack(inverse_stack)
-                    .push(Op::Deletion { pos: new_pos });
+                if inverse_stack == InverseStack::Undo {
+                    let top = self.undo_stack.last_mut();
+                    match top {
+                        Some(Op::Replacement {
+                            pos_from,
+                            pos_to,
+                            text: T::Empty,
+                        }) if !ch.is_whitespace() && pos_from.1 == pos_to.1 && *pos_to == pos => {
+                            *pos_to = new_pos
+                        }
+                        _ => self.undo_stack.push(Op::Replacement {
+                            pos_from: pos,
+                            pos_to: new_pos,
+                            text: T::Empty,
+                        }),
+                    }
+                } else {
+                    self.redo_stack.push(Op::Deletion { pos: new_pos });
+                }
+
+                Some(new_pos)
+            }
+            Op::Insertion {
+                pos,
+                text: T::InverseString(string),
+            } => {
+                let string = string.chars().into_iter().rev().collect::<String>();
+                let new_pos = self.insert_string_at(pos, string)?;
+                self.get_inverse_stack(inverse_stack).push(Op::Replacement {
+                    pos_from: pos,
+                    pos_to: new_pos,
+                    text: T::Empty,
+                });
 
                 Some(new_pos)
             }
@@ -107,21 +139,42 @@ impl Document {
                 Some(new_pos)
             }
             Op::Deletion { pos } => match self.delete_char_at(pos) {
-                (newline, Some(new_pos)) if newline == '\n' || newline == '\r' => {
+                (newline, Some(new_cursor_pos)) if newline == '\n' || newline == '\r' => {
                     self.get_inverse_stack(inverse_stack).push(Op::Insertion {
-                        pos: new_pos,
+                        pos: new_cursor_pos,
                         text: T::Char(newline),
                     });
 
-                    Some(new_pos)
+                    Some(new_cursor_pos)
                 }
-                (ch, Some(new_pos)) => {
-                    self.get_inverse_stack(inverse_stack).push(Op::Insertion {
-                        pos,
-                        text: T::Char(ch),
-                    });
+                (ch, Some(new_cursor_pos)) => {
+                    if inverse_stack == InverseStack::Undo {
+                        let top = self.undo_stack.last_mut();
 
-                    Some(new_pos)
+                        match top {
+                            Some(Op::Insertion {
+                                pos: last_cursor_pos,
+                                text: T::InverseString(string),
+                            }) if new_cursor_pos.1 == last_cursor_pos.1
+                                && new_cursor_pos.0 == last_cursor_pos.0 - 1
+                                && !ch.is_whitespace() =>
+                            {
+                                *last_cursor_pos = new_cursor_pos;
+                                string.push(ch);
+                            }
+                            _ => self.undo_stack.push(Op::Insertion {
+                                pos: new_cursor_pos,
+                                text: T::InverseString(String::from(ch)),
+                            }),
+                        }
+                    } else {
+                        self.redo_stack.push(Op::Insertion {
+                            pos: new_cursor_pos,
+                            text: T::Char(ch),
+                        })
+                    }
+
+                    Some(new_cursor_pos)
                 }
                 (_, None) => None,
             },
@@ -136,6 +189,11 @@ impl Document {
                     T::Char(ch) => self.insert_char_at(pos_from, ch),
                     T::String(string) => self.insert_string_at(pos_from, string),
                     T::Lines(lines) => self.insert_strings_at(pos_from, lines),
+                    // NOTE: implemented for completeness but a Replacement should never be constructed with an InverseString
+                    T::InverseString(string) => {
+                        let string = string.chars().into_iter().rev().collect::<String>();
+                        self.insert_string_at(pos_from, string)
+                    }
                 }?;
 
                 self.get_inverse_stack(inverse_stack).push(Op::Replacement {
