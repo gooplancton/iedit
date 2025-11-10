@@ -3,7 +3,7 @@ use termion::event::Key;
 use crate::{
     Editor,
     editor::{
-        commands::{CommandExecutionResult, EditorCommand},
+        commands::{CommandExecutionResult, CursorMovement, EditorCommand},
         modes::EditorMode,
     },
     input::Input,
@@ -60,7 +60,14 @@ impl Editor {
             Input::Keypress(Key::Char('\n')) | Input::Keypress(Key::Char('\r')) => {
                 Some(C::SubmitPrompt)
             }
-            // can implement go to end, etc..
+            Input::Keypress(Key::Char('w')) => Some(C::MoveCursor {
+                movement: CursorMovement::StartOfFile,
+                with_selection: self.is_selection_locked,
+            }),
+            Input::Keypress(Key::Char('e')) => Some(C::MoveCursor {
+                movement: CursorMovement::EndOfFile,
+                with_selection: self.is_selection_locked,
+            }),
             Input::Keypress(Key::Char(ch)) if ch.is_numeric() => Some(C::InsertCharPrompt {
                 pos_x: self.status_bar.cursor_pos,
                 ch,

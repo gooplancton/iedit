@@ -59,15 +59,15 @@ impl Document {
         (x, y): (usize, usize),
         ch: char,
     ) -> Option<(usize, usize)> {
-        // Search current line from position
         if let Some(line) = self.lines.get(y)
-            && let Some(idx) = line.get_range(x..).find(ch)
+            && let Some(idx) = line.as_ref().find(ch)
         {
-            let x = line.byte_to_char_idx(idx)?;
-            return Some((x + idx, y));
+            let find_x = line.byte_to_char_idx(idx)?;
+            if find_x > x {
+                return Some((find_x, y));
+            }
         }
 
-        // Search subsequent lines
         for (line_idx, line) in self.lines.iter().enumerate().skip(y + 1) {
             if let Some(idx) = line.as_ref().find(ch) {
                 let x = line.byte_to_char_idx(idx)?;

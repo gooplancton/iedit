@@ -3,10 +3,10 @@ use termion::event::Key;
 use crate::{
     Editor,
     editor::{
-        commands::{CommandExecutionResult, EditorCommand},
+        commands::{CommandExecutionResult, EditorCommand, send_simple_notification},
         keybindings::{
-            CHORDS_POPUP_LINES, HELP_POPUP_LINES, L_CHORD_POPUP_LINES, V_CHORD_POPUP_LINES,
-            X_CHORD_POPUP_LINES,
+            CHORDS_POPUP_LINES, HELP_POPUP_LINES, L_CHORD_POPUP_LINES, T_CHORD_POPUP_LINES,
+            V_CHORD_POPUP_LINES, X_CHORD_POPUP_LINES,
         },
     },
     input::{Input, Notification},
@@ -37,6 +37,10 @@ impl Editor {
         use EditorCommand as C;
 
         match command {
+            C::MoveCursor {
+                movement: _,
+                with_selection: _,
+            } => self.execute_cursor_movement_command(command),
             C::DisplayHelp => {
                 self.displayed_popup = Some(&HELP_POPUP_LINES);
             }
@@ -52,13 +56,16 @@ impl Editor {
             C::DisplayViewChordHelp => {
                 self.displayed_popup = Some(&V_CHORD_POPUP_LINES);
             }
+            C::DisplayPressCharacterPopup => {
+                self.displayed_popup = Some(&T_CHORD_POPUP_LINES);
+            }
             C::DisplayMessage(notification) => {
                 self.status_bar.notification = notification;
             }
             C::Quit => return self.quit(false),
             C::Save => {
                 if let Err(err) = self.save_file(true) {
-                    self.status_bar.update_notification(err.to_string());
+                    send_simple_notification(err.to_string());
                 };
             }
             C::ToggleLockSelection => {
@@ -111,19 +118,6 @@ impl Editor {
             }
             Input::Keypress(Key::Ctrl('q')) => Some(EditorCommand::Quit),
             Input::Keypress(Key::Ctrl('s')) => Some(EditorCommand::Save),
-            Input::Keypress(Key::Ctrl('t')) => Some(EditorCommand::DisplayHelp),
-            Input::KeyChord([Key::Ctrl('k'), Key::Null, Key::Null]) => {
-                Some(EditorCommand::DisplayChordsHelp)
-            }
-            Input::KeyChord([Key::Ctrl('k'), Key::Char('x'), Key::Null]) => {
-                Some(EditorCommand::DisplayExecuteChordHelp)
-            }
-            Input::KeyChord([Key::Ctrl('k'), Key::Char('l'), Key::Null]) => {
-                Some(EditorCommand::DisplayLineChordHelp)
-            }
-            Input::KeyChord([Key::Ctrl('k'), Key::Char('v'), Key::Null]) => {
-                Some(EditorCommand::DisplayViewChordHelp)
-            }
             _ => match self.mode {
                 EditorMode::Insert => self.insert_mode_parse_command(input),
                 EditorMode::Prompt(_) => self.prompt_mode_parse_command(input),

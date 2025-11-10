@@ -98,77 +98,6 @@ impl Editor {
                 }
             }
 
-            EditorCommand::MoveCursor {
-                movement,
-                with_selection,
-            } => {
-                if !with_selection && self.cursor.selection_anchor.is_some() {
-                    self.needs_full_rerender = true;
-                    self.cursor.selection_anchor = None;
-                } else if with_selection && self.cursor.selection_anchor.is_none() {
-                    self.cursor.selection_anchor = Some(self.cursor.pos())
-                }
-
-                match movement {
-                    CursorMovement::AbsolutePos(pos) => self.cursor.update_pos(pos),
-                    CursorMovement::Up(lines) => self.cursor.move_up(lines),
-                    CursorMovement::Down(lines) => self.cursor.move_down(lines),
-                    CursorMovement::Left(cols) => self.cursor.move_left(cols),
-                    CursorMovement::Right(cols) => self.cursor.move_right(cols),
-                    CursorMovement::NextWord => {
-                        let next_word_pos = self.document.get_next_word_pos(self.cursor.pos());
-                        self.cursor.update_pos(next_word_pos);
-                    }
-                    CursorMovement::PreviousWord => {
-                        let previous_word_pos =
-                            self.document.get_previous_word_pos(self.cursor.pos());
-                        self.cursor.update_pos(previous_word_pos);
-                    }
-                    CursorMovement::NextParagraph => {
-                        let next_paragraph_row =
-                            self.document.get_next_blank_line_idx(self.cursor.cur_y);
-                        self.cursor.update_pos((0, next_paragraph_row));
-                    }
-                    CursorMovement::PreviousParagraph => {
-                        let previous_paragraph_row =
-                            self.document.get_previous_blank_line_idx(self.cursor.cur_y);
-                        self.cursor.update_pos((0, previous_paragraph_row));
-                    }
-                    CursorMovement::MatchingParenthesis => {
-                        if let Some(pos) = self.document.get_matching_paren_pos(self.cursor.pos()) {
-                            self.cursor.update_pos(pos);
-                        }
-                    }
-                    CursorMovement::NextOccurrenceOf(ch) => {
-                        if let Some(pos) = self
-                            .document
-                            .get_next_occurrence_of_char(self.cursor.pos(), ch)
-                        {
-                            self.cursor.update_pos(pos);
-                        }
-                    }
-                    CursorMovement::PreviousOccurrenceOf(ch) => {
-                        if let Some(pos) = self
-                            .document
-                            .get_previous_occurrence_of_char(self.cursor.pos(), ch)
-                        {
-                            self.cursor.update_pos(pos);
-                        }
-                    }
-                    CursorMovement::StartOfLine => {
-                        self.cursor.update_pos((0, self.cursor.cur_y));
-                    }
-                    CursorMovement::EndOfLine => {
-                        self.cursor.update_pos((usize::MAX, 0));
-                    }
-                    CursorMovement::StartOfFile => {
-                        self.cursor.update_pos((0, 0));
-                    }
-                    CursorMovement::EndOfFile => {
-                        self.cursor.update_pos((0, self.document.n_lines()));
-                    }
-                }
-            }
             EditorCommand::ClearSelection => {
                 self.is_selection_locked = false;
                 self.needs_full_rerender = true;
@@ -288,6 +217,10 @@ impl Editor {
                 movement: CursorMovement::NextParagraph,
                 with_selection: self.is_selection_locked,
             }),
+            Input::Keypress(Key::Ctrl('w')) => Some(C::MoveCursor {
+                movement: CursorMovement::PreviousParagraph,
+                with_selection: self.is_selection_locked,
+            }),
             Input::Keypress(Key::Ctrl('(')) => Some(C::MoveCursor {
                 movement: CursorMovement::MatchingParenthesis,
                 with_selection: self.is_selection_locked,
@@ -329,20 +262,25 @@ impl Editor {
                 }
             }
             Input::Keypress(Key::Ctrl('h')) | Input::Keypress(Key::Ctrl('\x7F')) => {
-                match self.cursor.get_selected_range() {
-                    None => {
-                        let word_start_pos = self.document.get_previous_word_pos(self.cursor.pos());
-                        Some(C::Edit(Op::Replacement {
-                            pos_from: word_start_pos,
-                            pos_to: self.cursor.pos(),
+                if self.cursor.cur_x == 0 {
+                    Some(C::Edit(Op::Deletion { pos: self.cursor.pos() }))
+                } else {
+                    match self.cursor.get_selected_range() {
+                        None => {
+                            let word_start_pos =
+                                self.document.get_previous_word_pos(self.cursor.pos());
+                            Some(C::Edit(Op::Replacement {
+                                pos_from: word_start_pos,
+                                pos_to: self.cursor.pos(),
+                                text: Text::Empty,
+                            }))
+                        }
+                        Some((pos_from, pos_to)) => Some(C::Edit(Op::Replacement {
+                            pos_from,
+                            pos_to,
                             text: Text::Empty,
-                        }))
+                        })),
                     }
-                    Some((pos_from, pos_to)) => Some(C::Edit(Op::Replacement {
-                        pos_from,
-                        pos_to,
-                        text: Text::Empty,
-                    })),
                 }
             }
             Input::Keypress(Key::Left) => Some(C::MoveCursor {
@@ -389,6 +327,22 @@ impl Editor {
                     movement: CursorMovement::PreviousWord,
                 })
             }
+            Input::Keypress(Key::Ctrl('t')) => Some(EditorCommand::DisplayHelp),
+            Input::KeyChord([Key::Ctrl('k'), Key::Null, Key::Null]) => {
+                Some(EditorCommand::DisplayChordsHelp)
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('x'), Key::Null]) => {
+                Some(EditorCommand::DisplayExecuteChordHelp)
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('l'), Key::Null]) => {
+                Some(EditorCommand::DisplayLineChordHelp)
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('v'), Key::Null]) => {
+                Some(EditorCommand::DisplayViewChordHelp)
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('t') | Key::Char('T'), Key::Null]) => {
+                Some(EditorCommand::DisplayPressCharacterPopup)
+            }
             Input::KeyChord([Key::Ctrl('k'), Key::Char('l'), Key::Char('n')]) => {
                 Some(C::ToggleLineNumbers)
             }
@@ -398,6 +352,18 @@ impl Editor {
                     pos_to: (0, self.cursor.cur_y + 1),
                     text: Text::Empty,
                 }))
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('l'), Key::Char('w')]) => {
+                Some(C::MoveCursor {
+                    movement: CursorMovement::StartOfLine,
+                    with_selection: self.is_selection_locked,
+                })
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('l'), Key::Char('e')]) => {
+                Some(C::MoveCursor {
+                    movement: CursorMovement::EndOfLine,
+                    with_selection: self.is_selection_locked,
+                })
             }
             Input::KeyChord([Key::Ctrl('k'), Key::Char('t'), Key::Char(ch)]) => {
                 Some(C::MoveCursor {

@@ -2,7 +2,7 @@ mod execute;
 mod move_cursor;
 mod notify;
 
-use crate::{editor::modes::EditorMode};
+use crate::editor::modes::EditorMode;
 use iedit_document::EditOperation;
 pub use move_cursor::CursorMovement;
 use termion::event::Key;
@@ -46,6 +46,7 @@ pub enum EditorCommand {
     DisplayExecuteChordHelp,
     DisplayLineChordHelp,
     DisplayViewChordHelp,
+    DisplayPressCharacterPopup,
     ViewExecutionOutput,
 }
 
