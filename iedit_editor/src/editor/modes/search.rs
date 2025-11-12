@@ -29,6 +29,7 @@ impl Editor {
                 self.status_bar.prompt_line.truncate(0);
                 self.mode = EditorMode::Insert;
                 self.needs_full_rerender = true;
+                self.cursor.jump_history.push(original_pos);
                 R::Continue
             }
             C::MovePromptCursorLeft | C::MovePromptCursorRight => {
@@ -57,7 +58,7 @@ impl Editor {
 
                 if let Some((start, end)) = next_cursor_pos {
                     self.needs_full_rerender = true;
-                    self.cursor.update_pos(start);
+                    self.cursor.update_pos(start, false);
                     self.matched_range = Some((start, end));
                     if let Ok(regex) = maybe_parsed_regex {
                         self.search_item = Some(SearchItem::Regex(regex))
@@ -82,7 +83,7 @@ impl Editor {
 
                 if let Some((start, end)) = next_cursor_pos {
                     self.needs_full_rerender = true;
-                    self.cursor.update_pos(start);
+                    self.cursor.update_pos(start, false);
                     self.matched_range = Some((start, end));
                 }
 
@@ -102,7 +103,7 @@ impl Editor {
 
                 if let Some((start, end)) = next_cursor_pos {
                     self.needs_full_rerender = true;
-                    self.cursor.update_pos(start);
+                    self.cursor.update_pos(start, false);
                     self.matched_range = Some((start, end));
                 }
 

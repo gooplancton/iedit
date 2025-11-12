@@ -11,7 +11,7 @@ use crate::editor::renderer::Renderer;
 impl<'editor, Term: Write> Renderer<'editor, Term> {
     /// this will wrap the provided lines in a frame and render it in the top-right corner of the ui
     pub fn render_popup(&mut self, lines: &'editor [&'editor str]) -> io::Result<()> {
-        let popup_height = min(self.ui.editor_lines as usize - 1, lines.len() + 2) as u16;
+        let popup_height = min(self.ui.editor_lines as usize, lines.len() + 2) as u16;
         let popup_width = lines
             .iter()
             .map(|line| line.n_chars())

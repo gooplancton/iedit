@@ -30,7 +30,7 @@ impl Editor {
                 if let Ok(line_num) = maybe_parsed_line_num
                     && line_num > 0
                 {
-                    self.cursor.update_pos((0, line_num - 1));
+                    self.cursor.update_pos((0, line_num - 1), false);
                     self.needs_full_rerender = true;
                 }
                 R::Continue
@@ -39,11 +39,12 @@ impl Editor {
                 self.status_bar.prompt_line.truncate(0);
                 self.mode = M::Insert;
                 self.needs_full_rerender = true;
+                self.cursor.jump_history.push(original_pos);
                 R::Continue
             }
             C::SwitchMode(mode) => {
                 self.status_bar.prompt_line.truncate(0);
-                self.cursor.update_pos(original_pos);
+                self.cursor.update_pos(original_pos, false);
                 self.mode = mode;
                 self.search_item = None;
                 self.needs_full_rerender = true;

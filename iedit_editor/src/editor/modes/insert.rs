@@ -33,7 +33,7 @@ impl Editor {
 
                     self.cursor.selection_anchor = None;
                     if let Some(cursor_pos) = self.document.apply_edit(edit, S::Undo) {
-                        self.cursor.update_pos(cursor_pos);
+                        self.cursor.update_pos(cursor_pos, false);
                     }
                     match &yanked_text {
                         Text::String(string) => send_simple_notification(format!(
@@ -85,7 +85,7 @@ impl Editor {
                     self.yanked_text = Some(text);
                     if matches!(command, EditorCommand::CutSelection) {
                         self.cursor.selection_anchor = None;
-                        self.cursor.update_pos(pos_from);
+                        self.cursor.update_pos(pos_from, false);
                         self.document.apply_edit(
                             EditOperation::Replacement {
                                 pos_from,
@@ -107,7 +107,7 @@ impl Editor {
             }
             EditorCommand::Edit(op) => {
                 if let Some(new_pos) = self.document.apply_edit(op, S::Undo) {
-                    self.cursor.update_pos(new_pos);
+                    self.cursor.update_pos(new_pos, false);
                 }
 
                 self.first_quit_sent = false;
@@ -115,7 +115,7 @@ impl Editor {
             }
             EditorCommand::UndoLastEdit => {
                 if let Some(new_pos) = self.document.undo_last_edit() {
-                    self.cursor.update_pos(new_pos);
+                    self.cursor.update_pos(new_pos, false);
                 }
 
                 self.first_quit_sent = false;
@@ -123,7 +123,7 @@ impl Editor {
             }
             EditorCommand::RedoLastEdit => {
                 if let Some(new_pos) = self.document.redo_last_edit() {
-                    self.cursor.update_pos(new_pos);
+                    self.cursor.update_pos(new_pos, false);
                 }
 
                 self.first_quit_sent = false;
@@ -164,7 +164,7 @@ impl Editor {
 
                 if let Some((start, end)) = next_cursor_pos {
                     self.matched_range = Some((start, end));
-                    self.cursor.update_pos(start);
+                    self.cursor.update_pos(start, false);
                 } else if matches!(command, EditorCommand::FindMatchForward) {
                     send_simple_notification("Already at last match");
                 } else if matches!(command, EditorCommand::FindMatchBackward) {
@@ -204,9 +204,16 @@ impl Editor {
             Input::Keypress(Key::Ctrl('g')) => Some(C::SwitchMode(M::Goto {
                 original_cursor_pos: self.cursor.pos(),
             })),
-            Input::Keypress(Key::Ctrl('l')) => Some(C::ToggleLockSelection),
             Input::Keypress(Key::CtrlDown) => Some(C::ScrollViewportDown),
             Input::Keypress(Key::CtrlUp) => Some(C::ScrollViewportUp),
+            Input::Keypress(Key::Ctrl('l')) => Some(C::MoveCursor {
+                movement: CursorMovement::NextJump,
+                with_selection: self.is_selection_locked,
+            }),
+            Input::Keypress(Key::Ctrl('o')) => Some(C::MoveCursor {
+                movement: CursorMovement::PreviousJump,
+                with_selection: self.is_selection_locked,
+            }),
             Input::Keypress(Key::Ctrl('d')) => Some(C::MoveCursor {
                 movement: CursorMovement::Down(self.ui.editor_lines as usize),
                 with_selection: self.is_selection_locked,
@@ -398,6 +405,12 @@ impl Editor {
             }
             Input::KeyChord([Key::Ctrl('k'), Key::Char('v'), Key::Char('o')]) => {
                 Some(C::ViewExecutionOutput)
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Ctrl('s'), Key::Null]) => {
+                Some(C::DisplaySelectionChordHelp)
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Ctrl('s'), Key::Ctrl('l')]) => {
+                Some(C::ToggleLockSelection)
             }
             _ => None,
         }

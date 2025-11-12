@@ -46,6 +46,7 @@ pub enum EditorCommand {
     DisplayExecuteChordHelp,
     DisplayLineChordHelp,
     DisplayViewChordHelp,
+    DisplaySelectionChordHelp,
     DisplayPressCharacterPopup,
     ViewExecutionOutput,
 }

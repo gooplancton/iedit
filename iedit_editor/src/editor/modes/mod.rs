@@ -5,8 +5,8 @@ use crate::{
     editor::{
         commands::{CommandExecutionResult, EditorCommand, send_simple_notification},
         keybindings::{
-            CHORDS_POPUP_LINES, HELP_POPUP_LINES, L_CHORD_POPUP_LINES, T_CHORD_POPUP_LINES,
-            V_CHORD_POPUP_LINES, X_CHORD_POPUP_LINES,
+            CHORDS_POPUP_LINES, HELP_POPUP_LINES, L_CHORD_POPUP_LINES, S_CHORD_POPUP_LINES,
+            T_CHORD_POPUP_LINES, V_CHORD_POPUP_LINES, X_CHORD_POPUP_LINES,
         },
     },
     input::{Input, Notification},
@@ -55,6 +55,9 @@ impl Editor {
             }
             C::DisplayViewChordHelp => {
                 self.displayed_popup = Some(&V_CHORD_POPUP_LINES);
+            }
+            C::DisplaySelectionChordHelp => {
+                self.displayed_popup = Some(&S_CHORD_POPUP_LINES);
             }
             C::DisplayPressCharacterPopup => {
                 self.displayed_popup = Some(&T_CHORD_POPUP_LINES);
