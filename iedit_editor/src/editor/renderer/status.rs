@@ -7,6 +7,7 @@ use crate::{
     editor::{
         modes::EditorMode,
         renderer::{Renderer, line::LineRenderer},
+        search::SearchItem,
     },
 };
 
@@ -83,6 +84,14 @@ impl Editor {
                 }
                 renderer.add("SEARCH ")?;
 
+                match self.search_item {
+                    Some(SearchItem::PromptString) => {
+                        renderer.add("(exact) ")?;
+                    },
+                    _ => {
+                        renderer.add("(regex) ")?;
+                    }
+                }
                 &self.status_bar.prompt_line
             }
         };

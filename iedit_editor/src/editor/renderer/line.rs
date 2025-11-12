@@ -1,11 +1,11 @@
 use std::io::Write;
 
 use crate::{
-    editor::highlight::{SelectionHighlight, SyntaxHighlight},
+    editor::highlight::{RangeHighlight, SyntaxHighlight},
     terminal::EMPTY_CURSOR,
 };
 use iedit_document::DocumentLine;
-use termion::color;
+use termion::color::{self};
 
 pub struct ColorRange<'renderer> {
     start: usize,
@@ -95,39 +95,44 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
         Ok(())
     }
 
-    pub fn add_selection_highlight(&mut self, selection_highlight: SelectionHighlight) {
-        match selection_highlight {
-            SelectionHighlight::None => {}
-            SelectionHighlight::After(start) => {
+    pub fn add_range_highlight(
+        &mut self,
+        range_highlight: RangeHighlight,
+        is_bg: bool,
+        color_str: &'writer str,
+    ) {
+        match range_highlight {
+            RangeHighlight::None => {}
+            RangeHighlight::After(start) => {
                 self.color_ranges.push(ColorRange {
                     start,
                     end: self.line.len(),
-                    is_bg: true,
-                    color_str: color::LightBlue.bg_str(),
+                    is_bg,
+                    color_str,
                 });
             }
-            SelectionHighlight::Before(end) => {
+            RangeHighlight::Before(end) => {
                 self.color_ranges.push(ColorRange {
                     start: 0,
                     end: end.saturating_sub(1),
-                    is_bg: true,
-                    color_str: color::LightBlue.bg_str(),
+                    is_bg,
+                    color_str,
                 });
             }
-            SelectionHighlight::WholeLine => {
+            RangeHighlight::WholeLine => {
                 self.color_ranges.push(ColorRange {
                     start: 0,
                     end: self.line.len(),
-                    is_bg: true,
-                    color_str: color::LightBlue.bg_str(),
+                    is_bg,
+                    color_str,
                 });
             }
-            SelectionHighlight::Range(start, end) => {
+            RangeHighlight::Range(start, end) => {
                 self.color_ranges.push(ColorRange {
                     start,
                     end: end.saturating_sub(1),
-                    is_bg: true,
-                    color_str: color::LightBlue.bg_str(),
+                    is_bg,
+                    color_str,
                 });
             }
         }
@@ -175,9 +180,6 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
     }
 
     pub fn render(&mut self) -> std::io::Result<()> {
-        write!(self.writer, "{}", color::Reset.fg_str())?;
-        write!(self.writer, "{}", color::Reset.bg_str())?;
-
         self.color_ranges
             .iter()
             .filter(|range| range.start <= range.end && range.start <= self.char_offset)

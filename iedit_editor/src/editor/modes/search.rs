@@ -55,9 +55,10 @@ impl Editor {
                     ),
                 };
 
-                if let Some(next_cursor_pos) = next_cursor_pos {
+                if let Some((start, end)) = next_cursor_pos {
                     self.needs_full_rerender = true;
-                    self.cursor.update_pos(next_cursor_pos);
+                    self.cursor.update_pos(start);
+                    self.matched_range = Some((start, end));
                     if let Ok(regex) = maybe_parsed_regex {
                         self.search_item = Some(SearchItem::Regex(regex))
                     } else {
@@ -79,9 +80,10 @@ impl Editor {
                     _ => return R::Continue,
                 };
 
-                if let Some(next_cursor_pos) = next_cursor_pos {
+                if let Some((start, end)) = next_cursor_pos {
                     self.needs_full_rerender = true;
-                    self.cursor.update_pos(next_cursor_pos);
+                    self.cursor.update_pos(start);
+                    self.matched_range = Some((start, end));
                 }
 
                 R::Continue
@@ -98,9 +100,10 @@ impl Editor {
                     _ => return R::Continue,
                 };
 
-                if let Some(next_cursor_pos) = next_cursor_pos {
+                if let Some((start, end)) = next_cursor_pos {
                     self.needs_full_rerender = true;
-                    self.cursor.update_pos(next_cursor_pos);
+                    self.cursor.update_pos(start);
+                    self.matched_range = Some((start, end));
                 }
 
                 R::Continue

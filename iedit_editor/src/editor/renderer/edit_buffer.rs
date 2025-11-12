@@ -3,7 +3,7 @@ use std::io::Write;
 use crate::{
     Editor,
     editor::{
-        highlight::SelectionHighlight,
+        highlight::RangeHighlight,
         renderer::{Renderer, line::LineRenderer},
     },
     terminal::{EMPTY_CURSOR, V_BAR},
@@ -55,9 +55,14 @@ impl Editor {
             line_renderer.add_syntax_highlight(syntax_highlight);
         }
 
+        if let Some(matched_range) = self.matched_range {
+            let highlight = RangeHighlight::new(line_idx, &matched_range);
+            line_renderer.add_range_highlight(highlight, false, termion::color::LightBlue.fg_str());
+        };
+
         if let Some(highlighted_range) = highlighted_range {
-            let highlight = SelectionHighlight::new(line_idx, &highlighted_range);
-            line_renderer.add_selection_highlight(highlight);
+            let highlight = RangeHighlight::new(line_idx, &highlighted_range);
+            line_renderer.add_range_highlight(highlight, true, termion::color::LightBlue.bg_str());
         };
 
         line_renderer.render()?;

@@ -89,7 +89,9 @@ impl<'term, Term: Write> Renderer<'term, Term> {
     }
 
     pub fn position_cursor<'editor>(&mut self, editor: &'editor Editor) -> std::io::Result<()> {
-        if editor.cursor.cur_y < editor.viewport.top_line {
+        if editor.cursor.cur_y < editor.viewport.top_line
+            || editor.cursor.cur_y >= editor.viewport.top_line + self.ui.editor_lines as usize
+        {
             return self.add(termion::cursor::Hide);
         }
 

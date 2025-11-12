@@ -102,6 +102,7 @@ impl Editor {
                 self.is_selection_locked = false;
                 self.needs_full_rerender = true;
                 self.cursor.selection_anchor = None;
+                self.matched_range = None;
                 self.search_item = None;
             }
             EditorCommand::Edit(op) => {
@@ -161,8 +162,9 @@ impl Editor {
                         }
                     });
 
-                if let Some((next_x, next_y)) = next_cursor_pos {
-                    self.cursor.update_pos((next_x, next_y));
+                if let Some((start, end)) = next_cursor_pos {
+                    self.matched_range = Some((start, end));
+                    self.cursor.update_pos(start);
                 } else if matches!(command, EditorCommand::FindMatchForward) {
                     send_simple_notification("Already at last match");
                 } else if matches!(command, EditorCommand::FindMatchBackward) {
@@ -263,7 +265,9 @@ impl Editor {
             }
             Input::Keypress(Key::Ctrl('h')) | Input::Keypress(Key::Ctrl('\x7F')) => {
                 if self.cursor.cur_x == 0 {
-                    Some(C::Edit(Op::Deletion { pos: self.cursor.pos() }))
+                    Some(C::Edit(Op::Deletion {
+                        pos: self.cursor.pos(),
+                    }))
                 } else {
                     match self.cursor.get_selected_range() {
                         None => {
@@ -307,14 +311,18 @@ impl Editor {
                 with_selection: true,
                 movement: CursorMovement::Right(1),
             }),
-            Input::Keypress(Key::ShiftUp) | Input::Keypress(Key::CtrlShiftUp) => Some(C::MoveCursor {
-                with_selection: true,
-                movement: CursorMovement::Up(1),
-            }),
-            Input::Keypress(Key::ShiftDown) | Input::Keypress(Key::CtrlShiftDown) => Some(C::MoveCursor {
-                with_selection: true,
-                movement: CursorMovement::Down(1),
-            }),
+            Input::Keypress(Key::ShiftUp) | Input::Keypress(Key::CtrlShiftUp) => {
+                Some(C::MoveCursor {
+                    with_selection: true,
+                    movement: CursorMovement::Up(1),
+                })
+            }
+            Input::Keypress(Key::ShiftDown) | Input::Keypress(Key::CtrlShiftDown) => {
+                Some(C::MoveCursor {
+                    with_selection: true,
+                    movement: CursorMovement::Down(1),
+                })
+            }
             Input::Keypress(Key::Alt('f')) | Input::Keypress(Key::CtrlRight) => {
                 Some(C::MoveCursor {
                     with_selection: self.is_selection_locked,
@@ -327,18 +335,14 @@ impl Editor {
                     movement: CursorMovement::PreviousWord,
                 })
             }
-            Input::Keypress(Key::CtrlShiftLeft) => {
-                Some(C::MoveCursor {
-                    with_selection: true,
-                    movement: CursorMovement::PreviousWord,
-                })
-            }
-            Input::Keypress(Key::CtrlShiftRight) => {
-                Some(C::MoveCursor {
-                    with_selection: true,
-                    movement: CursorMovement::NextWord,
-                })
-            }
+            Input::Keypress(Key::CtrlShiftLeft) => Some(C::MoveCursor {
+                with_selection: true,
+                movement: CursorMovement::PreviousWord,
+            }),
+            Input::Keypress(Key::CtrlShiftRight) => Some(C::MoveCursor {
+                with_selection: true,
+                movement: CursorMovement::NextWord,
+            }),
             Input::Keypress(Key::Ctrl('t')) => Some(EditorCommand::DisplayHelp),
             Input::KeyChord([Key::Ctrl('k'), Key::Null, Key::Null]) => {
                 Some(EditorCommand::DisplayChordsHelp)

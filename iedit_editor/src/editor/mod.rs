@@ -47,6 +47,7 @@ pub struct Editor {
     viewport: Viewport,
     ui: UILayout,
     search_item: Option<SearchItem>,
+    matched_range: Option<((usize, usize), (usize, usize))>,
     displayed_popup: Option<&'static [&'static str]>,
     yanked_text: Option<Text>,
 
@@ -84,6 +85,7 @@ impl Editor {
             viewport,
             yanked_text: None,
             search_item: None,
+            matched_range: None,
             displayed_popup: None,
             needs_full_rerender: true,
             is_selection_locked: false,

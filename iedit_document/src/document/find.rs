@@ -6,7 +6,7 @@ impl Document {
     pub fn get_char_at_pos(&self, (x, y): (usize, usize)) -> Option<char> {
         self.lines.get(y).and_then(|line| line.at(x))
     }
-
+    // dio cnae
     pub fn get_next_word_pos(&self, (x, y): (usize, usize)) -> (usize, usize) {
         let line = match self.lines.get(y) {
             Some(line) => line,
@@ -14,6 +14,10 @@ impl Document {
         };
 
         let n_chars = line.len();
+        if x == n_chars {
+            return (0, y + 1);
+        }
+
         let mut next_word_x = x + 1;
 
         // Skip word
@@ -22,7 +26,8 @@ impl Document {
         }
 
         // Skip whitespace
-        while next_word_x <= n_chars && line.at(next_word_x).is_some_and(char::is_whitespace) {
+        while next_word_x <= n_chars && line.at(next_word_x).is_some_and(|ch| !ch.is_alphanumeric())
+        {
             next_word_x += 1;
         }
 
@@ -42,7 +47,11 @@ impl Document {
         let mut previous_word_x = x - 1;
 
         // Skip whitespace backwards
-        while previous_word_x > 0 && line.at(previous_word_x).is_some_and(char::is_whitespace) {
+        while previous_word_x > 0
+            && line
+                .at(previous_word_x)
+                .is_some_and(|ch| !ch.is_alphanumeric())
+        {
             previous_word_x -= 1;
         }
 
@@ -80,21 +89,21 @@ impl Document {
 
     pub fn get_word_boundaries(&self, (x, y): (usize, usize)) -> Option<(usize, usize)> {
         let line = self.lines.get(y)?;
-        if line.at(x).is_none_or(char::is_whitespace) {
+        if line.at(x).is_none_or(|ch| !ch.is_alphanumeric()) {
             return None;
         };
 
         let left_boundary = line
             .get_range(..x)
             .char_indices()
-            .rfind(|(_idx, ch)| ch.is_whitespace())
+            .rfind(|(_idx, ch)| !ch.is_alphanumeric())
             .map(|(idx, _ch)| idx + 1)
             .unwrap_or_default();
 
         let right_boundary = line
             .get_range(x..)
             .char_indices()
-            .find(|(_idx, ch)| ch.is_whitespace())
+            .find(|(_idx, ch)| !ch.is_alphanumeric())
             .map(|(idx, _ch)| idx.saturating_sub(1))
             .unwrap_or(line.len() - x - 1);
 
@@ -153,7 +162,7 @@ impl Document {
         &self,
         from_pos: (usize, usize),
         lit: &str,
-    ) -> Option<(usize, usize)> {
+    ) -> Option<((usize, usize), (usize, usize))> {
         for y in from_pos.1..self.n_lines() {
             let line = if y == from_pos.1 {
                 self.lines
@@ -166,7 +175,7 @@ impl Document {
             let offset = from_pos.0 * (y == from_pos.1) as usize;
             if let Some(idx) = line.find(lit) {
                 let x = line.byte_to_char_idx(idx)?;
-                return Some((x + offset, y));
+                return Some(((x + offset, y), (x + offset + lit.n_chars(), y)));
             }
         }
 
@@ -177,7 +186,7 @@ impl Document {
         &self,
         from_pos: (usize, usize),
         regex: &Regex,
-    ) -> Option<(usize, usize)> {
+    ) -> Option<((usize, usize), (usize, usize))> {
         for y in from_pos.1..self.n_lines() {
             let line = if y == from_pos.1 {
                 self.lines
@@ -187,10 +196,13 @@ impl Document {
                 self.lines.get(y).map(|line| line.get_range(..))
             }?;
 
-            let offset = from_pos.0 * (y == from_pos.1) as usize;
+            let offset = (from_pos.0 + 1) * (y == from_pos.1) as usize;
             if let Some(reg_match) = regex.find(line) {
-                let x = line.byte_to_char_idx(reg_match.start())?;
-                return Some((x + offset, y));
+                let x_start = line.byte_to_char_idx(reg_match.start())?;
+                let x_end = line
+                    .byte_to_char_idx(reg_match.end())
+                    .unwrap_or(line.n_chars());
+                return Some(((x_start + offset, y), (x_end + offset, y)));
             }
         }
 
@@ -201,7 +213,7 @@ impl Document {
         &self,
         from_pos: (usize, usize),
         lit: &str,
-    ) -> Option<(usize, usize)> {
+    ) -> Option<((usize, usize), (usize, usize))> {
         for y in (0..=from_pos.1).rev() {
             let line = if y == from_pos.1 {
                 self.lines.get(y).map(|line| line.get_range(..from_pos.0))
@@ -211,7 +223,7 @@ impl Document {
 
             if let Some(idx) = line.rfind(lit) {
                 let x = line.byte_to_char_idx(idx)?;
-                return Some((x, y));
+                return Some(((x, y), (x + lit.n_chars(), y)));
             }
         }
 
@@ -222,7 +234,7 @@ impl Document {
         &self,
         from_pos: (usize, usize),
         regex: &Regex,
-    ) -> Option<(usize, usize)> {
+    ) -> Option<((usize, usize), (usize, usize))> {
         for y in (0..=from_pos.1).rev() {
             let line = if y == from_pos.1 {
                 self.lines.get(y).map(|line| line.get_range(..from_pos.0))
@@ -231,8 +243,11 @@ impl Document {
             }?;
 
             if let Some(reg_match) = regex.find_iter(line).last() {
-                let x = line.byte_to_char_idx(reg_match.start())?;
-                return Some((x, y));
+                let x_start = line.byte_to_char_idx(reg_match.start())?;
+                let x_end = line
+                    .byte_to_char_idx(reg_match.end())
+                    .unwrap_or(line.n_chars());
+                return Some(((x_start, y), (x_end, y)));
             }
         }
 
