@@ -29,7 +29,7 @@ pub static L_CHORD_POPUP_LINES: [&'static str; 4] = [
 
 pub static X_CHORD_POPUP_LINES: [&'static str; 6] = [
     "x │ auto",
-    "? | manual",
+    "? │ manual",
     "p │ python3",
     "P │ python",
     "n │ node",
