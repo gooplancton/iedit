@@ -5,7 +5,8 @@ use crate::{
     Editor,
     editor::{
         commands::{
-            CommandExecutionResult, CursorMovement, EditorCommand, send_simple_notification,
+            CommandExecutionResult, CursorMovement, EditorCommand, Executor,
+            send_simple_notification,
         },
         modes::EditorMode,
     },
@@ -23,6 +24,12 @@ impl Editor {
         match command {
             EditorCommand::SwitchMode(mode) => {
                 self.mode = mode;
+            }
+            EditorCommand::PromptExecutor => {
+                self.prompt_user("Run with: ", move |editor, executor| {
+                    editor.execute_file(Executor::Literal(executor.into()));
+                    CommandExecutionResult::Continue
+                });
             }
             EditorCommand::Paste => {
                 if let Some(yanked_text) = &self.yanked_text {
@@ -172,7 +179,7 @@ impl Editor {
                 }
             }
             EditorCommand::ExecuteFile(executor_key) => {
-                self.execute_file(executor_key);
+                self.execute_file(Executor::Key(executor_key));
             }
             EditorCommand::ViewExecutionOutput => {
                 self.toggle_execution_output();
@@ -399,6 +406,9 @@ impl Editor {
                     movement: CursorMovement::PreviousOccurrenceOf(ch),
                     with_selection: self.is_selection_locked,
                 })
+            }
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('x'), Key::Char('?')]) => {
+                Some(C::PromptExecutor)
             }
             Input::KeyChord([Key::Ctrl('k'), Key::Char('x'), executor_key]) => {
                 Some(C::ExecuteFile(executor_key))

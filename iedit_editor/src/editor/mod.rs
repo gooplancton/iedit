@@ -55,7 +55,7 @@ pub struct Editor {
     needs_full_rerender: bool,
     is_selection_locked: bool,
     first_quit_sent: bool,
-    is_executing_file: bool,
+    is_running_external_command: bool,
     is_viewing_execution_output: bool,
 }
 
@@ -90,7 +90,7 @@ impl Editor {
             needs_full_rerender: true,
             is_selection_locked: false,
             first_quit_sent: false,
-            is_executing_file: false,
+            is_running_external_command: false,
             is_viewing_execution_output: false,
         })
     }

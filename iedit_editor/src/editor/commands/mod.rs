@@ -3,11 +3,12 @@ mod move_cursor;
 mod notify;
 
 use crate::editor::modes::EditorMode;
+pub use execute::Executor;
 use iedit_document::EditOperation;
 pub use move_cursor::CursorMovement;
 use termion::event::Key;
 
-pub use notify::send_simple_notification;
+pub use notify::{send_simple_notification};
 pub enum EditorCommand {
     Quit,
     Save,
@@ -39,6 +40,7 @@ pub enum EditorCommand {
     ScrollViewportDown,
     FindMatchForward,
     FindMatchBackward,
+    PromptExecutor,
     ExecuteFile(Key),
     DisplayMessage(String),
     DisplayHelp,

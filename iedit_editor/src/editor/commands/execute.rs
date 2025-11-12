@@ -14,8 +14,13 @@ use crate::{
     editor::{FILE_EXECUTION_OUTPUT, commands::notify::send_simple_notification},
 };
 
+pub enum Executor {
+    Literal(String),
+    Key(Key),
+}
+
 impl Editor {
-    pub fn execute_file(&mut self, executor_key: Key) {
+    pub fn execute_file(&mut self, executor: Executor) {
         if self.is_viewing_execution_output {
             send_simple_notification("Not an executable file");
             return;
@@ -26,19 +31,22 @@ impl Editor {
             return;
         };
 
-        let executor = self.get_executor_by_key(executor_key);
+        let executor: Option<String> = match executor {
+            Executor::Key(key) => self.infer_executor(key).map(str::to_string),
+            Executor::Literal(executor) => Some(executor),
+        };
+
         if executor.is_none() {
             return;
         }
 
-        let executor = executor.unwrap();
         let command = format!(
             "{} {}",
-            executor,
+            executor.unwrap(),
             self.document.canonicalized_file_path.as_path().display()
         );
 
-        self.is_executing_file = true;
+        self.is_running_external_command = true;
 
         let _handle: JoinHandle<()> = spawn(move || {
             if let Err(e) = run_command(&command) {
@@ -47,7 +55,7 @@ impl Editor {
         });
     }
 
-    fn get_executor_by_key(&self, executor_key: Key) -> Option<&str> {
+    fn infer_executor(&self, executor_key: Key) -> Option<&str> {
         match executor_key {
             Key::Char('p') => Some("/usr/bin/env python3"),
             Key::Char('P') => Some("/usr/bin/env python"),
@@ -59,7 +67,18 @@ impl Editor {
                     return Some(shebang_line.get_range(2..));
                 }
 
-                None
+                let file_extension = self
+                    .document
+                    .canonicalized_file_path
+                    .extension()
+                    .and_then(|ext| ext.to_str());
+
+                match file_extension {
+                    Some("py") => Some("/usr/bin/env python3"),
+                    Some("js") => Some("/usr/bin/env node"),
+                    Some("sh") => Some("/usr/bin/env bash"),
+                    _ => None,
+                }
             }
             _ => None,
         }

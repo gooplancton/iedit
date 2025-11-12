@@ -27,8 +27,9 @@ pub static L_CHORD_POPUP_LINES: [&'static str; 4] = [
     "e │ go to end",
 ];
 
-pub static X_CHORD_POPUP_LINES: [&'static str; 5] = [
-    "x │ auto (shebang)",
+pub static X_CHORD_POPUP_LINES: [&'static str; 6] = [
+    "x │ auto",
+    "? | manual",
     "p │ python3",
     "P │ python",
     "n │ node",
