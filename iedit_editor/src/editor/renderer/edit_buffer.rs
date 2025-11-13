@@ -40,7 +40,7 @@ impl Editor {
                 V_BAR,
             ))?;
 
-            ui_width = ui_width.saturating_sub(self.get_line_number_gutter_width());
+            ui_width = ui_width.saturating_sub(self.get_line_number_gutter_width() + 2);
         }
 
         let highlighted_range = self.cursor.get_selected_range();
