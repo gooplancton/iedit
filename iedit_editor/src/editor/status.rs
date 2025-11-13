@@ -4,7 +4,7 @@ use crate::{Editor, editor::commands::CommandExecutionResult};
 
 type SubmitAction = Box<dyn FnOnce(&mut Editor, DocumentLine) -> CommandExecutionResult>;
 
-static KEYBINDINGS: &str = " ^q: quit; ^s: save; ^t: help";
+pub static KEYBINDINGS: &str = "│ ^q: quit │ ^s: save │ ^t: help";
 
 #[derive(Default)]
 pub struct StatusBar {
@@ -22,31 +22,33 @@ impl StatusBar {
     }
 }
 
+pub static FLAGS: [&str; 4] = [
+    "\x1b[30;103m modified \x1b[0m",
+    "\x1b[30;104m sel. lock \x1b[0m",
+    "\x1b[30;101m running cmd \x1b[0m",
+    "\x1b[30;102m cmd output \x1b[0m",
+];
+
+pub static FLAGS_SMALL: [&str; 4] = [
+    "\x1b[30;103m * \x1b[0m",
+    "\x1b[30;104m sel \x1b[0m",
+    "\x1b[30;101m cmd \x1b[0m",
+    "\x1b[30;102m out \x1b[0m",
+];
+
 impl Editor {
-    pub fn get_status_text_chunks(&self) -> [&str; 3] {
+    pub fn get_flag_strings(&self) -> impl Iterator<Item = &str> {
+        let small = self.ui.term_width < 80;
+
         [
-            self.document
-                .canonicalized_file_path
-                .as_os_str()
-                .to_str()
-                .and_then(|file_name| {
-                    if file_name.is_empty() {
-                        None
-                    } else {
-                        Some(file_name)
-                    }
-                })
-                .unwrap_or("[Unnamed Buffer]"),
-            if self.document.has_been_edited {
-                "* |"
-            } else {
-                " |"
-            },
-            if self.config.show_keybindings {
-                KEYBINDINGS
-            } else {
-                ""
-            },
+            self.document.has_been_modified(),
+            self.is_selection_locked,
+            self.is_running_external_command,
+            self.is_viewing_execution_output,
         ]
+        .into_iter()
+        .enumerate()
+        .filter(|(_, flag)| *flag)
+        .map(move |(idx, _)| if small { FLAGS_SMALL[idx] } else { FLAGS[idx] })
     }
 }

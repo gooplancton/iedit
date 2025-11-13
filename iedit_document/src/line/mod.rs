@@ -8,18 +8,16 @@ use std::ops::RangeBounds;
 pub struct DocumentLine {
     buf: String,
     /// NOTE: every line is considered dirty when created or modified.
-    pub is_dirty: bool,
-    // colors cache
-    pub tab_stops: Vec<(usize, usize)>,
-    // gap start and end
+    pub needs_render: bool,
+    pub has_been_modified: bool,
 }
 
 impl Default for DocumentLine {
     fn default() -> Self {
         DocumentLine {
             buf: String::new(),
-            tab_stops: vec![],
-            is_dirty: true,
+            needs_render: true,
+            has_been_modified: true,
         }
     }
 }
@@ -28,9 +26,15 @@ impl DocumentLine {
     pub fn new(line: String) -> Self {
         DocumentLine {
             buf: line,
-            tab_stops: vec![],
-            is_dirty: true,
+            needs_render: true,
+            has_been_modified: true,
         }
+    }
+
+    #[inline(always)]
+    pub fn set_dirty(&mut self) {
+        self.has_been_modified = true;
+        self.needs_render = true;
     }
 
     #[inline(always)]
@@ -51,34 +55,34 @@ impl DocumentLine {
     #[inline(always)]
     pub fn push(&mut self, ch: char) {
         self.buf.push(ch);
-        self.is_dirty = true;
+        self.set_dirty();
     }
 
     #[inline(always)]
     pub fn push_str(&mut self, string: &str) {
         self.buf.push_str(string);
-        self.is_dirty = true;
+        self.set_dirty();
     }
 
     #[inline(always)]
     pub fn truncate(&mut self, new_len: usize) {
         let byte_idx = self.char_to_byte_idx(new_len.saturating_sub(1));
         self.buf.truncate(byte_idx);
-        self.is_dirty = true;
+        self.set_dirty();
     }
 
     #[inline(always)]
     pub fn insert(&mut self, idx: usize, ch: char) {
         let byte_idx = self.char_to_byte_idx(idx);
         self.buf.insert(byte_idx, ch);
-        self.is_dirty = true;
+        self.set_dirty();
     }
 
     #[inline(always)]
     pub fn insert_str(&mut self, idx: usize, string: &str) {
         let byte_idx = self.char_to_byte_idx(idx);
         self.buf.insert_str(byte_idx, string);
-        self.is_dirty = true;
+        self.set_dirty();
     }
 
     #[inline(always)]
@@ -91,7 +95,7 @@ impl DocumentLine {
         let ch = self.buf[byte_idx..].chars().next()?;
         let ch_len = ch.len_utf8();
         self.buf.replace_range(byte_idx..byte_idx + ch_len, "");
-        self.is_dirty = true;
+        self.set_dirty();
 
         Some(ch)
     }
@@ -101,7 +105,7 @@ impl DocumentLine {
         let byte_range = self.char_to_byte_range(range);
         let removed = self.buf[byte_range.clone()].to_owned();
         self.buf.replace_range(byte_range, "");
-        self.is_dirty = true;
+        self.set_dirty();
 
         removed
     }
@@ -177,7 +181,7 @@ impl DocumentLine {
     pub fn split_off(&mut self, idx: usize) -> Self {
         let byte_idx = self.char_to_byte_idx(idx);
         let other_buf = self.buf.split_off(byte_idx);
-        self.is_dirty = true;
+        self.set_dirty();
         DocumentLine::new(other_buf)
     }
 

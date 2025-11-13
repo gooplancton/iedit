@@ -180,7 +180,7 @@ impl Editor {
 
             renderer.render(self)?;
 
-            self.document.clean_lines(
+            self.document.reset_lines_need_render(
                 self.viewport.top_line..self.viewport.top_line + self.ui.editor_lines as usize,
             );
             self.status_bar.notification.truncate(0);

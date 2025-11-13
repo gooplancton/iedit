@@ -14,7 +14,7 @@ impl Document {
             self.lines[y - 1].push_str(current_line.as_ref());
 
             for line in &mut self.lines[y - 1..] {
-                line.is_dirty = true;
+                line.needs_render = true;
             }
 
             return ('\n', Some((prev_line_len, y - 1)));
@@ -78,7 +78,7 @@ impl Document {
         }
 
         for line in &mut self.lines[pos_from.1..] {
-            line.is_dirty = true;
+            line.needs_render = true;
         }
 
         Text::Lines(deleted_text)

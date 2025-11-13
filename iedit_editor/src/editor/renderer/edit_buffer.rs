@@ -106,7 +106,7 @@ impl Editor {
             let should_render_line = self.needs_full_rerender
                 || line_idx == self.cursor.cur_y
                 || line_idx == self.cursor.past_y
-                || self.document.is_line_dirty(line_idx);
+                || self.document.line_needs_render(line_idx);
 
             if should_render_line {
                 self.render_line(renderer, line_idx)?;

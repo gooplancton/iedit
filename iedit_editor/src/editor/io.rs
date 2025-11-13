@@ -2,6 +2,7 @@ use std::{
     fs::File,
     io::{Seek, SeekFrom, Write},
     path::PathBuf,
+    time::SystemTime,
 };
 
 use iedit_document::DocumentLine;
@@ -27,32 +28,79 @@ impl Editor {
             self.document.file = Some(File::create_new(&self.document.canonicalized_file_path)?);
         }
 
-        // naive implemetation for now, in the future we can keep track of
-        // lines that have been modified and only write them
+        let mut bytes_written = 0;
         let n_lines = self.document.n_lines();
-        if let Some(file) = &mut self.document.file {
-            file.set_len(0)?;
-            file.seek(SeekFrom::Start(0))?;
-            let mut file_writer = std::io::BufWriter::new(file);
-            self.document
+        let file = self.document.file.as_mut().unwrap();
+        file.seek(SeekFrom::Start(0))?;
+
+        let is_untouched = file.metadata().is_ok_and(|metadata| {
+            metadata
+                .modified()
+                .is_ok_and(|modified| modified <= self.document.last_save_time)
+        });
+
+        let first_modified_line_idx = if is_untouched {
+            let first_modified_line_idx = self
+                .document
                 .lines
                 .iter()
-                .enumerate()
-                .try_for_each(|(line_idx, line)| {
-                    write!(file_writer, "{}", line.as_ref())?;
-                    if line_idx != n_lines - 1 {
-                        writeln!(file_writer)
-                    } else {
-                        Ok(())
-                    }
-                })?;
+                .position(|line| line.has_been_modified)
+                .unwrap_or(n_lines);
 
-            file_writer.flush()?;
-
-            self.document.has_been_edited = false;
-            if display_notification {
-                send_simple_notification("File saved");
+            if let Some(new_file_len) = self.document.line_offsets.get(first_modified_line_idx) {
+                let new_file_len = *new_file_len;
+                file.set_len(new_file_len)?;
+                file.seek(SeekFrom::End(0))?;
+            } else {
+                file.seek(SeekFrom::End(0))?;
+                if !self.document.line_offsets.is_empty() {
+                    file.write_all(&[b'\n'])?;
+                }
             }
+
+            first_modified_line_idx
+        } else {
+            // NOTE: file has been modified outiside of iedit, present user with options:
+            // - write to different file
+            // - overwrite
+            // - reload file
+            file.set_len(0)?;
+            0
+        };
+
+        let mut new_offsets = Vec::with_capacity(n_lines - first_modified_line_idx);
+        let mut file_writer = std::io::BufWriter::new(file);
+        let mut last_offset = file_writer.stream_position()?;
+        for (line_idx, line) in self
+            .document
+            .lines
+            .iter_mut()
+            .enumerate()
+            .skip(first_modified_line_idx)
+        {
+            line.has_been_modified = false;
+
+            let text = line.as_ref();
+            write!(file_writer, "{}", text)?;
+            let mut line_bytes = text.as_bytes().len();
+            if line_idx != n_lines - 1 {
+                writeln!(file_writer)?;
+                line_bytes += 1;
+            }
+
+            new_offsets.push(last_offset);
+            bytes_written += line_bytes;
+            last_offset += line_bytes as u64;
+        }
+
+        file_writer.flush()?;
+
+        self.document.last_save_time = SystemTime::now();
+        self.document.line_offsets.truncate(first_modified_line_idx);
+        self.document.line_offsets.extend(new_offsets);
+
+        if display_notification {
+            send_simple_notification(format!("File saved. {} bytes written", bytes_written));
         }
 
         Ok(())
@@ -77,7 +125,7 @@ impl Editor {
             self.document.canonicalized_file_path = canonicalized_file_path;
         }
 
-        // TODO: handle this
+        // TODO: handle error here
         let _ = self.save_file(false);
 
         CommandExecutionResult::Continue

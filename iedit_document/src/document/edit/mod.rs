@@ -59,7 +59,6 @@ impl Document {
             self.redo_stack.clear();
         }
 
-        self.has_been_edited = true;
         match op {
             Op::Insertion {
                 pos,

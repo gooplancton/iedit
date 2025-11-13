@@ -11,7 +11,11 @@ use termion::event::Key;
 
 use crate::{
     Editor,
-    editor::{FILE_EXECUTION_OUTPUT, commands::notify::send_simple_notification},
+    editor::{
+        FILE_EXECUTION_OUTPUT,
+        commands::notify::{send_notification, send_simple_notification},
+    },
+    input::Notification,
 };
 
 pub enum Executor {
@@ -127,18 +131,17 @@ fn run_command(command: &str) -> std::io::Result<()> {
     let status = child.wait()?;
     let output = Document::from_strings(output_lines, command, true);
 
-    if let Ok(mut file_execution_output) = FILE_EXECUTION_OUTPUT.lock() {
+    let output_available = if let Ok(mut file_execution_output) = FILE_EXECUTION_OUTPUT.lock() {
         *file_execution_output = Some(output);
-        send_simple_notification(format!(
-            "Process exited with status: {}. To view output: Ctrl+k v o",
-            status
-        ));
+        true
     } else {
-        send_simple_notification(format!(
-            "Process exited with status: {}. Output cannot be displayed",
-            status
-        ));
-    }
+        false
+    };
+
+    send_notification(Notification::ExecutionEnd {
+        status,
+        output_available,
+    });
 
     Ok(())
 }

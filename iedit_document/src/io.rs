@@ -6,7 +6,7 @@ use std::{
 
 use crate::line::DocumentLine;
 
-type ReadFile = (Option<File>, PathBuf, Vec<DocumentLine>);
+type ReadFile = (Option<File>, PathBuf, Vec<DocumentLine>, Vec<u64>);
 
 pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
     let file = OpenOptions::new()
@@ -26,21 +26,44 @@ pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
         Err(err)
             if path.as_ref().as_os_str().is_empty() || err.kind() == io::ErrorKind::NotFound =>
         {
-            Ok((None, path.as_ref().to_owned(), Vec::new()))
+            Ok((None, path.as_ref().to_owned(), Vec::new(), Vec::new()))
         }
         Err(err) => Err(err),
         Ok(file) => {
             let mut file_lines = Vec::new();
             let mut file_reader = BufReader::new(file);
             let mut file_line = String::default();
+            let mut line_offsets = vec![];
+            let mut last_offset = 0;
+            let mut is_last_line_newline_terminated = false;
             while file_reader.read_line(&mut file_line)? > 0 {
-                let trimmed = file_line.trim_end_matches(&['\n', '\r'][..]);
-                file_lines.push(DocumentLine::new(trimmed.to_string()));
+                let bytes_read = file_line.as_bytes().len();
+                // TODO: should save line terminator? Can't always assume it's \n
+                let trimmed = file_line.trim_end_matches(&['\n', '\r']);
+                is_last_line_newline_terminated = trimmed.len() < bytes_read;
+                let mut line = DocumentLine::new(trimmed.to_string());
+                line.has_been_modified = false;
+                file_lines.push(line);
                 file_line.truncate(0);
+
+                line_offsets.push(last_offset);
+                last_offset += bytes_read as u64;
+            }
+
+            if is_last_line_newline_terminated {
+                let mut line = DocumentLine::default();
+                line.has_been_modified = false;
+                file_lines.push(line);
+                line_offsets.push(last_offset);
             }
 
             let file = file_reader.into_inner();
-            Ok((Some(file), path.as_ref().to_owned(), file_lines))
+            Ok((
+                Some(file),
+                path.as_ref().to_owned(),
+                file_lines,
+                line_offsets,
+            ))
         }
     }
 }

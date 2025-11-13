@@ -30,7 +30,7 @@ pub enum EditorMode {
 }
 
 static UNSAVED_CHANGES_WARNING: &str =
-    "\x1b[33mBuffer contains unsaved changes.\x1b[0m Ctrl+ \x1b[7ms\x1b[0mave, \x1b[7mq\x1b[0muit";
+    "\x1b[33mBuffer contains unsaved changes.\x1b[0m ^s: save, ^q: quit";
 
 impl Editor {
     pub fn execute_command(&mut self, command: EditorCommand) -> CommandExecutionResult {
@@ -41,6 +41,18 @@ impl Editor {
                 movement: _,
                 with_selection: _,
             } => self.execute_cursor_movement_command(command),
+            C::EndFileExecution(status, is_output_available) => {
+                self.status_bar.notification = format!(
+                    "{}. {}",
+                    status,
+                    if is_output_available {
+                        "^k v o: view output"
+                    } else {
+                        "output unavailable"
+                    }
+                );
+                self.is_running_external_command = false;
+            }
             C::DisplayHelp => {
                 self.displayed_popup = Some(&HELP_POPUP_LINES);
             }
@@ -119,6 +131,10 @@ impl Editor {
             Input::ExternalNotification(Notification::Simple(message)) => {
                 Some(EditorCommand::DisplayMessage(message))
             }
+            Input::ExternalNotification(Notification::ExecutionEnd {
+                status,
+                output_available,
+            }) => Some(EditorCommand::EndFileExecution(status, output_available)),
             Input::Keypress(Key::Ctrl('q')) => Some(EditorCommand::Quit),
             Input::Keypress(Key::Ctrl('s')) => Some(EditorCommand::Save),
             _ => match self.mode {
@@ -136,7 +152,7 @@ impl Editor {
     }
 
     pub fn quit(&mut self, force: bool) -> CommandExecutionResult {
-        if !self.document.has_been_edited
+        if !self.document.has_been_modified()
             || !self.config.confirm_quit_unsaved_changes
             || self.first_quit_sent
             || force

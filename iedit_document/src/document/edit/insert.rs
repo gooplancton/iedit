@@ -58,7 +58,7 @@ impl Document {
         }
 
         for line in &mut self.lines[y..] {
-            line.is_dirty = true;
+            line.needs_render = true;
         }
 
         Some((landing_x, landing_y))
@@ -82,7 +82,7 @@ impl Document {
 
         self.lines.insert(y + 1, to_append);
         for line in &mut self.lines[y + 1..] {
-            line.is_dirty = true;
+            line.needs_render = true;
         }
 
         Some((first_nonwhitespace_x, y + 1))

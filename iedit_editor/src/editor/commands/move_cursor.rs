@@ -87,7 +87,7 @@ impl Editor {
                         self.cursor.update_pos((0, self.cursor.cur_y), false);
                     }
                     CursorMovement::EndOfLine => {
-                        self.cursor.update_pos((usize::MAX, 0), false);
+                        self.cursor.update_pos((usize::MAX, self.cursor.cur_y), false);
                     }
                     CursorMovement::StartOfFile => {
                         self.cursor.update_pos((0, 0), true);

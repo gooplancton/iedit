@@ -5,6 +5,7 @@ use std::{
     fs::File,
     ops::{self},
     path::{Path, PathBuf},
+    time::SystemTime,
 };
 
 pub use crate::line::{CharacterIndexable, DocumentLine};
@@ -16,40 +17,44 @@ pub struct Document {
     pub lines: Vec<DocumentLine>,
     pub file: Option<File>,
     pub canonicalized_file_path: PathBuf,
+    pub line_offsets: Vec<u64>,
     undo_stack: Vec<EditOperation>,
     redo_stack: Vec<EditOperation>,
 
-    pub has_been_edited: bool,
+    pub last_save_time: SystemTime,
     pub is_readonly: bool,
 }
 
 impl Document {
-    pub fn is_line_dirty(&self, line_idx: usize) -> bool {
-        self.lines.get(line_idx).is_none_or(|line| line.is_dirty)
+    pub fn line_needs_render(&self, line_idx: usize) -> bool {
+        self.lines
+            .get(line_idx)
+            .is_none_or(|line| line.needs_render)
     }
 
-    pub fn clean_lines(&mut self, line_range: ops::Range<usize>) {
+    pub fn reset_lines_need_render(&mut self, line_range: ops::Range<usize>) {
         for line_idx in line_range {
             if let Some(line) = self.lines.get_mut(line_idx) {
-                line.is_dirty = false;
+                line.needs_render = false;
             }
         }
     }
 
-    pub fn from_strings(lines: Vec<String>, name: impl Into<PathBuf>, is_readonly: bool) -> Self {
+    pub fn from_strings(strings: Vec<String>, name: impl Into<PathBuf>, is_readonly: bool) -> Self {
         Self {
-            lines: lines.into_iter().map(DocumentLine::new).collect(),
+            lines: strings.into_iter().map(DocumentLine::new).collect(),
             file: None,
             canonicalized_file_path: name.into(),
+            line_offsets: vec![],
             undo_stack: vec![],
             redo_stack: vec![],
-            has_been_edited: false,
+            last_save_time: SystemTime::now(),
             is_readonly,
         }
     }
 
     pub fn from_file(file_path: impl AsRef<Path>) -> std::io::Result<Self> {
-        let (file, canonicalized_file_path, lines) = read_file(file_path)?;
+        let (file, canonicalized_file_path, lines, line_offsets) = read_file(file_path)?;
         let is_readonly = if let Some(file) = &file
             && let Ok(metadata) = file.metadata()
         {
@@ -62,9 +67,10 @@ impl Document {
             lines,
             file,
             canonicalized_file_path,
+            line_offsets,
             undo_stack: vec![],
             redo_stack: vec![],
-            has_been_edited: false,
+            last_save_time: SystemTime::now(),
             is_readonly,
         })
     }
@@ -79,6 +85,11 @@ impl Document {
     }
 
     #[inline]
+    pub fn has_been_modified(&self) -> bool {
+        self.lines.iter().any(|line| line.has_been_modified)
+    }
+
+    #[inline]
     pub fn get_or_add_line(&mut self, y: usize) -> Option<&mut DocumentLine> {
         if y < self.n_lines() {
             self.lines.get_mut(y)
@@ -89,5 +100,4 @@ impl Document {
             None
         }
     }
-
 }

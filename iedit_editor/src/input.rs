@@ -1,10 +1,13 @@
 use crossbeam_channel::{Receiver, select, unbounded};
-use std::{fs, thread};
+use std::{fs, process::ExitStatus, thread};
 use termion::{event::Key, input::TermRead};
 
 pub enum Notification {
     Simple(String),
-    // others?...
+    ExecutionEnd {
+        status: ExitStatus,
+        output_available: bool,
+    }, // others?...
 }
 
 #[non_exhaustive]

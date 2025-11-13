@@ -2,6 +2,8 @@ mod execute;
 mod move_cursor;
 mod notify;
 
+use std::process::ExitStatus;
+
 use crate::editor::modes::EditorMode;
 pub use execute::Executor;
 use iedit_document::EditOperation;
@@ -50,6 +52,7 @@ pub enum EditorCommand {
     DisplayViewChordHelp,
     DisplaySelectionChordHelp,
     DisplayPressCharacterPopup,
+    EndFileExecution(ExitStatus, bool),
     ViewExecutionOutput,
 }
 

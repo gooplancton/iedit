@@ -416,10 +416,10 @@ impl Editor {
             Input::KeyChord([Key::Ctrl('k'), Key::Char('v'), Key::Char('o')]) => {
                 Some(C::ViewExecutionOutput)
             }
-            Input::KeyChord([Key::Ctrl('k'), Key::Ctrl('s'), Key::Null]) => {
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('s'), Key::Null]) => {
                 Some(C::DisplaySelectionChordHelp)
             }
-            Input::KeyChord([Key::Ctrl('k'), Key::Ctrl('s'), Key::Ctrl('l')]) => {
+            Input::KeyChord([Key::Ctrl('k'), Key::Char('s'), Key::Char('l')]) => {
                 Some(C::ToggleLockSelection)
             }
             _ => None,
