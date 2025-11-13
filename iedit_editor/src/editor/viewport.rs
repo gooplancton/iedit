@@ -32,7 +32,7 @@ impl Editor {
         let tab_size = self.config.tab_size as usize;
 
         if self.config.show_line_numbers {
-            term_width -= 7;
+            term_width -= self.get_line_number_gutter_width() + 2;
         }
 
         // If cursor moved and is not visible, reset vertical offset and scroll to cursor
@@ -125,5 +125,11 @@ impl Editor {
     #[inline(always)]
     pub fn viewport_contains_y(&self, y: usize) -> bool {
         self.viewport.top_line <= y && y < self.viewport.top_line + self.ui.editor_lines as usize
+    }
+
+    #[inline(always)]
+    pub fn get_line_number_gutter_width(&self) -> usize {
+        // NOTE: this also includes one space of padding on each side of the number
+        (self.document.n_lines() + 1).ilog10() as usize + 2
     }
 }

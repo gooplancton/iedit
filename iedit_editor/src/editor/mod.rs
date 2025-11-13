@@ -150,6 +150,7 @@ impl Editor {
         let input_parser = InputParser::new(notification_receiver);
         for input in input_parser {
             self.cursor.set_last_pos();
+            let gutter_width_before = self.get_line_number_gutter_width();
 
             if window_resized
                 .compare_exchange(true, false, Ordering::Acquire, Ordering::Relaxed)
@@ -171,6 +172,9 @@ impl Editor {
             }
 
             self.clamp_cursor();
+
+            let gutter_width_after = self.get_line_number_gutter_width();
+            self.needs_full_rerender |= gutter_width_after != gutter_width_before;
 
             self.adjust_viewport();
 

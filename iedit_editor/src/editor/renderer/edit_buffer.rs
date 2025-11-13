@@ -28,15 +28,19 @@ impl Editor {
                 termion::color::LightBlack.fg_str()
             };
 
+            let padding =
+                (self.get_line_number_gutter_width() - 1) - (line_idx + 1).ilog10() as usize;
+
             renderer.add(format!(
-                "{}{: >5}{} {}",
+                "{}{}{}{} {}",
                 line_number_color,
+                " ".repeat(padding),
                 line_idx + 1,
                 termion::color::Reset.fg_str(),
                 V_BAR,
             ))?;
 
-            ui_width = ui_width.saturating_sub(7);
+            ui_width = ui_width.saturating_sub(self.get_line_number_gutter_width());
         }
 
         let highlighted_range = self.cursor.get_selected_range();
@@ -78,7 +82,11 @@ impl Editor {
         renderer.clear_line()?;
 
         if self.config.show_line_numbers {
-            renderer.add(format!("{: >5} {}", " ", V_BAR))?
+            renderer.add(format!(
+                "{} {}",
+                " ".repeat(self.get_line_number_gutter_width()),
+                V_BAR
+            ))?
         }
         let content = if with_cursor { EMPTY_CURSOR } else { "~" };
         renderer.add(content)?;
