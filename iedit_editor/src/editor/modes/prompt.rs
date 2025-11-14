@@ -13,6 +13,28 @@ use crate::{
 };
 
 impl Editor {
+    pub fn execute_from_cmd_prompt(&mut self, cmd_string: &str) -> CommandExecutionResult {
+        match cmd_string {
+            "q" | "quit" => self.quit(false),
+            "q!" | "quit!" => self.quit(true),
+            "w" | "write" => {
+                // TODO: handle error here
+                let _ = self.save_file(true);
+                CommandExecutionResult::Continue
+            }
+            "wq" => {
+                if self.save_file(false).is_ok() {
+                    return self.quit(false);
+                }
+
+                CommandExecutionResult::Continue
+            }
+            // TODO: support config modification
+            // e.g. > set show_keybindings = 0
+            _ => CommandExecutionResult::Continue,
+        }
+    }
+
     pub fn prompt_mode_execute_command(
         &mut self,
         command: EditorCommand,

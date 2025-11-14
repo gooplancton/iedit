@@ -1,6 +1,7 @@
-pub static HELP_POPUP_LINES: [&'static str; 11] = [
+pub static HELP_POPUP_LINES: [&'static str; 12] = [
     "Ctrl-k      │ enter chord",
     "Ctrl-g      │ go to",
+    "Ctrl-e      │ open command prompt",
     "Ctrl-f (-b) │ forward (backward) search",
     "Ctrl-z (-r) │ undo (redo)",
     "Ctrl-y (-x) │ copy (cut)",

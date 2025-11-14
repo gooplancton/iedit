@@ -22,6 +22,7 @@ pub enum EditorCommand {
     ClearSelection,
     SwitchMode(EditorMode),
     Edit(EditOperation),
+    OpenCommandLine,
     YankSelection,
     CutSelection,
     Paste,

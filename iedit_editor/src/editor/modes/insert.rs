@@ -25,6 +25,11 @@ impl Editor {
             EditorCommand::SwitchMode(mode) => {
                 self.mode = mode;
             }
+            EditorCommand::OpenCommandLine => {
+                self.prompt_user("> ", move |editor, cmd| {
+                    editor.execute_from_cmd_prompt(cmd.as_ref())
+                });
+            }
             EditorCommand::PromptExecutor => {
                 self.prompt_user("Run with: ", move |editor, executor| {
                     editor.execute_file(Executor::Literal(executor.into()));
@@ -245,6 +250,9 @@ impl Editor {
             }),
             Input::Keypress(Key::Alt('n')) => Some(C::FindMatchForward),
             Input::Keypress(Key::Alt('m')) => Some(C::FindMatchBackward),
+            Input::Keypress(Key::Ctrl('e')) | Input::Keypress(Key::Alt('e')) => {
+                Some(C::OpenCommandLine)
+            }
             Input::Keypress(Key::Ctrl('y')) => Some(C::YankSelection),
             Input::Keypress(Key::Ctrl('x')) => Some(C::CutSelection),
             Input::Keypress(Key::Ctrl('p')) => Some(C::Paste),
