@@ -30,7 +30,7 @@ pub enum EditorMode {
 }
 
 static UNSAVED_CHANGES_WARNING: &str =
-    "\x1b[33mBuffer contains unsaved changes.\x1b[0m ^s: save, ^q: quit";
+    "\x1b[33mBuffer contains unsaved changes.\x1b[0m Ctrl-s: save, Ctrl-q: quit";
 
 impl Editor {
     pub fn execute_command(&mut self, command: EditorCommand) -> CommandExecutionResult {
@@ -46,7 +46,7 @@ impl Editor {
                     "{}. {}",
                     status,
                     if is_output_available {
-                        "^k v o: view output"
+                        "Ctrl-k + v + o: view output"
                     } else {
                         "output unavailable"
                     }

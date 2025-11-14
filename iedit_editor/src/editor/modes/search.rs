@@ -117,8 +117,12 @@ impl Editor {
         use EditorCommand as C;
 
         match input {
-            Input::Keypress(Key::Ctrl('n')) => Some(C::FindMatchForward),
-            Input::Keypress(Key::Ctrl('b')) => Some(C::FindMatchBackward),
+            Input::Keypress(Key::Ctrl('n')) | Input::Keypress(Key::Alt('n')) => {
+                Some(C::FindMatchForward)
+            }
+            Input::Keypress(Key::Ctrl('m')) | Input::Keypress(Key::Alt('m')) => {
+                Some(C::FindMatchBackward)
+            }
             _ => self.prompt_mode_parse_command(input),
         }
     }

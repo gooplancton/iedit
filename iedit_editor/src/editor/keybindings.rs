@@ -1,14 +1,15 @@
-pub static HELP_POPUP_LINES: [&'static str; 10] = [
-    "^k      │ enter chord",
-    "^g      │ go to",
-    "^f (^b) │ forward (backward) search",
-    "^z (^r) │ undo (redo)",
-    "^y (^x) │ copy (cut)",
-    "^p      │ paste",
-    "^o (^l) │ go to previous (next) jump",
-    "^w (^e) │ go to start (end) of paragraph",
-    "^(      │ go to matching paren",
-    "^n      │ go to next match",
+pub static HELP_POPUP_LINES: [&'static str; 11] = [
+    "Ctrl-k      │ enter chord",
+    "Ctrl-g      │ go to",
+    "Ctrl-f (-b) │ forward (backward) search",
+    "Ctrl-z (-r) │ undo (redo)",
+    "Ctrl-y (-x) │ copy (cut)",
+    "Ctrl-p      │ paste",
+    "Ctrl-u (-d) │ go up (down) a page",
+    "Alt-o  (-i) │ go to previous (next) jump",
+    "Alt-j  (-k) │ go to end (start) of paragraph",
+    "Alt-n  (-m) │ go to next (previous) match",
+    "Alt-p       │ go to matching paren",
 ];
 
 pub static CHORDS_POPUP_LINES: [&'static str; 6] = [

@@ -4,7 +4,7 @@ use crate::{Editor, editor::commands::CommandExecutionResult};
 
 type SubmitAction = Box<dyn FnOnce(&mut Editor, DocumentLine) -> CommandExecutionResult>;
 
-pub static KEYBINDINGS: &str = "│ ^q: quit │ ^s: save │ ^t: help";
+pub static KEYBINDINGS: &str = "│ Ctrl-q: quit │ Ctrl-s: save │ Ctrl-t: help";
 
 #[derive(Default)]
 pub struct StatusBar {

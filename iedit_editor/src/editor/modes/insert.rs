@@ -213,38 +213,41 @@ impl Editor {
             })),
             Input::Keypress(Key::CtrlDown) => Some(C::ScrollViewportDown),
             Input::Keypress(Key::CtrlUp) => Some(C::ScrollViewportUp),
-            Input::Keypress(Key::Ctrl('l')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Alt('i')) => Some(C::MoveCursor {
                 movement: CursorMovement::NextJump,
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Ctrl('o')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Alt('o')) => Some(C::MoveCursor {
                 movement: CursorMovement::PreviousJump,
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Ctrl('d')) => Some(C::MoveCursor {
-                movement: CursorMovement::Down(self.ui.editor_lines as usize),
-                with_selection: self.is_selection_locked,
-            }),
+            Input::Keypress(Key::Ctrl('d')) | Input::Keypress(Key::PageDown) => {
+                Some(C::MoveCursor {
+                    movement: CursorMovement::Down(self.ui.editor_lines as usize),
+                    with_selection: self.is_selection_locked,
+                })
+            }
             Input::Keypress(Key::Ctrl('u')) => Some(C::MoveCursor {
                 movement: CursorMovement::Up(self.ui.editor_lines as usize),
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Ctrl('e')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Alt('j')) => Some(C::MoveCursor {
                 movement: CursorMovement::NextParagraph,
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Ctrl('w')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Alt('k')) => Some(C::MoveCursor {
                 movement: CursorMovement::PreviousParagraph,
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Ctrl('(')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Alt('p')) => Some(C::MoveCursor {
                 movement: CursorMovement::MatchingParenthesis,
                 with_selection: self.is_selection_locked,
             }),
+            Input::Keypress(Key::Alt('n')) => Some(C::FindMatchForward),
+            Input::Keypress(Key::Alt('m')) => Some(C::FindMatchBackward),
             Input::Keypress(Key::Ctrl('y')) => Some(C::YankSelection),
             Input::Keypress(Key::Ctrl('x')) => Some(C::CutSelection),
             Input::Keypress(Key::Ctrl('p')) => Some(C::Paste),
-            Input::Keypress(Key::Ctrl('n')) => Some(C::FindMatchForward),
             Input::Keypress(Key::Char(ch)) => {
                 let text = if ch == '\t' && self.config.tab_emit_spaces {
                     let n_spaces = self.config.tab_size as usize
@@ -277,7 +280,9 @@ impl Editor {
                     })),
                 }
             }
-            Input::Keypress(Key::Ctrl('h')) | Input::Keypress(Key::Ctrl('\x7F')) => {
+            Input::Keypress(Key::Ctrl('h'))
+            | Input::Keypress(Key::Ctrl('\x7F'))
+            | Input::Keypress(Key::Alt('\x7F')) => {
                 if self.cursor.cur_x == 0 {
                     Some(C::Edit(Op::Deletion {
                         pos: self.cursor.pos(),
