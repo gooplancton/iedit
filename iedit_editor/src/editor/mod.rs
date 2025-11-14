@@ -1,7 +1,7 @@
 use std::{
     cmp::min,
     io::Write,
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
@@ -65,12 +65,11 @@ pub static FILE_EXECUTION_OUTPUT: Mutex<Option<Document>> = Mutex::new(None);
 
 impl Editor {
     pub fn new(
-        file_path: impl AsRef<Path>,
+        document: Document,
         open_at_line: usize,
         config: EditorConfig,
         ui: UILayout,
     ) -> std::io::Result<Self> {
-        let document = Document::from_file(file_path)?;
         let viewport = Viewport::new(ui.editor_lines, open_at_line);
 
         let cur_y = min(open_at_line.saturating_sub(1), document.n_lines());

@@ -185,6 +185,9 @@ impl Document {
                 let deleted_text = self.delete_range(pos_from, pos_to);
                 let new_pos = match text {
                     T::Empty => Some(pos_from),
+                    T::Char(newline) if newline == '\n' || newline == '\r' => {
+                        self.insert_newline_at(pos_from)
+                    }
                     T::Char(ch) => self.insert_char_at(pos_from, ch),
                     T::String(string) => self.insert_string_at(pos_from, string),
                     T::Lines(lines) => self.insert_strings_at(pos_from, lines),

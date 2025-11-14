@@ -35,15 +35,18 @@ impl Document {
     }
 
     pub fn get_previous_word_pos(&self, (x, y): (usize, usize)) -> (usize, usize) {
-        let line = match self.lines.get(y) {
-            Some(line) => line,
-            None => return (0, y),
-        };
-
         if x == 0 {
-            return (x, y.saturating_sub(1));
+            return match y {
+                0 => (0, 0),
+                y if y <= self.n_lines() => {
+                    let previous_line_len = self.lines[y - 1].len();
+                    (previous_line_len, y - 1)
+                }
+                _ => (x, y),
+            };
         }
 
+        let line = &self.lines[y];
         let mut previous_word_x = x - 1;
 
         // Skip whitespace backwards

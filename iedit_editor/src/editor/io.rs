@@ -54,7 +54,7 @@ impl Editor {
             } else {
                 file.seek(SeekFrom::End(0))?;
                 if !self.document.line_offsets.is_empty() {
-                    file.write_all(&[b'\n'])?;
+                    file.write_all(self.document.end_of_line_seq.as_bytes())?;
                 }
             }
 
@@ -84,8 +84,8 @@ impl Editor {
             write!(file_writer, "{}", text)?;
             let mut line_bytes = text.as_bytes().len();
             if line_idx != n_lines - 1 {
-                writeln!(file_writer)?;
-                line_bytes += 1;
+                file_writer.write_all(self.document.end_of_line_seq.as_bytes())?;
+                line_bytes += self.document.end_of_line_seq.as_bytes().len();
             }
 
             new_offsets.push(last_offset);

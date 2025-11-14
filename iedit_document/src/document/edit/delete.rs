@@ -44,6 +44,8 @@ impl Document {
             let removed_text = line.remove_range(pos_from.0..pos_to.0);
 
             return Text::String(removed_text);
+        } else if pos_from.1 >= self.n_lines() {
+            return Text::Empty;
         }
 
         let mut deleted_text = Vec::<String>::new();

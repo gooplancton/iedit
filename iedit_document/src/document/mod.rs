@@ -21,8 +21,25 @@ pub struct Document {
     undo_stack: Vec<EditOperation>,
     redo_stack: Vec<EditOperation>,
 
+    pub end_of_line_seq: String,
     pub last_save_time: SystemTime,
     pub is_readonly: bool,
+}
+
+impl Default for Document {
+    fn default() -> Self {
+        Self {
+            lines: Default::default(),
+            file: Default::default(),
+            canonicalized_file_path: Default::default(),
+            line_offsets: Default::default(),
+            undo_stack: Default::default(),
+            redo_stack: Default::default(),
+            end_of_line_seq: "\n".to_owned(),
+            last_save_time: SystemTime::now(),
+            is_readonly: false,
+        }
+    }
 }
 
 impl Document {
@@ -48,13 +65,15 @@ impl Document {
             line_offsets: vec![],
             undo_stack: vec![],
             redo_stack: vec![],
+            end_of_line_seq: "\n".to_owned(),
             last_save_time: SystemTime::now(),
             is_readonly,
         }
     }
 
     pub fn from_file(file_path: impl AsRef<Path>) -> std::io::Result<Self> {
-        let (file, canonicalized_file_path, lines, line_offsets) = read_file(file_path)?;
+        let (file, canonicalized_file_path, lines, line_offsets, end_of_line_seq) =
+            read_file(file_path)?;
         let is_readonly = if let Some(file) = &file
             && let Ok(metadata) = file.metadata()
         {
@@ -67,6 +86,7 @@ impl Document {
             lines,
             file,
             canonicalized_file_path,
+            end_of_line_seq,
             line_offsets,
             undo_stack: vec![],
             redo_stack: vec![],

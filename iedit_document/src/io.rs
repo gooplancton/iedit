@@ -6,7 +6,7 @@ use std::{
 
 use crate::line::DocumentLine;
 
-type ReadFile = (Option<File>, PathBuf, Vec<DocumentLine>, Vec<u64>);
+type ReadFile = (Option<File>, PathBuf, Vec<DocumentLine>, Vec<u64>, String);
 
 pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
     let file = OpenOptions::new()
@@ -26,7 +26,13 @@ pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
         Err(err)
             if path.as_ref().as_os_str().is_empty() || err.kind() == io::ErrorKind::NotFound =>
         {
-            Ok((None, path.as_ref().to_owned(), Vec::new(), Vec::new()))
+            Ok((
+                None,
+                path.as_ref().to_owned(),
+                Vec::new(),
+                Vec::new(),
+                "\n".to_owned(),
+            ))
         }
         Err(err) => Err(err),
         Ok(file) => {
@@ -36,10 +42,19 @@ pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
             let mut line_offsets = vec![];
             let mut last_offset = 0;
             let mut is_last_line_newline_terminated = false;
+            let mut end_of_line_seq: Option<String> = None;
             while file_reader.read_line(&mut file_line)? > 0 {
                 let bytes_read = file_line.as_bytes().len();
-                // TODO: should save line terminator? Can't always assume it's \n
-                let trimmed = file_line.trim_end_matches(&['\n', '\r']);
+
+                let trimmed = if let Some(end_of_line_seq) = &end_of_line_seq {
+                    file_line.trim_end_matches(end_of_line_seq)
+                } else {
+                    let trimmed = file_line.trim_end_matches(&['\n', '\r']);
+                    end_of_line_seq = Some(file_line[trimmed.len()..bytes_read].to_owned());
+
+                    trimmed
+                };
+
                 is_last_line_newline_terminated = trimmed.len() < bytes_read;
                 let mut line = DocumentLine::new(trimmed.to_string());
                 line.has_been_modified = false;
@@ -63,6 +78,7 @@ pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
                 path.as_ref().to_owned(),
                 file_lines,
                 line_offsets,
+                end_of_line_seq.unwrap_or("\n".to_string()),
             ))
         }
     }
