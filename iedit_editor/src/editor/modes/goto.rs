@@ -61,11 +61,11 @@ impl Editor {
             Input::Keypress(Key::Char('\n')) | Input::Keypress(Key::Char('\r')) => {
                 Some(C::SubmitPrompt)
             }
-            Input::Keypress(Key::Char('w')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Char('g')) => Some(C::MoveCursor {
                 movement: CursorMovement::StartOfFile,
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Char('e')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Char('G')) => Some(C::MoveCursor {
                 movement: CursorMovement::EndOfFile,
                 with_selection: self.is_selection_locked,
             }),

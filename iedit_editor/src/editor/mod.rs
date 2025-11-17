@@ -63,6 +63,11 @@ pub struct Editor {
 pub static NOTIFICATION_SENDER: Mutex<Option<Sender<Notification>>> = Mutex::new(None);
 pub static FILE_EXECUTION_OUTPUT: Mutex<Option<Document>> = Mutex::new(None);
 
+pub enum EditorRunResult {
+    RestartInFullscreenMode,
+    Quit,
+}
+
 impl Editor {
     pub fn new(
         document: Document,
@@ -103,16 +108,16 @@ impl Editor {
         }
     }
 
+    pub fn set_ui(&mut self, ui: UILayout) {
+        self.ui = ui;
+    }
+
     pub fn swap_docuemnt(&mut self, new_doc: &mut Document) {
         std::mem::swap(&mut self.document, new_doc);
         self.needs_full_rerender = true;
     }
 
-    pub fn reset_ui(&mut self) {
-        // need to figure something out here
-    }
-
-    pub fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<()> {
+    pub fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<EditorRunResult> {
         // TODO: allow user to select cursor shape
         // write!(term, "\x1b[5 q")?;
 
@@ -155,7 +160,7 @@ impl Editor {
                 .compare_exchange(true, false, Ordering::Acquire, Ordering::Relaxed)
                 .is_ok()
             {
-                self.reset_ui();
+                return Ok(EditorRunResult::RestartInFullscreenMode);
             }
 
             let command = self.parse_command(input);
@@ -189,6 +194,6 @@ impl Editor {
 
         renderer.cleanup()?;
 
-        Ok(())
+        return Ok(EditorRunResult::Quit);
     }
 }

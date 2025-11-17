@@ -24,6 +24,16 @@ pub enum Executor {
 }
 
 impl Editor {
+    pub fn execute_shell_command(&mut self, cmd: String) {
+        self.is_running_external_command = true;
+
+        let _handle: JoinHandle<()> = spawn(move || {
+            if let Err(e) = run_command(&cmd) {
+                send_simple_notification(format!("Error executing command: {}", e));
+            }
+        });
+    }
+
     pub fn execute_file(&mut self, executor: Executor) {
         if self.is_viewing_execution_output {
             send_simple_notification("Not an executable file");
@@ -50,13 +60,7 @@ impl Editor {
             self.document.canonicalized_file_path.as_path().display()
         );
 
-        self.is_running_external_command = true;
-
-        let _handle: JoinHandle<()> = spawn(move || {
-            if let Err(e) = run_command(&command) {
-                send_simple_notification(format!("Error executing command: {}", e));
-            }
-        });
+        self.execute_shell_command(command);
     }
 
     fn infer_executor(&self, executor_key: Key) -> Option<&str> {

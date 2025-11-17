@@ -8,6 +8,8 @@ pub enum CursorMovement {
     Right(usize),
     NextWord,
     PreviousWord,
+    NextAlternatingAlphanum,
+    PreviousAlternatingAlphanum,
     NextParagraph,
     StartOfLine,
     EndOfLine,
@@ -87,7 +89,8 @@ impl Editor {
                         self.cursor.update_pos((0, self.cursor.cur_y), false);
                     }
                     CursorMovement::EndOfLine => {
-                        self.cursor.update_pos((usize::MAX, self.cursor.cur_y), false);
+                        self.cursor
+                            .update_pos((usize::MAX, self.cursor.cur_y), false);
                     }
                     CursorMovement::StartOfFile => {
                         self.cursor.update_pos((0, 0), true);
@@ -100,6 +103,20 @@ impl Editor {
                     }
                     CursorMovement::NextJump => {
                         self.cursor.jump_forward();
+                    }
+                    CursorMovement::NextAlternatingAlphanum => {
+                        let pos = self
+                            .document
+                            .get_next_alternating_alphanum_pos(self.cursor.pos());
+
+                        self.cursor.update_pos(pos, false);
+                    }
+                    CursorMovement::PreviousAlternatingAlphanum => {
+                        let pos = self
+                            .document
+                            .get_previous_alternating_alphanum_pos(self.cursor.pos());
+
+                        self.cursor.update_pos(pos, false);
                     }
                 }
             }

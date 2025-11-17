@@ -2,6 +2,7 @@ use iedit_macros::ConfigParse;
 
 #[derive(ConfigParse)]
 pub struct EditorConfig {
+    pub fullscreen: bool,
     pub min_lines: u16,
     pub horizontal_margin: u16,
     pub vertical_margin: u16,
@@ -17,6 +18,7 @@ pub struct EditorConfig {
 impl Default for EditorConfig {
     fn default() -> Self {
         Self {
+            fullscreen: false,
             min_lines: 0,
             horizontal_margin: 4,
             tab_size: 4,

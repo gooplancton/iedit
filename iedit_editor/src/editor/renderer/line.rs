@@ -147,7 +147,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     .unwrap_or_default();
                 let end_char = self
                     .line
-                    .byte_to_char_idx(rx_match.end() - 1)
+                    .byte_to_char_idx(rx_match.end().saturating_sub(1))
                     .unwrap_or(self.line.len());
                 self.color_ranges.push(ColorRange {
                     start: start_char,

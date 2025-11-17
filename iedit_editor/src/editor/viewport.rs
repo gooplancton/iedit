@@ -130,6 +130,6 @@ impl Editor {
     #[inline(always)]
     pub fn get_line_number_gutter_width(&self) -> usize {
         // NOTE: this also includes one space of padding on each side of the number
-        (self.document.n_lines() + 1).ilog10() as usize + 2
+        (max(self.document.n_lines(), 1)).ilog10() as usize + 2
     }
 }

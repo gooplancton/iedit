@@ -1,4 +1,4 @@
-use std::io::{IsTerminal, Read, stdin, stdout};
+use std::io::{self, IsTerminal, Read, stdin, stdout};
 
 use iedit_document::Document;
 use iedit_editor::{Editor, config::EditorConfig, terminal::UILayout};
@@ -9,14 +9,24 @@ fn main() -> std::io::Result<()> {
     let path = args.next();
     let open_at = args.next();
 
-    let editor_config = if let Some(mut path) = std::env::home_dir() {
-        path.push(".iedit.conf");
-        EditorConfig::from_file(path).unwrap_or_default()
+    let editor_config_path = std::env::home_dir().map(|mut home_path| {
+        home_path.push(".iedit.conf");
+        home_path
+    });
+    let editor_config = if let Some(editor_config_path) = &editor_config_path {
+        EditorConfig::from_file(editor_config_path).unwrap_or_default()
     } else {
         EditorConfig::default()
     };
 
-    match [path.as_deref(), open_at.as_deref()] {
+    let mut terminal = stdout().into_raw_mode()?;
+    let ui = if editor_config.fullscreen {
+        UILayout::fullscreen(&mut terminal)
+    } else {
+        UILayout::new(editor_config.min_lines, &mut terminal)
+    }?;
+
+    let mut editor = match [path.as_deref(), open_at.as_deref()] {
         [Some("--version"), None] => {
             println!("iedit version {}", env!("CARGO_PKG_VERSION"));
             return Ok(());
@@ -31,20 +41,23 @@ fn main() -> std::io::Result<()> {
             println!("  --version  Show version information");
             return Ok(());
         }
+        [Some("--config"), None] => {
+            let document = if let Some(editor_config_path) = &editor_config_path {
+                Document::from_file(editor_config_path)?
+            } else {
+                return Err(io::Error::other("Could not determine config path"));
+            };
+
+            Editor::new(document, 0, editor_config, ui)?
+        }
         [Some(path), open_at] => {
             let open_at = open_at
                 .and_then(|open_at| open_at.parse::<usize>().ok())
                 .unwrap_or_default();
 
             let document = Document::from_file(path)?;
-            let mut terminal = stdout().into_raw_mode()?;
-            let ui = UILayout::new(editor_config.min_lines, &mut terminal)?;
 
-            let mut editor = Editor::new(document, open_at, editor_config, ui)?;
-
-            editor.run(&mut terminal)?;
-
-            Ok(())
+            Editor::new(document, open_at, editor_config, ui)?
         }
         [None, _] => {
             let document = if !stdin().is_terminal() {
@@ -56,14 +69,21 @@ fn main() -> std::io::Result<()> {
                 Document::default()
             };
 
-            let mut terminal = stdout().into_raw_mode()?;
-            let ui = UILayout::new(editor_config.min_lines, &mut terminal)?;
-
-            let mut editor = Editor::new(document, 0, editor_config, ui)?;
-
-            editor.run(&mut terminal)?;
-
-            Ok(())
+            Editor::new(document, 0, editor_config, ui)?
         }
+    };
+
+    loop {
+        let result = editor.run(&mut terminal)?;
+
+        match result {
+            iedit_editor::editor::EditorRunResult::RestartInFullscreenMode => {
+                let new_ui = UILayout::fullscreen(&mut terminal)?;
+                editor.set_ui(new_ui);
+            }
+            iedit_editor::editor::EditorRunResult::Quit => break,
+        };
     }
+
+    Ok(())
 }

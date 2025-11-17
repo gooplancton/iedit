@@ -4,7 +4,9 @@ use std::{
     os::fd::AsFd,
 };
 
-use termion::{cursor::DetectCursorPos, raw::RawTerminal, terminal_size};
+use termion::{
+    cursor::DetectCursorPos, raw::RawTerminal, screen::IntoAlternateScreen, terminal_size,
+};
 
 pub static CURSOR_UP1: &str = "\x1b[1A";
 pub static CURSOR_DOWN1: &str = "\x1b[1B";
@@ -35,10 +37,7 @@ pub struct UILayout {
 }
 
 impl UILayout {
-    pub fn new<W: Write + AsFd>(
-        min_lines: u16,
-        term: &mut RawTerminal<W>,
-    ) -> io::Result<UILayout> {
+    pub fn new<W: Write + AsFd>(min_lines: u16, term: &mut RawTerminal<W>) -> io::Result<UILayout> {
         let (term_width, term_height) = terminal_size()?;
         let ui_origin = term.cursor_pos()?;
 
@@ -70,6 +69,20 @@ impl UILayout {
             ui_origin,
             term_height,
             term_width,
+        })
+    }
+
+    pub fn fullscreen<W: Write + AsFd>(term: &mut RawTerminal<W>) -> io::Result<UILayout> {
+        let (term_width, term_height) = terminal_size()?;
+        let ui_origin = (1, 1);
+
+        term.into_alternate_screen()?;
+
+        Ok(UILayout {
+            ui_origin,
+            term_width,
+            term_height,
+            editor_lines: term_height - 2,
         })
     }
 }

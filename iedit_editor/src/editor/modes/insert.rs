@@ -218,6 +218,14 @@ impl Editor {
             })),
             Input::Keypress(Key::CtrlDown) => Some(C::ScrollViewportDown),
             Input::Keypress(Key::CtrlUp) => Some(C::ScrollViewportUp),
+            Input::Keypress(Key::Alt('w')) => Some(C::MoveCursor {
+                movement: CursorMovement::NextAlternatingAlphanum,
+                with_selection: self.is_selection_locked,
+            }),
+            Input::Keypress(Key::Alt('b')) => Some(C::MoveCursor {
+                movement: CursorMovement::PreviousAlternatingAlphanum,
+                with_selection: self.is_selection_locked,
+            }),
             Input::Keypress(Key::Alt('i')) => Some(C::MoveCursor {
                 movement: CursorMovement::NextJump,
                 with_selection: self.is_selection_locked,
@@ -236,11 +244,19 @@ impl Editor {
                 movement: CursorMovement::Up(self.ui.editor_lines as usize),
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Alt('j')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Alt('a')) => Some(C::MoveCursor {
+                movement: CursorMovement::StartOfLine,
+                with_selection: self.is_selection_locked,
+            }),
+            Input::Keypress(Key::Alt('s')) => Some(C::MoveCursor {
+                movement: CursorMovement::EndOfLine,
+                with_selection: self.is_selection_locked,
+            }),
+            Input::Keypress(Key::Alt('.')) => Some(C::MoveCursor {
                 movement: CursorMovement::NextParagraph,
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Alt('k')) => Some(C::MoveCursor {
+            Input::Keypress(Key::Alt(',')) => Some(C::MoveCursor {
                 movement: CursorMovement::PreviousParagraph,
                 with_selection: self.is_selection_locked,
             }),
@@ -314,19 +330,19 @@ impl Editor {
                     }
                 }
             }
-            Input::Keypress(Key::Left) => Some(C::MoveCursor {
+            Input::Keypress(Key::Left) | Input::Keypress(Key::Alt('h')) => Some(C::MoveCursor {
                 with_selection: self.is_selection_locked,
                 movement: CursorMovement::Left(1),
             }),
-            Input::Keypress(Key::Right) => Some(C::MoveCursor {
+            Input::Keypress(Key::Right) | Input::Keypress(Key::Alt('l')) => Some(C::MoveCursor {
                 with_selection: self.is_selection_locked,
                 movement: CursorMovement::Right(1),
             }),
-            Input::Keypress(Key::Up) => Some(C::MoveCursor {
+            Input::Keypress(Key::Up) | Input::Keypress(Key::Alt('k')) => Some(C::MoveCursor {
                 with_selection: self.is_selection_locked,
                 movement: CursorMovement::Up(1),
             }),
-            Input::Keypress(Key::Down) => Some(C::MoveCursor {
+            Input::Keypress(Key::Down) | Input::Keypress(Key::Alt('j')) => Some(C::MoveCursor {
                 with_selection: self.is_selection_locked,
                 movement: CursorMovement::Down(1),
             }),
@@ -350,13 +366,13 @@ impl Editor {
                     movement: CursorMovement::Down(1),
                 })
             }
-            Input::Keypress(Key::Alt('f')) | Input::Keypress(Key::CtrlRight) => {
+            Input::Keypress(Key::CtrlRight) => {
                 Some(C::MoveCursor {
                     with_selection: self.is_selection_locked,
                     movement: CursorMovement::NextWord,
                 })
             }
-            Input::Keypress(Key::Alt('b')) | Input::Keypress(Key::CtrlLeft) => {
+            Input::Keypress(Key::CtrlLeft) => {
                 Some(C::MoveCursor {
                     with_selection: self.is_selection_locked,
                     movement: CursorMovement::PreviousWord,

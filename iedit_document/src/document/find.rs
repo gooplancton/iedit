@@ -6,7 +6,78 @@ impl Document {
     pub fn get_char_at_pos(&self, (x, y): (usize, usize)) -> Option<char> {
         self.lines.get(y).and_then(|line| line.at(x))
     }
-    // dio cnae
+
+    pub fn get_next_alternating_alphanum_pos(&self, (x, y): (usize, usize)) -> (usize, usize) {
+        let line = match self.lines.get(y) {
+            Some(line) => line,
+            None => return (x, y),
+        };
+
+        let n_chars = line.len();
+        if x == n_chars {
+            return (0, y + 1);
+        }
+
+        let is_alphanum = line
+            .at(x)
+            .map(|ch| ch.is_alphanumeric())
+            .unwrap_or_default();
+        let mut next_word_x = x + 1;
+
+        if is_alphanum {
+            while next_word_x <= n_chars && line.at(next_word_x).is_some_and(char::is_alphanumeric)
+            {
+                next_word_x += 1;
+            }
+        } else {
+            while next_word_x <= n_chars
+                && line.at(next_word_x).is_some_and(|ch| !ch.is_alphanumeric())
+            {
+                next_word_x += 1;
+            }
+        }
+
+        (next_word_x, y)
+    }
+
+    pub fn get_previous_alternating_alphanum_pos(&self, (x, y): (usize, usize)) -> (usize, usize) {
+        if x == 0 {
+            return match y {
+                0 => (0, 0),
+                y if y <= self.n_lines() => {
+                    let previous_line_len = self.lines[y - 1].len();
+                    (previous_line_len, y - 1)
+                }
+                _ => (x, y),
+            };
+        }
+
+        let line = &self.lines[y];
+        let mut previous_word_x = x - 1;
+        let is_alphanum = line
+            .at(x)
+            .map(|ch| ch.is_alphanumeric())
+            .unwrap_or_default();
+
+        if is_alphanum {
+            // Skip word backwards
+            while previous_word_x > 0 && line.at(previous_word_x).is_some_and(char::is_alphanumeric)
+            {
+                previous_word_x -= 1;
+            }
+        } else {
+            while previous_word_x > 0
+                && line
+                    .at(previous_word_x)
+                    .is_some_and(|ch| !ch.is_alphanumeric())
+            {
+                previous_word_x -= 1;
+            }
+        }
+
+        (previous_word_x, y)
+    }
+
     pub fn get_next_word_pos(&self, (x, y): (usize, usize)) -> (usize, usize) {
         let line = match self.lines.get(y) {
             Some(line) => line,

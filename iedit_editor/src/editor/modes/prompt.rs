@@ -29,6 +29,12 @@ impl Editor {
 
                 CommandExecutionResult::Continue
             }
+            cmd_string if cmd_string.starts_with("!") => {
+                let shell_cmd = cmd_string.strip_prefix("!").unwrap().to_string();
+                self.execute_shell_command(shell_cmd);
+
+                CommandExecutionResult::Continue
+            }
             // TODO: support config modification
             // e.g. > set show_keybindings = 0
             _ => CommandExecutionResult::Continue,
