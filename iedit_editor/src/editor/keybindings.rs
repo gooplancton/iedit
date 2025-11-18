@@ -1,4 +1,4 @@
-pub static HELP_POPUP_LINES: [&'static str; 12] = [
+pub static HELP_POPUP_LINES: [&'static str; 11] = [
     "Ctrl-k      │ enter chord",
     "Ctrl-g      │ go to",
     "Ctrl-e      │ open command prompt",
@@ -8,7 +8,6 @@ pub static HELP_POPUP_LINES: [&'static str; 12] = [
     "Ctrl-p      │ paste",
     "Ctrl-u (-d) │ go up (down) a page",
     "Alt-o  (-i) │ go to previous (next) jump",
-    "Alt-j  (-k) │ go to end (start) of paragraph",
     "Alt-n  (-m) │ go to next (previous) match",
     "Alt-p       │ go to matching paren",
 ];

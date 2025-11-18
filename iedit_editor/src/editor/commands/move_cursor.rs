@@ -6,10 +6,8 @@ pub enum CursorMovement {
     Down(usize),
     Left(usize),
     Right(usize),
-    NextWord,
-    PreviousWord,
-    NextAlternatingAlphanum,
-    PreviousAlternatingAlphanum,
+    NextWordEnd,
+    PreviousWordStart,
     NextParagraph,
     StartOfLine,
     EndOfLine,
@@ -43,13 +41,13 @@ impl Editor {
                     CursorMovement::Down(lines) => self.cursor.move_down(lines),
                     CursorMovement::Left(cols) => self.cursor.move_left(cols),
                     CursorMovement::Right(cols) => self.cursor.move_right(cols),
-                    CursorMovement::NextWord => {
-                        let next_word_pos = self.document.get_next_word_pos(self.cursor.pos());
+                    CursorMovement::NextWordEnd => {
+                        let next_word_pos = self.document.get_next_word_end_pos(self.cursor.pos());
                         self.cursor.update_pos(next_word_pos, false);
                     }
-                    CursorMovement::PreviousWord => {
+                    CursorMovement::PreviousWordStart => {
                         let previous_word_pos =
-                            self.document.get_previous_word_pos(self.cursor.pos());
+                            self.document.get_previous_word_start_pos(self.cursor.pos());
                         self.cursor.update_pos(previous_word_pos, false);
                     }
                     CursorMovement::NextParagraph => {
@@ -103,20 +101,6 @@ impl Editor {
                     }
                     CursorMovement::NextJump => {
                         self.cursor.jump_forward();
-                    }
-                    CursorMovement::NextAlternatingAlphanum => {
-                        let pos = self
-                            .document
-                            .get_next_alternating_alphanum_pos(self.cursor.pos());
-
-                        self.cursor.update_pos(pos, false);
-                    }
-                    CursorMovement::PreviousAlternatingAlphanum => {
-                        let pos = self
-                            .document
-                            .get_previous_alternating_alphanum_pos(self.cursor.pos());
-
-                        self.cursor.update_pos(pos, false);
                     }
                 }
             }

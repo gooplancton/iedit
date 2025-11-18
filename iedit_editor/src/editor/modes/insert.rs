@@ -38,9 +38,16 @@ impl Editor {
             }
             EditorCommand::Paste => {
                 if let Some(yanked_text) = &self.yanked_text {
-                    let edit = EditOperation::Insertion {
-                        pos: self.cursor.pos(),
-                        text: yanked_text.clone(),
+                    let edit = match self.cursor.get_selected_range() {
+                        Some((pos_from, pos_to)) => EditOperation::Replacement {
+                            pos_from,
+                            pos_to,
+                            text: yanked_text.clone(),
+                        },
+                        None => EditOperation::Insertion {
+                            pos: self.cursor.pos(),
+                            text: yanked_text.clone(),
+                        },
                     };
 
                     self.cursor.selection_anchor = None;
@@ -216,16 +223,8 @@ impl Editor {
             Input::Keypress(Key::Ctrl('g')) => Some(C::SwitchMode(M::Goto {
                 original_cursor_pos: self.cursor.pos(),
             })),
-            Input::Keypress(Key::CtrlDown) => Some(C::ScrollViewportDown),
-            Input::Keypress(Key::CtrlUp) => Some(C::ScrollViewportUp),
-            Input::Keypress(Key::Alt('w')) => Some(C::MoveCursor {
-                movement: CursorMovement::NextAlternatingAlphanum,
-                with_selection: self.is_selection_locked,
-            }),
-            Input::Keypress(Key::Alt('b')) => Some(C::MoveCursor {
-                movement: CursorMovement::PreviousAlternatingAlphanum,
-                with_selection: self.is_selection_locked,
-            }),
+            Input::Keypress(Key::AltDown) => Some(C::ScrollViewportDown),
+            Input::Keypress(Key::AltUp) => Some(C::ScrollViewportUp),
             Input::Keypress(Key::Alt('i')) => Some(C::MoveCursor {
                 movement: CursorMovement::NextJump,
                 with_selection: self.is_selection_locked,
@@ -252,13 +251,21 @@ impl Editor {
                 movement: CursorMovement::EndOfLine,
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Alt('.')) => Some(C::MoveCursor {
+            Input::Keypress(Key::CtrlDown) => Some(C::MoveCursor {
                 movement: CursorMovement::NextParagraph,
                 with_selection: self.is_selection_locked,
             }),
-            Input::Keypress(Key::Alt(',')) => Some(C::MoveCursor {
+            Input::Keypress(Key::CtrlShiftDown) => Some(C::MoveCursor {
+                movement: CursorMovement::NextParagraph,
+                with_selection: true,
+            }),
+            Input::Keypress(Key::CtrlUp) => Some(C::MoveCursor {
                 movement: CursorMovement::PreviousParagraph,
                 with_selection: self.is_selection_locked,
+            }),
+            Input::Keypress(Key::CtrlShiftUp) => Some(C::MoveCursor {
+                movement: CursorMovement::PreviousParagraph,
+                with_selection: true,
             }),
             Input::Keypress(Key::Alt('p')) => Some(C::MoveCursor {
                 movement: CursorMovement::MatchingParenthesis,
@@ -315,7 +322,7 @@ impl Editor {
                     match self.cursor.get_selected_range() {
                         None => {
                             let word_start_pos =
-                                self.document.get_previous_word_pos(self.cursor.pos());
+                                self.document.get_previous_word_start_pos(self.cursor.pos());
                             Some(C::Edit(Op::Replacement {
                                 pos_from: word_start_pos,
                                 pos_to: self.cursor.pos(),
@@ -354,37 +361,33 @@ impl Editor {
                 with_selection: true,
                 movement: CursorMovement::Right(1),
             }),
-            Input::Keypress(Key::ShiftUp) | Input::Keypress(Key::CtrlShiftUp) => {
-                Some(C::MoveCursor {
-                    with_selection: true,
-                    movement: CursorMovement::Up(1),
-                })
-            }
-            Input::Keypress(Key::ShiftDown) | Input::Keypress(Key::CtrlShiftDown) => {
-                Some(C::MoveCursor {
-                    with_selection: true,
-                    movement: CursorMovement::Down(1),
-                })
-            }
-            Input::Keypress(Key::CtrlRight) => {
+            Input::Keypress(Key::ShiftUp) => Some(C::MoveCursor {
+                with_selection: true,
+                movement: CursorMovement::Up(1),
+            }),
+            Input::Keypress(Key::ShiftDown) => Some(C::MoveCursor {
+                with_selection: true,
+                movement: CursorMovement::Down(1),
+            }),
+            Input::Keypress(Key::CtrlRight) | Input::Keypress(Key::Alt('w')) => {
                 Some(C::MoveCursor {
                     with_selection: self.is_selection_locked,
-                    movement: CursorMovement::NextWord,
+                    movement: CursorMovement::NextWordEnd,
                 })
             }
-            Input::Keypress(Key::CtrlLeft) => {
+            Input::Keypress(Key::CtrlShiftRight) => Some(C::MoveCursor {
+                with_selection: true,
+                movement: CursorMovement::NextWordEnd,
+            }),
+            Input::Keypress(Key::CtrlLeft) | Input::Keypress(Key::Alt('b')) => {
                 Some(C::MoveCursor {
                     with_selection: self.is_selection_locked,
-                    movement: CursorMovement::PreviousWord,
+                    movement: CursorMovement::PreviousWordStart,
                 })
             }
             Input::Keypress(Key::CtrlShiftLeft) => Some(C::MoveCursor {
                 with_selection: true,
-                movement: CursorMovement::PreviousWord,
-            }),
-            Input::Keypress(Key::CtrlShiftRight) => Some(C::MoveCursor {
-                with_selection: true,
-                movement: CursorMovement::NextWord,
+                movement: CursorMovement::PreviousWordStart,
             }),
             Input::Keypress(Key::Ctrl('t')) => Some(EditorCommand::DisplayHelp),
             Input::KeyChord([Key::Ctrl('k'), Key::Null, Key::Null]) => {
