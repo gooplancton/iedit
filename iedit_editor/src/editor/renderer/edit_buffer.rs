@@ -15,8 +15,6 @@ impl Editor {
         renderer: &'renderer mut Renderer<'term, Term>,
         line_idx: usize,
     ) -> std::io::Result<()> {
-        renderer.clear_line()?;
-
         let line = &self.document.lines[line_idx];
 
         let mut ui_width = self.ui.term_width as usize;

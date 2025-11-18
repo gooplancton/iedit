@@ -2,7 +2,7 @@ use std::io::Write;
 
 use crate::{
     editor::highlight::{RangeHighlight, SyntaxHighlight},
-    terminal::EMPTY_CURSOR,
+    terminal::{self, EMPTY_CURSOR},
 };
 use iedit_document::DocumentLine;
 use termion::color::{self};
@@ -209,6 +209,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
 
         write!(self.writer, "{}", color::Reset.fg_str())?;
         write!(self.writer, "{}", color::Reset.bg_str())?;
+        write!(self.writer, "{}", terminal::CLEAR_TO_END_OF_LINE)?;
 
         Ok(())
     }

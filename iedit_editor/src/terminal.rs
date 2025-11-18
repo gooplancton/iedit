@@ -15,6 +15,7 @@ pub static CURSOR_LEFT1: &str = "\x1b[1D";
 pub static CURSOR_TO_LINE1: &str = "\x1b[1;1H";
 pub static CURSOR_TO_COL1: &str = "\r";
 pub static CLEAR_LINE: &str = "\x1b[2K";
+pub static CLEAR_TO_END_OF_LINE: &str = "\x1b[0K";
 pub static CLEAR_BELOW_CURSOR: &str = "\x1b[J";
 pub static SAVE_CURSOR: &str = "\x1b[s";
 pub static RESTORE_CURSOR: &str = "\x1b[u";
@@ -25,6 +26,8 @@ pub static CURSOR_START: &str = "\x1b[7m";
 pub static RESET_FG_COLOR: &str = "\x1b[39m";
 pub static RESET_BG_COLOR: &str = "\x1b[0m";
 pub static EMPTY_CURSOR: &str = "\x1b[7m \x1b[0m";
+pub static SYNC_UPDATE_START: &str = "\x1b[?2026h";
+pub static SYNC_UPDATE_END: &str = "\x1b[?2026l";
 pub static H_BAR: &str = "─";
 pub static V_BAR: char = '│';
 

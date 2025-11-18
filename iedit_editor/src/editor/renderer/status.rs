@@ -7,7 +7,7 @@ use crate::{
         renderer::{Renderer, line::LineRenderer},
         search::SearchItem,
         status::KEYBINDINGS,
-    },
+    }, terminal::CLEAR_TO_END_OF_LINE,
 };
 
 impl Editor {
@@ -29,8 +29,6 @@ impl Editor {
             renderer.add_horizontal_bar()?;
         }
         renderer.next_line()?;
-        renderer.clear_line()?;
-
         renderer.add("  ".as_bytes())?;
 
         if !self.status_bar.notification.is_empty() {
@@ -62,6 +60,8 @@ impl Editor {
                 renderer.add(" ".repeat(padding))?;
                 renderer.add(&KEYBINDINGS)?;
             }
+
+            renderer.add(CLEAR_TO_END_OF_LINE)?;
 
             return Ok(());
         }
