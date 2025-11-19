@@ -9,25 +9,8 @@ fn main() -> std::io::Result<()> {
     let path = args.next();
     let open_at = args.next();
 
-    let editor_config_path = std::env::home_dir().map(|mut home_path| {
-        home_path.push(".iedit.conf");
-        home_path
-    });
-    let editor_config = if let Some(editor_config_path) = &editor_config_path {
-        EditorConfig::from_file(editor_config_path).unwrap_or_default()
-    } else {
-        EditorConfig::default()
-    };
-
-    let mut terminal = stdout().into_raw_mode()?;
-    let ui = if editor_config.fullscreen {
-        UILayout::fullscreen(&mut terminal)
-    } else {
-        UILayout::new(editor_config.min_lines, &mut terminal)
-    }?;
-
-    let mut editor = match [path.as_deref(), open_at.as_deref()] {
-        [Some("--version"), None] => {
+    match [path.as_deref(), open_at.as_deref()] {
+    	[Some("--version"), None] => {
             println!("iedit version {}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
@@ -41,6 +24,27 @@ fn main() -> std::io::Result<()> {
             println!("  --version  Show version information");
             return Ok(());
         }
+        _ => {}
+    };        	                                                                                                                                                   
+
+    let editor_config_path = std::env::home_dir().map(|mut home_path| {
+        home_path.push(".iedit.conf");
+        home_path
+    });
+    let editor_config = if let Some(editor_config_path) = &editor_config_path {
+        EditorConfig::from_file(editor_config_path).unwrap_or_default()
+    } else {
+        EditorConfig::default()
+    };
+    
+    let mut terminal = stdout().into_raw_mode()?;
+    let ui = if editor_config.fullscreen {
+        UILayout::fullscreen(&mut terminal)
+    } else {
+        UILayout::new(editor_config.min_lines, &mut terminal)
+    }?;
+
+    let mut editor = match [path.as_deref(), open_at.as_deref()] {
         [Some("--config"), None] => {
             let document = if let Some(editor_config_path) = &editor_config_path {
                 Document::from_file(editor_config_path)?
