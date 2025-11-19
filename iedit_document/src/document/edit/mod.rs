@@ -1,4 +1,4 @@
-use crate::Document;
+use crate::{CharacterIndexable, Document};
 
 mod delete;
 mod insert;
@@ -15,6 +15,52 @@ pub enum Text {
 impl Default for Text {
     fn default() -> Self {
         Self::Empty
+    }
+}
+
+impl ToString for Text {
+    fn to_string(&self) -> String {
+        match self {
+            Text::Empty => String::new(),
+            Text::Char(ch) => String::from(*ch),
+            Text::String(string) => string.clone(),
+            Text::InverseString(string) => string.chars().into_iter().rev().collect(),
+            Text::Lines(lines) => lines.join("\n"),
+        }
+    }
+}
+
+impl Into<String> for Text {
+    fn into(self) -> String {
+        match self {
+            Text::Empty => String::new(),
+            Text::Char(ch) => String::from(ch),
+            Text::String(string) => string,
+            Text::InverseString(string) => string.chars().into_iter().rev().collect(),
+            Text::Lines(lines) => lines.join("\n"),
+        }
+    }
+}
+
+impl From<String> for Text {
+    fn from(value: String) -> Self {
+        if value.is_empty() {
+            return Text::Empty;
+        } else if value.n_chars() == 1 {
+            return Text::Char(value.chars().next().unwrap());
+        }
+
+        let is_multiline = value.find('\n').is_some();
+        if is_multiline {
+            return Text::Lines(
+                value
+                    .split('\n')
+                    .map(|line| line.trim_end_matches('\r').to_owned())
+                    .collect::<Vec<String>>(),
+            );
+        }
+
+        return Text::String(value);
     }
 }
 

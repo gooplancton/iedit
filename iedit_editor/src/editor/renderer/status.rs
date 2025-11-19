@@ -16,6 +16,7 @@ impl Editor {
         renderer: &'renderer mut Renderer<'term, Term>,
     ) -> std::io::Result<()> {
         renderer.add(&self.status_bar.notification)?;
+        renderer.add(CLEAR_TO_END_OF_LINE)?;
         renderer.next_line()?;
 
         Ok(())

@@ -12,6 +12,7 @@ pub struct EditorConfig {
     pub confirm_quit_unsaved_changes: bool,
     pub tab_emit_spaces: bool,
     pub enable_syntax_highlighting: bool,
+    pub use_system_clipboard: bool,
     pub syntax_highlighting_dir: Option<String>,
 }
 
@@ -25,6 +26,7 @@ impl Default for EditorConfig {
             vertical_margin: 4,
             show_line_numbers: true,
             show_keybindings: true,
+            use_system_clipboard: true,
             confirm_quit_unsaved_changes: true,
             tab_emit_spaces: true,
             enable_syntax_highlighting: true,

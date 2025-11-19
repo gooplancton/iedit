@@ -37,23 +37,7 @@ impl Editor {
                 });
             }
             EditorCommand::Paste => {
-                if let Some(yanked_text) = &self.yanked_text {
-                    let edit = match self.cursor.get_selected_range() {
-                        Some((pos_from, pos_to)) => EditOperation::Replacement {
-                            pos_from,
-                            pos_to,
-                            text: yanked_text.clone(),
-                        },
-                        None => EditOperation::Insertion {
-                            pos: self.cursor.pos(),
-                            text: yanked_text.clone(),
-                        },
-                    };
-
-                    self.cursor.selection_anchor = None;
-                    if let Some(cursor_pos) = self.document.apply_edit(edit, S::Undo) {
-                        self.cursor.update_pos(cursor_pos, false);
-                    }
+                if let Some(yanked_text) = self.clipboard.get_text() {
                     match &yanked_text {
                         Text::String(string) => send_simple_notification(format!(
                             "Pasted {} characters",
@@ -64,6 +48,23 @@ impl Editor {
                         }
                         _ => {}
                     };
+
+                    let edit = match self.cursor.get_selected_range() {
+                        Some((pos_from, pos_to)) => EditOperation::Replacement {
+                            pos_from,
+                            pos_to,
+                            text: yanked_text,
+                        },
+                        None => EditOperation::Insertion {
+                            pos: self.cursor.pos(),
+                            text: yanked_text,
+                        },
+                    };
+
+                    self.cursor.selection_anchor = None;
+                    if let Some(cursor_pos) = self.document.apply_edit(edit, S::Undo) {
+                        self.cursor.update_pos(cursor_pos, false);
+                    }
                 }
             }
             EditorCommand::YankSelection | EditorCommand::CutSelection => {
@@ -101,7 +102,7 @@ impl Editor {
                         Text::Lines(lines)
                     };
 
-                    self.yanked_text = Some(text);
+                    self.clipboard.set_text(text);
                     if matches!(command, EditorCommand::CutSelection) {
                         self.cursor.selection_anchor = None;
                         self.cursor.update_pos(pos_from, false);

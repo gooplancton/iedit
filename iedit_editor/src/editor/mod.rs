@@ -10,10 +10,14 @@ use std::{
 
 use crate::{
     config::EditorConfig,
-    editor::{highlight::SyntaxHighlight, search::SearchItem},
+    editor::{
+        clipboard::{EditorClipboard, get_clipboard},
+        highlight::SyntaxHighlight,
+        search::SearchItem,
+    },
     input::Notification,
 };
-use iedit_document::{Document, Text};
+use iedit_document::Document;
 use signal_hook::{consts::SIGWINCH, flag};
 
 use crate::{
@@ -27,6 +31,7 @@ use crate::{
 
 use crossbeam_channel::{Sender, unbounded};
 
+mod clipboard;
 mod commands;
 mod cursor;
 mod highlight;
@@ -49,7 +54,7 @@ pub struct Editor {
     search_item: Option<SearchItem>,
     matched_range: Option<((usize, usize), (usize, usize))>,
     displayed_popup: Option<&'static [&'static str]>,
-    yanked_text: Option<Text>,
+    clipboard: Box<dyn EditorClipboard>,
 
     // TODO: turn into EditorFlags bitfield
     needs_full_rerender: bool,
@@ -76,6 +81,7 @@ impl Editor {
         ui: UILayout,
     ) -> std::io::Result<Self> {
         let viewport = Viewport::new(ui.editor_lines, open_at_line);
+        let clipboard = get_clipboard(config.use_system_clipboard);
 
         let cur_y = min(open_at_line.saturating_sub(1), document.n_lines());
 
@@ -87,7 +93,7 @@ impl Editor {
             cursor: Cursor::new((0, cur_y)),
             ui,
             viewport,
-            yanked_text: None,
+            clipboard,
             search_item: None,
             matched_range: None,
             displayed_popup: None,
