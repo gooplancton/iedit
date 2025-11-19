@@ -1,7 +1,5 @@
 use copypasta_ext::copypasta::ClipboardContext;
 use copypasta_ext::copypasta::ClipboardProvider;
-use copypasta_ext::wayland_bin::WaylandBinClipboardContext;
-use copypasta_ext::x11_bin::X11BinClipboardContext;
 use iedit_document::Text;
 
 #[derive(Default)]
@@ -34,6 +32,7 @@ impl<T: ClipboardProvider> EditorClipboard for T {
     }
 }
 
+#[cfg(target_os = "linux")]
 pub fn get_clipboard(use_system_clipboard: bool) -> Box<dyn EditorClipboard> {
     if !use_system_clipboard {
         return Box::from(BuiltinClipboardContext::default());
@@ -41,9 +40,22 @@ pub fn get_clipboard(use_system_clipboard: bool) -> Box<dyn EditorClipboard> {
 
     if let Ok(ctx) = ClipboardContext::new() {
         Box::from(ctx)
-    } else if let Ok(ctx) = WaylandBinClipboardContext::new() {
+    } else if let Ok(ctx) = copypasta_ext::wayland_bin::WaylandBinClipboardContext::new() {
         Box::from(ctx)
-    } else if let Ok(ctx) = X11BinClipboardContext::new() {
+    } else if let Ok(ctx) = copypasta_ext::x11_bin::X11BinClipboardContext::new() {
+        Box::from(ctx)
+    } else {
+        Box::from(BuiltinClipboardContext::default())
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub fn get_clipboard(use_system_clipboard: bool) -> Box<dyn EditorClipboard> {
+    if !use_system_clipboard {
+        return Box::from(BuiltinClipboardContext::default());
+    }
+
+    if let Ok(ctx) = ClipboardContext::new() {
         Box::from(ctx)
     } else {
         Box::from(BuiltinClipboardContext::default())
