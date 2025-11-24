@@ -83,6 +83,41 @@ pub enum EditOperation {
     },
 }
 
+impl EditOperation {
+    fn get_affected_line_range(&self) -> (usize, usize) {
+        match self {
+            EditOperation::LineRemoval { idx } => (*idx, *idx),
+            EditOperation::Deletion { pos } => (pos.1.saturating_sub(1), pos.1),
+            EditOperation::Insertion { pos, text } => match text {
+                Text::Empty | Text::String(_) | Text::InverseString(_) => (pos.1, pos.1),
+                Text::Char(ch) => {
+                    if *ch == '\n' {
+                        (pos.1, pos.1 + 1)
+                    } else {
+                        (pos.1, pos.1)
+                    }
+                }
+                Text::Lines(items) => (pos.1, pos.1 + items.len()),
+            },
+            EditOperation::Replacement {
+                pos_from,
+                pos_to,
+                text,
+            } => match text {
+                Text::Empty | Text::String(_) | Text::InverseString(_) => (pos_from.1, pos_to.1),
+                Text::Char(ch) => {
+                    if *ch == '\n' {
+                        (pos_from.1, pos_to.1 + 1)
+                    } else {
+                        (pos_from.1, pos_to.1)
+                    }
+                }
+                Text::Lines(items) => (pos_from.1, pos_to.1 + items.len()),
+            },
+        }
+    }
+}
+
 /// Cursor position following edit
 pub type EditResult = Option<(usize, usize)>;
 
@@ -105,7 +140,7 @@ impl Document {
             self.redo_stack.clear();
         }
 
-        let recompute_blocks = self.syntax.is_some() && self.should_recompute_syntax_blocks(&op);
+        let affected_range = op.get_affected_line_range();
 
         let edit_result = match op {
             Op::Insertion {
@@ -257,7 +292,7 @@ impl Document {
             _ => None,
         };
 
-        if recompute_blocks {
+        if self.should_recompute_syntax_blocks(affected_range) {
             self.recompute_syntax_blocks();
         }
 

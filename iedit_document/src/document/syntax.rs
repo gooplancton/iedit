@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use regex_lite::Regex;
 
-use crate::{Document, EditOperation};
+use crate::Document;
 
 pub struct DocumentSyntax {
     pub name: &'static str,
@@ -163,6 +163,10 @@ impl Document {
             return;
         }
 
+        self.lines
+            .iter_mut()
+            .for_each(|line| line.needs_render = true);
+
         let syntax = self.syntax.as_ref().unwrap();
         let mut cur_x = 0;
         let mut cur_y = 0;
@@ -234,24 +238,43 @@ impl Document {
         self.syntax_blocks = blocks;
     }
 
-    pub fn should_recompute_syntax_blocks(&mut self, op: &EditOperation) -> bool {
+    pub fn should_recompute_syntax_blocks(&mut self, affected_line_range: (usize, usize)) -> bool {
         // Naive check for now
-        match *op {
-            EditOperation::LineRemoval { idx: y }
-            | EditOperation::Deletion { pos: (_, y) }
-            | EditOperation::Insertion {
-                pos: (_, y),
-                text: _,
-            } => self.syntax_blocks.iter().any(|block| block.intersects_y(y)),
-            EditOperation::Replacement {
-                pos_from: (_, y_from),
-                pos_to: (_, y_to),
-                text: _,
-            } => self.syntax_blocks.iter().any(|block| {
-                block.intersects_y(y_from)
-                    || block.intersects_y(y_to)
-                    || (y_from < block.start_pos.1 && block.end_pos.is_none_or(|pos| y_to > pos.1))
-            }),
+        let mut multiline_patterns = self
+            .syntax
+            .as_ref()
+            .map(|syntax| syntax.rules.as_slice())
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|rule| {
+                if let SyntaxRule::Multiline {
+                    start_pattern,
+                    end_pattern,
+                    ..
+                } = rule
+                {
+                    Some([start_pattern, end_pattern])
+                } else {
+                    None
+                }
+            });
+
+        for y in affected_line_range.0..=affected_line_range.1 {
+            let line = self.lines.get(y);
+            if line.is_none() {
+                break;
+            }
+
+            let line = line.unwrap().as_ref();
+            if self.syntax_blocks.iter().any(|block| block.intersects_y(y))
+                || multiline_patterns.any(|[start_pattern, end_pattern]| {
+                    start_pattern.is_match(line) || end_pattern.is_match(line)
+                })
+            {
+                return true;
+            }
         }
+
+        false
     }
 }
