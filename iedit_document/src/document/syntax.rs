@@ -1,3 +1,5 @@
+use std::{fs, path::Path};
+
 use regex_lite::Regex;
 
 use crate::{Document, EditOperation};
@@ -32,13 +34,13 @@ impl SyntaxBlock {
 
 pub enum SyntaxRule {
     Inline {
-        pattern: Regex,
         color: String,
+        pattern: Regex,
     },
     Multiline {
+        color: String,
         start_pattern: Regex,
         end_pattern: Regex,
-        color: String,
     },
 }
 
@@ -57,87 +59,86 @@ impl SyntaxRule {
 }
 
 impl DocumentSyntax {
-    pub fn infer_from_extension(ext: &std::ffi::OsStr) -> Option<Self> {
-        // if let Some(base_path) = base_path {
-        //     let custom_sytnax_highlight = Self::load_from_file(
-        //         base_path
-        //             .join(format!("{}.syntax.conf", ext.to_str()?))
-        //             .as_path(),
-        //     );
-
-        //     if let Some(syntax_highlight) = custom_sytnax_highlight {
-        //         return Some(syntax_highlight);
-        //     }
-        // }
-
-        match ext.to_str()? {
-            "py" => Some(Self::builitn_python()),
+    pub fn infer_from_extension(ext: &str) -> Option<Self> {
+        match ext {
+            "py" => Some(Self::builtin_python()),
+            "js" | "jsx" | "mjs" => Some(Self::builtin_javascript()),
+            "rs" => Some(Self::builtin_rust()),
+            "sh" | "bash" => Some(Self::builtin_bash()),
+            "c" | "h" => Some(Self::builtin_c()),
+            "cpp" | "cc" | "cxx" | "hpp" | "hxx" => Some(Self::builtin_cpp()),
             _ => None,
         }
     }
 
-    // pub fn load_from_file(path: impl AsRef<Path>) -> Option<Self> {
-    //     todo!()
-    // }
+    pub fn from_file(path: impl AsRef<Path>) -> Option<Self> {
+        let content = fs::read_to_string(path.as_ref()).ok()?;
+        let mut lines = content.lines();
 
-    pub fn builitn_python() -> Self {
-        Self {
-            name: "Python",
-            rules: vec![
-                // Comments
-                SyntaxRule::Inline {
-                    pattern: Regex::new(r"^#.*$").unwrap(),
-                    color: parse_color_hex("#6A9955", false).unwrap(),
-                },
-                SyntaxRule::Multiline {
-                    start_pattern: Regex::new(r#"""""#).unwrap(),
-                    end_pattern: Regex::new(r#"""""#).unwrap(),
-                    color:  parse_color_hex("#6A9955", false).unwrap(),
-                },
-                SyntaxRule::Multiline {
-                    start_pattern: Regex::new(r#"'''"#).unwrap(),
-                    end_pattern: Regex::new(r#"'''"#).unwrap(),
-                    color:  parse_color_hex("#6A9955", false).unwrap(),
-                },
-                // Strings
-                SyntaxRule::Inline {
-                    pattern: Regex::new(r#"^"(?:[^"\\]|\\.)*""#).unwrap(),
-                    color: parse_color_hex("#6A9955", false).unwrap()
-                },
-                SyntaxRule::Inline {
-                    pattern: Regex::new(r#"^'(?:[^'\\]|\\.)*'"#).unwrap(),
-                    color: parse_color_hex("#6A9955", false).unwrap()
-                },
-                // Keywords
-                SyntaxRule::Inline {
-                    pattern: Regex::new(r"^\b(def|class|if|else|elif|for|while|return|import|from|as|try|except|finally|with|lambda)\b").unwrap(),
-                    color: parse_color_hex("#569CD6", false).unwrap(),
-                },
-                // Built-in functions and types
-                SyntaxRule::Inline {
-                    pattern: Regex::new(r"^\b(print|len|str|int|float|list|dict|set|range|type|isinstance)\b").unwrap(),
-                    color: parse_color_hex("#85855d", false).unwrap(),
-                },
-                // Numbers
-                SyntaxRule::Inline {
-                    pattern: Regex::new(r"^\b\d+\b").unwrap(),
-                    color: parse_color_hex("#B5CEA8", false).unwrap(),
-                },
-                // Operators
-                SyntaxRule::Inline {
-                    pattern: Regex::new(r"^[=+\-*/<>!&|]+").unwrap(),
-                    color: parse_color_hex("#D4D4D4", false).unwrap()
-                },
-            ],
+        let name = lines.next()?.trim();
+        let name = Box::leak(name.to_string().into_boxed_str());
+
+        let mut rules = Vec::new();
+
+        for line in lines {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() < 2 {
+                continue;
+            }
+
+            let color_hex = parts[0];
+            let color = parse_color_hex(color_hex, false);
+            if color.is_none() {
+                continue;
+            }
+
+            let color = color.unwrap();
+
+            if parts.len() == 2 {
+                // Inline rule
+                let pattern_str = parts[1];
+                let pattern = Regex::new(pattern_str);
+                if pattern.is_err() {
+                    continue;
+                }
+
+                rules.push(SyntaxRule::Inline {
+                    color,
+                    pattern: pattern.unwrap(),
+                });
+            } else if parts.len() == 3 {
+                // Multiline rule
+                let start_pattern_str = parts[1];
+                let end_pattern_str = parts[2];
+
+                let start_pattern = Regex::new(start_pattern_str);
+                let end_pattern = Regex::new(end_pattern_str);
+                if !start_pattern.is_ok() || !end_pattern.is_ok() {
+                    continue;
+                }
+
+                rules.push(SyntaxRule::Multiline {
+                    color,
+                    start_pattern: start_pattern.unwrap(),
+                    end_pattern: end_pattern.unwrap(),
+                });
+            }
         }
+
+        if rules.is_empty() {
+            return None;
+        }
+
+        Some(DocumentSyntax { name, rules })
     }
 }
 
-// rules: &[
-//     // Comments
-//
-
-fn parse_color_hex(color_hex: &str, is_bg: bool) -> Option<String> {
+pub fn parse_color_hex(color_hex: &str, is_bg: bool) -> Option<String> {
     if color_hex.starts_with('#')
         && color_hex.len() == 7
         && let (Ok(r), Ok(g), Ok(b)) = (
@@ -174,11 +175,8 @@ impl Document {
             if let Some(current_block) = &mut current_block {
                 // try to find the end of the current block
 
-                if let Some(SyntaxRule::Multiline {
-                    start_pattern: _,
-                    end_pattern,
-                    color: _,
-                }) = syntax.rules.get(current_block.rule_idx)
+                if let Some(SyntaxRule::Multiline { end_pattern, .. }) =
+                    syntax.rules.get(current_block.rule_idx)
                 {
                     if let Some(end_match) = end_pattern.find_at(line.as_ref(), cur_x) {
                         let block_end_x_start = line
@@ -200,11 +198,7 @@ impl Document {
                 // try to find a block start
 
                 for (rule_idx, rule) in syntax.rules.iter().enumerate() {
-                    if let SyntaxRule::Multiline {
-                        start_pattern,
-                        end_pattern: _,
-                        color: _,
-                    } = rule
+                    if let SyntaxRule::Multiline { start_pattern, .. } = rule
                         && let Some(start_match) = start_pattern.find_at(line.as_ref(), cur_x)
                     {
                         let block_start_x = line
@@ -236,8 +230,6 @@ impl Document {
             // unclosed block spans till document end
             blocks.push(current_block.take().unwrap());
         }
-
-        eprintln!("debug: syntax blocks: {:?}", &blocks);
 
         self.syntax_blocks = blocks;
     }

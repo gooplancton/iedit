@@ -1,8 +1,10 @@
+mod builtin_languages;
 mod edit;
 mod find;
 mod syntax;
 
 use std::{
+    ffi::OsStr,
     fs::File,
     ops::{self},
     path::{Path, PathBuf},
@@ -79,7 +81,10 @@ impl Document {
         }
     }
 
-    pub fn from_file(file_path: impl AsRef<Path>) -> std::io::Result<Self> {
+    pub fn from_file(
+        file_path: impl AsRef<Path>,
+        syntaxes_path: Option<impl AsRef<Path>>,
+    ) -> std::io::Result<Self> {
         let (file, canonicalized_file_path, lines, line_offsets, end_of_line_seq) =
             read_file(file_path)?;
         let is_readonly = if let Some(file) = &file
@@ -90,9 +95,15 @@ impl Document {
             false
         };
 
-        let syntax = canonicalized_file_path
-            .extension()
-            .and_then(DocumentSyntax::infer_from_extension);
+        let syntax =
+            if let Some(extension) = canonicalized_file_path.extension().and_then(OsStr::to_str) {
+                syntaxes_path
+                    .map(|path| path.as_ref().join(format!("{}.syntax", extension)))
+                    .and_then(DocumentSyntax::from_file)
+                    .or_else(|| DocumentSyntax::infer_from_extension(extension))
+            } else {
+                None
+            };
 
         let mut doc = Self {
             lines,

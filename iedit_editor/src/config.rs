@@ -1,6 +1,8 @@
-use iedit_macros::ConfigParse;
+use iedit_document::{DocumentSyntax, SyntaxRule};
+use iedit_macros::{ConfigParse, Reflective};
+use regex_lite::Regex;
 
-#[derive(ConfigParse)]
+#[derive(ConfigParse, Reflective)]
 pub struct EditorConfig {
     pub fullscreen: bool,
     pub min_lines: u16,
@@ -32,5 +34,17 @@ impl Default for EditorConfig {
             enable_syntax_highlighting: true,
             syntax_highlighting_dir: None,
         }
+    }
+}
+
+pub fn editor_config_syntax() -> DocumentSyntax {
+    let regex = format!("^({})", EditorConfig::field_names().join("|"));
+
+    DocumentSyntax {
+        name: "iedit",
+        rules: vec![SyntaxRule::Inline {
+            color: termion::color::Green.fg_str().to_owned(),
+            pattern: Regex::new(&regex).unwrap(),
+        }],
     }
 }

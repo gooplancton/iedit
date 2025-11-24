@@ -95,3 +95,38 @@ pub fn derive_config_parse(input: TokenStream) -> TokenStream {
 
     TokenStream::from(expanded)
 }
+
+#[proc_macro_derive(Reflective)]
+pub fn derive_reflective(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let name = &input.ident;
+
+    let fields = match &input.data {
+        Data::Struct(data) => match &data.fields {
+            Fields::Named(fields) => &fields.named,
+            _ => panic!("Reflective only supports structs with named fields"),
+        },
+        _ => panic!("Reflective only supports structs"),
+    };
+
+    let field_names = fields.iter().map(|f| {
+        let field_name = &f.ident;
+        let field_name_str = field_name.as_ref().unwrap().to_string();
+
+        quote! {
+            #field_name_str,
+        }
+    });
+
+    let expanded = quote! {
+        impl #name {
+            fn field_names() -> &'static[&'static str] {
+                &[
+                    #(#field_names)*
+                ]
+            }
+        }
+    };
+
+    TokenStream::from(expanded)
+}

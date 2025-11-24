@@ -26,3 +26,4 @@ proc-macro2 = "1.0"
 
 [patch.crates-io]
 termion = { path = "./termion" }
+regex-lite = { path = "./regex-lite" }

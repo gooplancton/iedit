@@ -204,17 +204,23 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                 }
             }
 
+            let offset_byte_idx = self.line.byte_to_char_idx(offset);
+            if offset_byte_idx.is_none() {
+                return;
+            }
+
+            let offset_byte_idx = offset_byte_idx.unwrap();
             for rule in syntax.rules.iter() {
                 if let SyntaxRule::Inline { pattern, color } = rule {
-                    // NOTE: inline rules are artificially altered to be forced to match the start of line ^
-                    let line_subset = self.line.get_range(offset..);
-                    if let Some(rx_match) = pattern.find(line_subset) {
-                        let start_char = offset;
-                        let end_char = offset
-                            + self
-                                .line
-                                .byte_to_char_idx(rx_match.end().saturating_sub(1))
-                                .unwrap_or(self.line.len());
+                    if let Some(rx_match) = pattern.find_anchored_at(self.line.as_ref(), offset_byte_idx) {
+                        let start_char = self
+                            .line
+                            .byte_to_char_idx(rx_match.start().saturating_sub(1))
+                            .unwrap_or_default();
+                        let end_char = self
+                            .line
+                            .byte_to_char_idx(rx_match.end().saturating_sub(1))
+                            .unwrap_or(self.line.len());
 
                         self.color_ranges.push(ColorRange {
                             start: start_char,

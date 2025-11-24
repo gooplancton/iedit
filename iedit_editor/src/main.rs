@@ -1,7 +1,11 @@
 use std::io::{self, IsTerminal, Read, stdin, stdout};
 
 use iedit_document::Document;
-use iedit_editor::{Editor, config::EditorConfig, terminal::UILayout};
+use iedit_editor::{
+    Editor,
+    config::{EditorConfig, editor_config_syntax},
+    terminal::UILayout,
+};
 use termion::raw::IntoRawMode;
 
 fn main() -> std::io::Result<()> {
@@ -10,7 +14,7 @@ fn main() -> std::io::Result<()> {
     let open_at = args.next();
 
     match [path.as_deref(), open_at.as_deref()] {
-    	[Some("--version"), None] => {
+        [Some("--version"), None] => {
             println!("iedit version {}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
@@ -25,7 +29,7 @@ fn main() -> std::io::Result<()> {
             return Ok(());
         }
         _ => {}
-    };        	                                                                                                                                                   
+    };
 
     let editor_config_path = std::env::home_dir().map(|mut home_path| {
         home_path.push(".iedit.conf");
@@ -36,7 +40,7 @@ fn main() -> std::io::Result<()> {
     } else {
         EditorConfig::default()
     };
-    
+
     let mut terminal = stdout().into_raw_mode()?;
     let ui = if editor_config.fullscreen {
         UILayout::fullscreen(&mut terminal)
@@ -47,7 +51,10 @@ fn main() -> std::io::Result<()> {
     let mut editor = match [path.as_deref(), open_at.as_deref()] {
         [Some("--config"), None] => {
             let document = if let Some(editor_config_path) = &editor_config_path {
-                Document::from_file(editor_config_path)?
+                let mut doc = Document::from_file(editor_config_path, Option::<&str>::None)?;
+                doc.syntax = Some(editor_config_syntax());
+
+                doc
             } else {
                 return Err(io::Error::other("Could not determine config path"));
             };
@@ -59,7 +66,8 @@ fn main() -> std::io::Result<()> {
                 .and_then(|open_at| open_at.parse::<usize>().ok())
                 .unwrap_or_default();
 
-            let document = Document::from_file(path)?;
+            let document =
+                Document::from_file(path, editor_config.syntax_highlighting_dir.as_ref())?;
 
             Editor::new(document, open_at, editor_config, ui)?
         }
