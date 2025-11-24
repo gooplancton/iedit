@@ -94,11 +94,6 @@ impl DocumentSyntax {
                     pattern: Regex::new(r"\b(console|window|document|Array|Object|String|Number|Boolean|Math|Date|JSON|Promise|null|undefined|true|false)\b").unwrap(),
                     color: parse_color_hex("#4EC9B0", false).unwrap(),
                 },
-                // Function names
-                SyntaxRule::Inline {
-                    pattern: Regex::new(r"\b[a-zA-Z_$][a-zA-Z0-9_$]*(?=\s*\()").unwrap(),
-                    color: parse_color_hex("#DCDCAA", false).unwrap(),
-                },
                 // Numbers
                 SyntaxRule::Inline {
                     pattern: Regex::new(r"\b\d+\.?\d*\b").unwrap(),
