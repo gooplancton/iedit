@@ -1,5 +1,6 @@
 mod edit;
 mod find;
+mod syntax;
 
 use std::{
     fs::File,
@@ -10,6 +11,7 @@ use std::{
 
 pub use crate::line::{CharacterIndexable, DocumentLine};
 pub use edit::{EditOperation, InverseStack, Text};
+pub use syntax::{DocumentSyntax, SyntaxBlock, SyntaxRule};
 
 use crate::io::read_file;
 
@@ -18,6 +20,8 @@ pub struct Document {
     pub file: Option<File>,
     pub canonicalized_file_path: PathBuf,
     pub line_offsets: Vec<u64>,
+    pub syntax: Option<DocumentSyntax>,
+    pub syntax_blocks: Vec<SyntaxBlock>,
     undo_stack: Vec<EditOperation>,
     redo_stack: Vec<EditOperation>,
 
@@ -32,6 +36,8 @@ impl Default for Document {
             lines: Default::default(),
             file: Default::default(),
             canonicalized_file_path: Default::default(),
+            syntax: Default::default(),
+            syntax_blocks: Default::default(),
             line_offsets: Default::default(),
             undo_stack: Default::default(),
             redo_stack: Default::default(),
@@ -65,6 +71,8 @@ impl Document {
             line_offsets: vec![],
             undo_stack: vec![],
             redo_stack: vec![],
+            syntax: None,
+            syntax_blocks: Default::default(),
             end_of_line_seq: "\n".to_owned(),
             last_save_time: SystemTime::now(),
             is_readonly,
@@ -82,17 +90,27 @@ impl Document {
             false
         };
 
-        Ok(Self {
+        let syntax = canonicalized_file_path
+            .extension()
+            .and_then(DocumentSyntax::infer_from_extension);
+
+        let mut doc = Self {
             lines,
             file,
             canonicalized_file_path,
             end_of_line_seq,
+            syntax,
+            syntax_blocks: Default::default(),
             line_offsets,
             undo_stack: vec![],
             redo_stack: vec![],
             last_save_time: SystemTime::now(),
             is_readonly,
-        })
+        };
+
+        doc.recompute_syntax_blocks();
+
+        Ok(doc)
     }
 
     pub fn get_name(&self) -> Option<&str> {

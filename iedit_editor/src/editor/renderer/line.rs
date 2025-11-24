@@ -1,10 +1,10 @@
 use std::io::Write;
 
 use crate::{
-    editor::highlight::{RangeHighlight, SyntaxHighlight},
+    editor::highlight::RangeHighlight,
     terminal::{self, EMPTY_CURSOR},
 };
-use iedit_document::DocumentLine;
+use iedit_document::{DocumentLine, DocumentSyntax, SyntaxBlock, SyntaxRule};
 use termion::color::{self};
 
 pub struct ColorRange<'renderer> {
@@ -17,6 +17,7 @@ pub struct ColorRange<'renderer> {
 
 pub struct LineRenderer<'line, 'writer, Writer: Write> {
     pub line: &'line DocumentLine,
+    pub line_idx: usize,
     pub char_offset: usize,
     pub visual_offset: usize,
     pub ui_width: usize,
@@ -29,6 +30,7 @@ pub struct LineRenderer<'line, 'writer, Writer: Write> {
 impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
     pub fn new(
         line: &'line DocumentLine,
+        line_idx: usize,
         visual_offset: usize,
         ui_width: usize,
         writer: &'writer mut Writer,
@@ -38,6 +40,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
 
         Self {
             line,
+            line_idx,
             char_offset,
             visual_offset,
             ui_width,
@@ -138,24 +141,95 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
         }
     }
 
-    pub fn add_syntax_highlight(&mut self, syntax_highlight: &'writer SyntaxHighlight) {
-        for rule in &syntax_highlight.rules {
-            for rx_match in rule.pattern.find_iter(self.line.as_ref()) {
-                let start_char = self
-                    .line
-                    .byte_to_char_idx(rx_match.start())
-                    .unwrap_or_default();
-                let end_char = self
-                    .line
-                    .byte_to_char_idx(rx_match.end().saturating_sub(1))
-                    .unwrap_or(self.line.len());
-                self.color_ranges.push(ColorRange {
-                    start: start_char,
-                    end: end_char,
-                    is_bg: rule.is_bg,
-                    color_str: &rule.color,
-                });
+    pub fn add_syntax_highlight(
+        &mut self,
+        syntax: &'writer DocumentSyntax,
+        blocks: &'writer [SyntaxBlock],
+    ) {
+        let mut offset = 0;
+        let len = self.line.len();
+        let mut iter = 0;
+
+        'outer: while offset < len && iter < len {
+            iter += 1;
+            for block in blocks.iter() {
+                if (offset, self.line_idx) == block.start_pos {
+                    // start of block
+                    let color_str = &syntax.rules[block.rule_idx].get_color();
+                    if let Some(end_pos) = block.end_pos
+                        && end_pos.1 == self.line_idx
+                    {
+                        // inline block
+                        self.color_ranges.push(ColorRange {
+                            start: offset,
+                            end: end_pos.0,
+                            is_bg: false,
+                            color_str,
+                        });
+
+                        offset = end_pos.0 + 1;
+                        continue 'outer;
+                    } else {
+                        // start of block
+                        self.color_ranges.push(ColorRange {
+                            start: offset,
+                            end: self.line.len(),
+                            is_bg: false,
+                            color_str,
+                        });
+                        break 'outer;
+                    }
+                } else if block.end_pos.is_some_and(|end_pos| {
+                    (end_pos.0 - block.end_symbol_len, end_pos.1) == (offset, self.line_idx)
+                }) {
+                    // end of block, start_pos.0 is for sure on a previous line
+                    let color_str = &syntax.rules[block.rule_idx].get_color();
+                    self.color_ranges.push(ColorRange {
+                        start: 0,
+                        end: offset + block.end_symbol_len,
+                        is_bg: false,
+                        color_str,
+                    });
+                    break 'outer;
+                } else if block.contains_pos((offset, self.line_idx)) {
+                    // fully inside a block
+                    let color_str = &syntax.rules[block.rule_idx].get_color();
+                    self.color_ranges.push(ColorRange {
+                        start: 0,
+                        end: self.line.len(),
+                        is_bg: false,
+                        color_str,
+                    });
+                    break 'outer;
+                }
             }
+
+            for rule in syntax.rules.iter() {
+                if let SyntaxRule::Inline { pattern, color } = rule {
+                    // NOTE: inline rules are artificially altered to be forced to match the start of line ^
+                    let line_subset = self.line.get_range(offset..);
+                    if let Some(rx_match) = pattern.find(line_subset) {
+                        let start_char = offset;
+                        let end_char = offset
+                            + self
+                                .line
+                                .byte_to_char_idx(rx_match.end().saturating_sub(1))
+                                .unwrap_or(self.line.len());
+
+                        self.color_ranges.push(ColorRange {
+                            start: start_char,
+                            end: end_char,
+                            is_bg: false,
+                            color_str: &color,
+                        });
+
+                        offset = end_char + 1;
+                        continue 'outer;
+                    }
+                }
+            }
+
+            offset += 1;
         }
     }
 

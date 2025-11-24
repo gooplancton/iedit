@@ -45,6 +45,7 @@ impl Editor {
 
         let mut line_renderer = LineRenderer::new(
             line,
+            line_idx,
             self.viewport.left_col,
             ui_width,
             &mut renderer.term,
@@ -52,9 +53,9 @@ impl Editor {
         );
 
         if !self.is_viewing_execution_output
-            && let Some(ref syntax_highlight) = renderer.syntax_highlight
+            && let Some(syntax) = self.document.syntax.as_ref()
         {
-            line_renderer.add_syntax_highlight(syntax_highlight);
+            line_renderer.add_syntax_highlight(syntax, self.document.syntax_blocks.as_slice());
         }
 
         if let Some(matched_range) = self.matched_range {

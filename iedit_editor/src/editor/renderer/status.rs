@@ -7,7 +7,8 @@ use crate::{
         renderer::{Renderer, line::LineRenderer},
         search::SearchItem,
         status::KEYBINDINGS,
-    }, terminal::CLEAR_TO_END_OF_LINE,
+    },
+    terminal::CLEAR_TO_END_OF_LINE,
 };
 
 impl Editor {
@@ -102,6 +103,7 @@ impl Editor {
 
         let mut line_renderer = LineRenderer::new(
             content,
+            0,
             0,
             self.ui.term_width as usize,
             &mut renderer.term,

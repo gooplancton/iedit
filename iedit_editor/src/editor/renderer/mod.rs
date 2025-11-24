@@ -9,7 +9,6 @@ use termion::cursor::Goto;
 
 use crate::{
     Editor,
-    editor::highlight::SyntaxHighlight,
     terminal::{
         self, CLEAR_BELOW_CURSOR, CLEAR_LINE, CURSOR_DOWN1, CURSOR_TO_COL1, H_BAR, UILayout,
     },
@@ -18,7 +17,6 @@ use crate::{
 pub struct Renderer<'editor, Term: Write> {
     term: BufWriter<&'editor mut Term>,
     ui: UILayout,
-    syntax_highlight: Option<SyntaxHighlight>,
     horizontal_bar: String,
     tab_size: usize,
     is_first_render: bool,
@@ -29,7 +27,6 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         term: &'term mut Term,
         ui: UILayout,
         tab_size: usize,
-        syntax_highlight: Option<SyntaxHighlight>,
     ) -> Self {
         let horizontal_bar = str::repeat(H_BAR, ui.term_width as usize);
 
@@ -38,7 +35,6 @@ impl<'term, Term: Write> Renderer<'term, Term> {
             ui,
             horizontal_bar,
             tab_size,
-            syntax_highlight,
             is_first_render: true,
         }
     }

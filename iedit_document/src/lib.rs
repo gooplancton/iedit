@@ -2,5 +2,8 @@ mod document;
 mod io;
 mod line;
 
-pub use document::{Document, EditOperation, InverseStack, Text, CharacterIndexable};
+pub use document::{
+    CharacterIndexable, Document, DocumentSyntax, EditOperation, InverseStack, SyntaxBlock,
+    SyntaxRule, Text,
+};
 pub use line::DocumentLine;

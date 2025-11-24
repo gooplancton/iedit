@@ -105,7 +105,9 @@ impl Document {
             self.redo_stack.clear();
         }
 
-        match op {
+        let recompute_blocks = self.syntax.is_some() && self.should_recompute_syntax_blocks(&op);
+
+        let edit_result = match op {
             Op::Insertion {
                 pos,
                 text: T::Char(newline),
@@ -253,7 +255,13 @@ impl Document {
                 Some(new_pos)
             }
             _ => None,
+        };
+
+        if recompute_blocks {
+            self.recompute_syntax_blocks();
         }
+
+        edit_result
     }
 
     pub fn undo_last_edit(&mut self) -> EditResult {

@@ -1,7 +1,6 @@
 use std::{
     cmp::min,
     io::Write,
-    path::PathBuf,
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
@@ -12,7 +11,6 @@ use crate::{
     config::EditorConfig,
     editor::{
         clipboard::{EditorClipboard, get_clipboard},
-        highlight::SyntaxHighlight,
         search::SearchItem,
     },
     input::Notification,
@@ -127,26 +125,10 @@ impl Editor {
         // TODO: allow user to select cursor shape
         // write!(term, "\x1b[5 q")?;
 
-        let syntax_highlight = if self.config.enable_syntax_highlighting {
-            let base_dir = self
-                .config
-                .syntax_highlighting_dir
-                .take()
-                .map(PathBuf::from);
-
-            self.document
-                .canonicalized_file_path
-                .extension()
-                .and_then(|ext| SyntaxHighlight::infer_from_extension(ext, base_dir))
-        } else {
-            None
-        };
-
         let mut renderer = Renderer::new(
             term,
             self.ui.clone(),
             self.config.tab_size as usize,
-            syntax_highlight,
         );
         renderer.render(self)?;
 

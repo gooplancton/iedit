@@ -138,6 +138,7 @@ name = "iedit_document"
 version = "0.1.0"
 dependencies = [
  "regex-lite",
+ "termion",
 ]
 
 [[package]]
