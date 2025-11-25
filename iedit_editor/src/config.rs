@@ -1,3 +1,5 @@
+use std::env;
+
 use iedit_document::{DocumentSyntax, SyntaxRule};
 use iedit_macros::{ConfigParse, Reflective};
 use regex_lite::Regex;
@@ -11,6 +13,7 @@ pub struct EditorConfig {
     pub tab_size: u16,
     pub show_line_numbers: bool,
     pub show_keybindings: bool,
+    pub render_trailing_whitespace: bool,
     pub confirm_quit_unsaved_changes: bool,
     pub tab_emit_spaces: bool,
     pub enable_syntax_highlighting: bool,
@@ -20,19 +23,26 @@ pub struct EditorConfig {
 
 impl Default for EditorConfig {
     fn default() -> Self {
+        let syntax_highlighting_dir = env::home_dir().map(|dir| {
+            dir.join(".config/iedit/syntax")
+                .to_string_lossy()
+                .to_string()
+        });
+
         Self {
             fullscreen: false,
             min_lines: 0,
             horizontal_margin: 4,
             tab_size: 4,
             vertical_margin: 4,
+            render_trailing_whitespace: true,
             show_line_numbers: true,
             show_keybindings: true,
             use_system_clipboard: true,
             confirm_quit_unsaved_changes: true,
             tab_emit_spaces: true,
             enable_syntax_highlighting: true,
-            syntax_highlighting_dir: None,
+            syntax_highlighting_dir,
         }
     }
 }

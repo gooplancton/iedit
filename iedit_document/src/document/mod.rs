@@ -29,6 +29,7 @@ pub struct Document {
 
     pub end_of_line_seq: String,
     pub last_save_time: SystemTime,
+    pub auto_inserted_whitespace_line: Option<usize>,
     pub is_readonly: bool,
 }
 
@@ -44,6 +45,7 @@ impl Default for Document {
             undo_stack: Default::default(),
             redo_stack: Default::default(),
             end_of_line_seq: "\n".to_owned(),
+            auto_inserted_whitespace_line: None,
             last_save_time: SystemTime::now(),
             is_readonly: false,
         }
@@ -75,6 +77,7 @@ impl Document {
             redo_stack: vec![],
             syntax: None,
             syntax_blocks: Default::default(),
+            auto_inserted_whitespace_line: None,
             end_of_line_seq: "\n".to_owned(),
             last_save_time: SystemTime::now(),
             is_readonly,
@@ -116,6 +119,7 @@ impl Document {
             undo_stack: vec![],
             redo_stack: vec![],
             last_save_time: SystemTime::now(),
+            auto_inserted_whitespace_line: None,
             is_readonly,
         };
 

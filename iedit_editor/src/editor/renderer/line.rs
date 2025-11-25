@@ -19,6 +19,7 @@ pub struct LineRenderer<'line, 'writer, Writer: Write> {
     pub line: &'line DocumentLine,
     pub line_idx: usize,
     pub char_offset: usize,
+    pub trailing_whitespace_offset: usize,
     pub visual_offset: usize,
     pub ui_width: usize,
     pub writer: &'writer mut Writer,
@@ -45,6 +46,7 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
             visual_offset,
             ui_width,
             color_ranges: vec![],
+            trailing_whitespace_offset: line.len(),
             writer,
             tab_size,
             cursor_at_end: false,
@@ -74,10 +76,16 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
 
         if ch == '\t' {
             let n_spaces = self.tab_size - (visual_idx % self.tab_size);
-            let tab_string = " ".repeat(n_spaces);
+            let tab_string = if char_idx < self.trailing_whitespace_offset {
+                " ".repeat(n_spaces)
+            } else {
+                "─".repeat(n_spaces)
+            };
             write!(self.writer, "{}", &tab_string)?;
-        } else {
+        } else if char_idx < self.trailing_whitespace_offset {
             write!(self.writer, "{}", ch)?;
+        } else {
+            write!(self.writer, "•")?;
         }
 
         self.color_ranges
@@ -96,6 +104,19 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
             })?;
 
         Ok(())
+    }
+
+    pub fn add_trailing_whitespace(&mut self) {
+        let trailing_whitespace_idx = self
+            .line
+            .as_ref()
+            .rfind(|ch: char| !ch.is_whitespace())
+            .map(|idx| idx + 1)
+            .unwrap_or_default();
+        self.trailing_whitespace_offset = self
+            .line
+            .byte_to_char_idx(trailing_whitespace_idx)
+            .unwrap_or(self.line.len());
     }
 
     pub fn add_range_highlight(
@@ -193,7 +214,9 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     continue 'outer;
                 } else if block.contains_pos((offset, self.line_idx)) {
                     // inside a block
-                    let end = if let Some(pos) = block.end_pos && pos.1 == self.line_idx {
+                    let end = if let Some(pos) = block.end_pos
+                        && pos.1 == self.line_idx
+                    {
                         // block ends in current line
                         pos.0
                     } else {
@@ -219,7 +242,9 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
             let offset_byte_idx = offset_byte_idx.unwrap();
             for rule in syntax.rules.iter() {
                 if let SyntaxRule::Inline { pattern, color } = rule {
-                    if let Some(rx_match) = pattern.find_anchored_at(self.line.as_ref(), offset_byte_idx) {
+                    if let Some(rx_match) =
+                        pattern.find_anchored_at(self.line.as_ref(), offset_byte_idx)
+                    {
                         let start_char = self
                             .line
                             .byte_to_char_idx(rx_match.start().saturating_sub(1))
@@ -283,6 +308,10 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
 
             if visual_idx >= self.ui_width + self.visual_offset {
                 break;
+            }
+
+            if char_idx >= self.trailing_whitespace_offset {
+                write!(self.writer, "{}", termion::color::LightBlack.fg_str())?;
             }
 
             if visual_idx >= self.visual_offset {

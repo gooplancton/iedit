@@ -122,14 +122,7 @@ impl Editor {
     }
 
     pub fn run<Term: Write>(&mut self, term: &mut Term) -> std::io::Result<EditorRunResult> {
-        // TODO: allow user to select cursor shape
-        // write!(term, "\x1b[5 q")?;
-
-        let mut renderer = Renderer::new(
-            term,
-            self.ui.clone(),
-            self.config.tab_size as usize,
-        );
+        let mut renderer = Renderer::new(term, self.ui.clone(), self.config.tab_size as usize);
         renderer.render(self)?;
 
         let window_resized = Arc::<AtomicBool>::new(AtomicBool::new(false));

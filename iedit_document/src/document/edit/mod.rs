@@ -121,7 +121,7 @@ impl EditOperation {
 /// Cursor position following edit
 pub type EditResult = Option<(usize, usize)>;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum InverseStack {
     Undo,
     Redo,
@@ -141,15 +141,44 @@ impl Document {
         }
 
         let affected_range = op.get_affected_line_range();
+        if !matches!(
+            op,
+            Op::Insertion {
+                pos: _,
+                text: T::Char('\n')
+            }
+        ) {
+            self.auto_inserted_whitespace_line = None;
+        }
 
         let edit_result = match op {
             Op::Insertion {
                 pos,
-                text: T::Char(newline),
-            } if newline == '\n' || newline == '\r' => {
+                text: T::Char('\n'),
+            } => {
                 let new_pos = self.insert_newline_at(pos)?;
-                self.get_inverse_stack(inverse_stack)
-                    .push(Op::Deletion { pos: new_pos });
+                let has_auto_inserted_whitespace = new_pos.0 != 0;
+
+                if !has_auto_inserted_whitespace {
+                    self.auto_inserted_whitespace_line = None;
+                    self.get_inverse_stack(inverse_stack)
+                        .push(Op::Deletion { pos: new_pos });
+                } else if let Some(return_y) = self.auto_inserted_whitespace_line {
+                    self.lines[pos.1].truncate(0); // TODO: move into insert_newline_at
+                    let return_x = self.lines[return_y].len();
+                    *self.get_inverse_stack(inverse_stack).last_mut().unwrap() = Op::Replacement {
+                        pos_from: (return_x, return_y),
+                        pos_to: new_pos,
+                        text: T::Empty,
+                    };
+                } else {
+                    self.auto_inserted_whitespace_line = Some(pos.1);
+                    self.get_inverse_stack(inverse_stack).push(Op::Replacement {
+                        pos_from: pos,
+                        pos_to: new_pos,
+                        text: T::Empty
+                    });
+                }
 
                 Some(new_pos)
             }

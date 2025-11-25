@@ -53,6 +53,7 @@ impl Editor {
         );
 
         if !self.is_viewing_execution_output
+            && self.config.enable_syntax_highlighting
             && let Some(syntax) = self.document.syntax.as_ref()
         {
             line_renderer.add_syntax_highlight(syntax, self.document.syntax_blocks.as_slice());
@@ -67,6 +68,10 @@ impl Editor {
             let highlight = RangeHighlight::new(line_idx, &highlighted_range);
             line_renderer.add_range_highlight(highlight, true, termion::color::LightBlue.bg_str());
         };
+
+        if self.config.render_trailing_whitespace {
+            line_renderer.add_trailing_whitespace();
+        }
 
         line_renderer.render()?;
 
