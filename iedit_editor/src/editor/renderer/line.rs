@@ -159,18 +159,18 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     if let Some(end_pos) = block.end_pos
                         && end_pos.1 == self.line_idx
                     {
-                        // inline block
+                        // inline block, skip to block end
                         self.color_ranges.push(ColorRange {
                             start: offset,
-                            end: end_pos.0,
+                            end: end_pos.0.saturating_sub(1),
                             is_bg: false,
                             color_str,
                         });
 
-                        offset = end_pos.0 + 1;
+                        offset = end_pos.0;
                         continue 'outer;
                     } else {
-                        // start of block
+                        // start of block, end is on another line
                         self.color_ranges.push(ColorRange {
                             start: offset,
                             end: self.line.len(),
@@ -186,26 +186,29 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     let color_str = syntax.rules[block.rule_idx].get_color();
                     self.color_ranges.push(ColorRange {
                         start: 0,
-                        end: offset + block.end_symbol_len,
+                        end: offset + block.end_symbol_len - 1,
                         is_bg: false,
                         color_str,
                     });
-                    break 'outer;
+                    offset += block.end_symbol_len + 1;
+                    continue 'outer;
                 } else if block.contains_pos((offset, self.line_idx)) {
                     // inside a block
                     let color_str = syntax.rules[block.rule_idx].get_color();
                     let end = if let Some(pos) = block.end_pos && pos.1 == self.line_idx {
+                        // block ends in current line
                         pos.0
                     } else {
+                        // block extends to next line
                         self.line.len()
                     };
                     self.color_ranges.push(ColorRange {
                         start: 0,
-                        end,
+                        end: end.saturating_sub(1),
                         is_bg: false,
                         color_str,
                     });
-                    offset = end;
+                    offset = end + 1;
                     continue 'outer;
                 }
             }
