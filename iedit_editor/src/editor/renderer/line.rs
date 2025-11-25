@@ -153,9 +153,9 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
         'outer: while offset < len && iter < len {
             iter += 1;
             for block in blocks.iter() {
+                let color_str = &syntax.rules[block.rule_idx].get_color();
                 if (offset, self.line_idx) == block.start_pos {
                     // start of block
-                    let color_str = &syntax.rules[block.rule_idx].get_color();
                     if let Some(end_pos) = block.end_pos
                         && end_pos.1 == self.line_idx
                     {
@@ -183,10 +183,9 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     (end_pos.0 - block.end_symbol_len, end_pos.1) == (offset, self.line_idx)
                 }) {
                     // end of block, start_pos.0 is for sure on a previous line
-                    let color_str = syntax.rules[block.rule_idx].get_color();
                     self.color_ranges.push(ColorRange {
                         start: 0,
-                        end: offset + block.end_symbol_len - 1,
+                        end: offset + block.end_symbol_len.saturating_sub(1),
                         is_bg: false,
                         color_str,
                     });
@@ -194,7 +193,6 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
                     continue 'outer;
                 } else if block.contains_pos((offset, self.line_idx)) {
                     // inside a block
-                    let color_str = syntax.rules[block.rule_idx].get_color();
                     let end = if let Some(pos) = block.end_pos && pos.1 == self.line_idx {
                         // block ends in current line
                         pos.0

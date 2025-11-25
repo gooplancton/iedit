@@ -82,7 +82,7 @@ impl DocumentSyntax {
 
         for line in lines {
             let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
+            if line.is_empty() || !line.starts_with('#') {
                 continue;
             }
 

@@ -1,0 +1,12 @@
+Go
+
+#00ADD8 \b(package|import|func|var|const|type|struct|interface|map|chan)\b
+#6D4C3C //.*$
+#6D4C3C /\* \*/
+#D16969 \b(int|string|bool|float64|error|rune|byte)\b
+#569CD6 \b(if|else|for|range|switch|case|default|return|defer|go|select)\b
+#4EC9B0 \b(len|cap|make|new|append|copy|close|panic|recover|print|println)\b
+#9CDCFE [a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()
+#DCDCAA [0-9]+(\.[0-9]+)?
+#CE9173 "(?:[^"\\]|\\.)*"
+#CE9173 `(?:[^`]|`[^`])*`?

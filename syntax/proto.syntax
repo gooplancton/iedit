@@ -1,0 +1,9 @@
+Protocol Buffers
+
+#569CD6 \b(syntax|import|package|option|message|enum|service|rpc|returns|repeated|required|optional)\b
+#4EC9B0 \b(double|float|int32|int64|uint32|uint64|sint32|sint64|fixed32|fixed64|sfixed32|sfixed64|bool|string|bytes)\b
+#D16969 \b(stream|reserved|to|max)\b
+#9CDCFE [a-zA-Z_][a-zA-Z0-9_]*
+#DCDCAA [0-9]+
+#CE9173 "(?:[^"\\]|\\.)*"
+#6A9955 //.*$
