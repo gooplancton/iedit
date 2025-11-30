@@ -65,7 +65,7 @@ impl Editor {
                     .saturating_sub(left_status_len)
                     .saturating_sub(KEYBINDINGS.len());
                 renderer.add(" ".repeat(padding))?;
-                renderer.add(&KEYBINDINGS)?;
+                renderer.add(KEYBINDINGS)?;
             }
 
             renderer.add(CLEAR_TO_END_OF_LINE)?;

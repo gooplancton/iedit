@@ -220,8 +220,8 @@ impl AsRef<str> for DocumentLine {
     }
 }
 
-impl Into<String> for DocumentLine {
-    fn into(self) -> String {
-        self.buf
+impl From<DocumentLine> for String {
+    fn from(val: DocumentLine) -> Self {
+        val.buf
     }
 }

@@ -22,6 +22,30 @@ impl Editor {
         use iedit_document::InverseStack as S;
 
         match command {
+            EditorCommand::AutocompleteDisplay => {
+                self.is_autocomplete_open = true;
+            }
+            EditorCommand::AutocompleteNext => {
+                self.autocomplete.selected_idx += 1;
+            }
+            EditorCommand::AutocompletePrevious => {
+                self.autocomplete.selected_idx = self.autocomplete.selected_idx.saturating_sub(1);
+            }
+            EditorCommand::AutocompleteInsert => {
+                let text = Text::String(self.autocomplete.get_selected_choice());
+                let op = EditOperation::Insertion {
+                    pos: self.cursor.pos(),
+                    text,
+                };
+
+                if let Some(new_pos) = self.document.apply_edit(op, S::Undo) {
+                    self.cursor.update_pos(new_pos, false);
+                }
+
+                self.first_quit_sent = false;
+                self.cursor.selection_anchor = None;
+                self.is_autocomplete_open = false;
+            }
             EditorCommand::SwitchMode(mode) => {
                 self.mode = mode;
             }
@@ -117,8 +141,8 @@ impl Editor {
                     }
                 }
             }
-
             EditorCommand::ClearSelection => {
+                self.is_autocomplete_open = false;
                 self.is_selection_locked = false;
                 self.needs_full_rerender = true;
                 self.cursor.selection_anchor = None;
@@ -126,12 +150,33 @@ impl Editor {
                 self.search_item = None;
             }
             EditorCommand::Edit(op) => {
+                let mut is_typing = matches!(
+                    op,
+                    EditOperation::Insertion {
+                        text: Text::Char(_),
+                        ..
+                    }
+                );
+
                 if let Some(new_pos) = self.document.apply_edit(op, S::Undo) {
+                    if new_pos.1 != self.cursor.cur_y {
+                        is_typing = false;
+                    }
+
                     self.cursor.update_pos(new_pos, false);
                 }
 
                 self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
+                if is_typing {
+                    let word_boundaries = self.document.get_word_boundaries((
+                        self.cursor.cur_x.saturating_sub(1),
+                        self.cursor.cur_y,
+                    ));
+                    let left_boundary = word_boundaries.map(|(x, _)| x).unwrap_or_default();
+                    self.is_autocomplete_open = true;
+                    self.update_autocomplete_choices(left_boundary);
+                }
             }
             EditorCommand::UndoLastEdit => {
                 if let Some(new_pos) = self.document.undo_last_edit() {
@@ -280,7 +325,20 @@ impl Editor {
             Input::Keypress(Key::Ctrl('y')) => Some(C::YankSelection),
             Input::Keypress(Key::Ctrl('x')) => Some(C::CutSelection),
             Input::Keypress(Key::Ctrl('p')) => Some(C::Paste),
+            Input::Keypress(Key::Ctrl('m')) => Some(C::AutocompletePrevious),
+            Input::Keypress(Key::Ctrl('n')) => {
+                if self.is_autocomplete_open {
+                    Some(C::AutocompleteNext)
+                } else {
+                    Some(C::AutocompleteDisplay)
+                }
+            }
             Input::Keypress(Key::Char(ch)) => {
+                if ch == '\n' && self.is_autocomplete_open && !self.autocomplete.choices.is_empty()
+                {
+                    return Some(C::AutocompleteInsert);
+                }
+
                 let text = if ch == '\t' && self.config.tab_emit_spaces {
                     let n_spaces = self.config.tab_size as usize
                         - (self.cursor.cur_x % self.config.tab_size as usize);

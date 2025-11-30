@@ -10,6 +10,7 @@ pub struct EditorConfig {
     pub min_lines: u16,
     pub horizontal_margin: u16,
     pub vertical_margin: u16,
+    pub autocomplete_choices: u16,
     pub tab_size: u16,
     pub show_line_numbers: bool,
     pub show_keybindings: bool,
@@ -17,6 +18,7 @@ pub struct EditorConfig {
     pub confirm_quit_unsaved_changes: bool,
     pub tab_emit_spaces: bool,
     pub enable_syntax_highlighting: bool,
+    pub enable_autocomplete: bool,
     pub use_system_clipboard: bool,
     pub syntax_highlighting_dir: Option<String>,
 }
@@ -35,6 +37,7 @@ impl Default for EditorConfig {
             horizontal_margin: 4,
             tab_size: 4,
             vertical_margin: 4,
+            autocomplete_choices: 10,
             render_trailing_whitespace: true,
             show_line_numbers: true,
             show_keybindings: true,
@@ -42,6 +45,7 @@ impl Default for EditorConfig {
             confirm_quit_unsaved_changes: true,
             tab_emit_spaces: true,
             enable_syntax_highlighting: true,
+            enable_autocomplete: true,
             syntax_highlighting_dir,
         }
     }

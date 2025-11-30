@@ -176,7 +176,7 @@ impl Document {
                     self.get_inverse_stack(inverse_stack).push(Op::Replacement {
                         pos_from: pos,
                         pos_to: new_pos,
-                        text: T::Empty
+                        text: T::Empty,
                     });
                 }
 

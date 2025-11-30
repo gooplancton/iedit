@@ -55,6 +55,10 @@ pub enum EditorCommand {
     DisplayPressCharacterPopup,
     EndFileExecution(ExitStatus, bool),
     ViewExecutionOutput,
+    AutocompleteDisplay,
+    AutocompleteNext,
+    AutocompletePrevious,
+    AutocompleteInsert,
 }
 
 #[non_exhaustive]

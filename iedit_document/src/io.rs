@@ -44,12 +44,12 @@ pub fn read_file(path: impl AsRef<Path>) -> io::Result<ReadFile> {
             let mut is_last_line_newline_terminated = false;
             let mut end_of_line_seq: Option<String> = None;
             while file_reader.read_line(&mut file_line)? > 0 {
-                let bytes_read = file_line.as_bytes().len();
+                let bytes_read = file_line.len();
 
                 let trimmed = if let Some(end_of_line_seq) = &end_of_line_seq {
                     file_line.trim_end_matches(end_of_line_seq)
                 } else {
-                    let trimmed = file_line.trim_end_matches(&['\n', '\r']);
+                    let trimmed = file_line.trim_end_matches(['\n', '\r']);
                     end_of_line_seq = Some(file_line[trimmed.len()..bytes_read].to_owned());
 
                     trimmed

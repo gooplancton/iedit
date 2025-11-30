@@ -1,4 +1,4 @@
-pub static HELP_POPUP_LINES: [&'static str; 11] = [
+pub static HELP_POPUP_LINES: [&str; 11] = [
     "Ctrl-k      │ enter chord",
     "Ctrl-g      │ go to",
     "Ctrl-e      │ open command prompt",
@@ -12,7 +12,7 @@ pub static HELP_POPUP_LINES: [&'static str; 11] = [
     "Alt-p       │ go to matching paren",
 ];
 
-pub static CHORDS_POPUP_LINES: [&'static str; 6] = [
+pub static CHORDS_POPUP_LINES: [&str; 6] = [
     "l │ line",
     "x │ execute",
     "s │ selection",
@@ -21,14 +21,14 @@ pub static CHORDS_POPUP_LINES: [&'static str; 6] = [
     "v │ view",
 ];
 
-pub static L_CHORD_POPUP_LINES: [&'static str; 4] = [
+pub static L_CHORD_POPUP_LINES: [&str; 4] = [
     "d │ delete",
     "n │ toggle numbers",
     "w │ go to start",
     "e │ go to end",
 ];
 
-pub static X_CHORD_POPUP_LINES: [&'static str; 6] = [
+pub static X_CHORD_POPUP_LINES: [&str; 6] = [
     "x │ auto",
     "? │ manual",
     "p │ python3",
@@ -37,8 +37,8 @@ pub static X_CHORD_POPUP_LINES: [&'static str; 6] = [
     "b │ bash",
 ];
 
-pub static T_CHORD_POPUP_LINES: [&'static str; 1] = ["press a key..."];
+pub static T_CHORD_POPUP_LINES: [&str; 1] = ["press a key..."];
 
-pub static S_CHORD_POPUP_LINES: [&'static str; 1] = ["l │ lock/unlock selection"];
+pub static S_CHORD_POPUP_LINES: [&str; 1] = ["l │ lock/unlock selection"];
 
-pub static V_CHORD_POPUP_LINES: [&'static str; 1] = ["o │ output/original"];
+pub static V_CHORD_POPUP_LINES: [&str; 1] = ["o │ output/original"];

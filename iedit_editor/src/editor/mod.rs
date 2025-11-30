@@ -10,6 +10,7 @@ use std::{
 use crate::{
     config::EditorConfig,
     editor::{
+        autocomplete::EditorAutocomplete,
         clipboard::{EditorClipboard, get_clipboard},
         search::SearchItem,
     },
@@ -29,6 +30,7 @@ use crate::{
 
 use crossbeam_channel::{Sender, unbounded};
 
+mod autocomplete;
 mod clipboard;
 mod commands;
 mod cursor;
@@ -53,6 +55,7 @@ pub struct Editor {
     matched_range: Option<((usize, usize), (usize, usize))>,
     displayed_popup: Option<&'static [&'static str]>,
     clipboard: Box<dyn EditorClipboard>,
+    autocomplete: EditorAutocomplete,
 
     // TODO: turn into EditorFlags bitfield
     needs_full_rerender: bool,
@@ -60,6 +63,7 @@ pub struct Editor {
     first_quit_sent: bool,
     is_running_external_command: bool,
     is_viewing_execution_output: bool,
+    is_autocomplete_open: bool,
 }
 
 // Store sender in a static or global location for access anywhere
@@ -92,6 +96,7 @@ impl Editor {
             ui,
             viewport,
             clipboard,
+            autocomplete: EditorAutocomplete::default(),
             search_item: None,
             matched_range: None,
             displayed_popup: None,
@@ -100,6 +105,7 @@ impl Editor {
             first_quit_sent: false,
             is_running_external_command: false,
             is_viewing_execution_output: false,
+            is_autocomplete_open: false,
         })
     }
 
@@ -169,12 +175,12 @@ impl Editor {
                 self.viewport.top_line..self.viewport.top_line + self.ui.editor_lines as usize,
             );
             self.status_bar.notification.truncate(0);
-            self.needs_full_rerender = self.displayed_popup.is_some();
+            self.needs_full_rerender |= self.is_autocomplete_open || self.displayed_popup.is_some();
             self.displayed_popup = None;
         }
 
         renderer.cleanup()?;
 
-        return Ok(EditorRunResult::Quit);
+        Ok(EditorRunResult::Quit)
     }
 }

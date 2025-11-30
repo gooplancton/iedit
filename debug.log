@@ -1,0 +1,3 @@
+   Compiling iedit_editor v0.6.6 (/Users/leonardosantangelo/Projects/iedit/iedit_editor)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.04s
+     Running `target/debug/iedit test_input.py`

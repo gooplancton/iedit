@@ -118,7 +118,7 @@ impl DocumentSyntax {
 
                 let start_pattern = Regex::new(start_pattern_str);
                 let end_pattern = Regex::new(end_pattern_str);
-                if !start_pattern.is_ok() || !end_pattern.is_ok() {
+                if start_pattern.is_err() || end_pattern.is_err() {
                     continue;
                 }
 
@@ -210,7 +210,7 @@ impl Document {
                             .unwrap_or(line.len());
 
                         current_block = Some(SyntaxBlock {
-                            start_pos: ((block_start_x, cur_y)),
+                            start_pos: (block_start_x, cur_y),
                             end_pos: None,
                             end_symbol_len: 0,
                             rule_idx,

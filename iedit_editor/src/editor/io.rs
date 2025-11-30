@@ -82,10 +82,10 @@ impl Editor {
 
             let text = line.as_ref();
             write!(file_writer, "{}", text)?;
-            let mut line_bytes = text.as_bytes().len();
+            let mut line_bytes = text.len();
             if line_idx != n_lines - 1 {
                 file_writer.write_all(self.document.end_of_line_seq.as_bytes())?;
-                line_bytes += self.document.end_of_line_seq.as_bytes().len();
+                line_bytes += self.document.end_of_line_seq.len();
             }
 
             new_offsets.push(last_offset);

@@ -1,6 +1,6 @@
 pub trait CharacterIndexable {
     fn n_chars(&self) -> usize;
-    // fn char_to_byte_idx(&self, char_idx: usize) -> usize;
+    fn char_to_byte_idx(&self, char_idx: usize) -> usize;
     fn byte_to_char_idx(&self, byte_idx: usize) -> Option<usize>;
     fn char_to_visual_idx(&self, char_idx: usize, tab_size: usize) -> usize;
     fn visual_to_char_idx(&self, char_idx: usize, tab_size: usize) -> usize;
@@ -14,13 +14,13 @@ impl CharacterIndexable for str {
         self.chars().count()
     }
 
-    // #[inline]
-    // fn char_to_byte_idx(&self, char_idx: usize) -> usize {
-    //     self.char_indices()
-    //         .nth(char_idx)
-    //         .map(|(i, _)| i)
-    //         .unwrap_or(self.len())
-    // }
+    #[inline]
+    fn char_to_byte_idx(&self, char_idx: usize) -> usize {
+        self.char_indices()
+            .nth(char_idx)
+            .map(|(i, _)| i)
+            .unwrap_or(self.len())
+    }
 
     #[inline]
     fn byte_to_char_idx(&self, byte_idx: usize) -> Option<usize> {

@@ -241,29 +241,28 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
 
             let offset_byte_idx = offset_byte_idx.unwrap();
             for rule in syntax.rules.iter() {
-                if let SyntaxRule::Inline { pattern, color } = rule {
-                    if let Some(rx_match) =
+                if let SyntaxRule::Inline { pattern, color } = rule
+                    && let Some(rx_match) =
                         pattern.find_anchored_at(self.line.as_ref(), offset_byte_idx)
-                    {
-                        let start_char = self
-                            .line
-                            .byte_to_char_idx(rx_match.start().saturating_sub(1))
-                            .unwrap_or_default();
-                        let end_char = self
-                            .line
-                            .byte_to_char_idx(rx_match.end().saturating_sub(1))
-                            .unwrap_or(self.line.len());
+                {
+                    let start_char = self
+                        .line
+                        .byte_to_char_idx(rx_match.start().saturating_sub(1))
+                        .unwrap_or_default();
+                    let end_char = self
+                        .line
+                        .byte_to_char_idx(rx_match.end().saturating_sub(1))
+                        .unwrap_or(self.line.len());
 
-                        self.color_ranges.push(ColorRange {
-                            start: start_char,
-                            end: end_char,
-                            is_bg: false,
-                            color_str: &color,
-                        });
+                    self.color_ranges.push(ColorRange {
+                        start: start_char,
+                        end: end_char,
+                        is_bg: false,
+                        color_str: color,
+                    });
 
-                        offset = end_char + 1;
-                        continue 'outer;
-                    }
+                    offset = end_char + 1;
+                    continue 'outer;
                 }
             }
 
@@ -297,7 +296,9 @@ impl<'line, 'writer, Writer: Write> LineRenderer<'line, 'writer, Writer> {
             .filter(|range| range.start <= range.end && range.start <= self.char_offset)
             .try_for_each(|range| write!(self.writer, "{}", range.color_str))?;
 
-        if self.visual_offset % self.tab_size != 0 && self.line.at(self.char_offset) == Some('\t') {
+        if !self.visual_offset.is_multiple_of(self.tab_size)
+            && self.line.at(self.char_offset) == Some('\t')
+        {
             let hidden_length = self.visual_offset % self.tab_size;
             let partial_tab_length = self.tab_size - hidden_length;
             write!(self.writer, "{}", " ".repeat(partial_tab_length))?;

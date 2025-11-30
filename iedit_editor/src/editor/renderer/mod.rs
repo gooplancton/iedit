@@ -1,4 +1,7 @@
-use std::io::{BufWriter, Write};
+use std::{
+    cmp::min,
+    io::{BufWriter, Write},
+};
 
 mod edit_buffer;
 mod line;
@@ -23,11 +26,7 @@ pub struct Renderer<'editor, Term: Write> {
 }
 
 impl<'term, Term: Write> Renderer<'term, Term> {
-    pub fn new(
-        term: &'term mut Term,
-        ui: UILayout,
-        tab_size: usize,
-    ) -> Self {
+    pub fn new(term: &'term mut Term, ui: UILayout, tab_size: usize) -> Self {
         let horizontal_bar = str::repeat(H_BAR, ui.term_width as usize);
 
         Self {
@@ -86,7 +85,7 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         Ok(())
     }
 
-    pub fn position_cursor<'editor>(&mut self, editor: &'editor Editor) -> std::io::Result<()> {
+    pub fn position_cursor(&mut self, editor: &Editor) -> std::io::Result<()> {
         let cursor_rel_y =
             (editor.cursor.cur_y - editor.viewport.top_line) as u16 + self.ui.ui_origin.1;
 
@@ -123,7 +122,24 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         editor.render_status(self)?;
 
         if let Some(popup_lines) = editor.displayed_popup {
-            self.render_popup(popup_lines)?;
+            self.render_popup(popup_lines, (self.ui.term_width, 0), None)?;
+        }
+
+        if editor.is_autocomplete_open {
+            let adjusted_cursor_x = editor.cursor.cur_x
+                + editor.config.show_line_numbers as usize * editor.get_line_number_gutter_width();
+            let lines = editor
+                .autocomplete
+                .get_displayable_choices(editor.config.autocomplete_choices as usize);
+            let selected_idx = min(
+                editor.autocomplete.selected_idx,
+                editor.config.autocomplete_choices as usize - 1,
+            );
+            let origin_pos = (adjusted_cursor_x as u16 + 1, editor.cursor.cur_y as u16 + 1);
+
+            if !lines.is_empty() {
+                self.render_popup(lines, origin_pos, Some(selected_idx as u16))?;
+            }
         }
 
         self.position_cursor(editor)?;

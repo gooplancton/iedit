@@ -2,6 +2,7 @@ mod builtin_languages;
 mod edit;
 mod find;
 mod syntax;
+mod vocab;
 
 use std::{
     ffi::OsStr,
@@ -15,7 +16,7 @@ pub use crate::line::{CharacterIndexable, DocumentLine};
 pub use edit::{EditOperation, InverseStack, Text};
 pub use syntax::{DocumentSyntax, SyntaxBlock, SyntaxRule};
 
-use crate::io::read_file;
+use crate::{document::vocab::DocumentVocabulary, io::read_file};
 
 pub struct Document {
     pub lines: Vec<DocumentLine>,
@@ -24,6 +25,7 @@ pub struct Document {
     pub line_offsets: Vec<u64>,
     pub syntax: Option<DocumentSyntax>,
     pub syntax_blocks: Vec<SyntaxBlock>,
+    pub vocabulary: DocumentVocabulary,
     undo_stack: Vec<EditOperation>,
     redo_stack: Vec<EditOperation>,
 
@@ -44,6 +46,7 @@ impl Default for Document {
             line_offsets: Default::default(),
             undo_stack: Default::default(),
             redo_stack: Default::default(),
+            vocabulary: Default::default(),
             end_of_line_seq: "\n".to_owned(),
             auto_inserted_whitespace_line: None,
             last_save_time: SystemTime::now(),
@@ -68,7 +71,7 @@ impl Document {
     }
 
     pub fn from_strings(strings: Vec<String>, name: impl Into<PathBuf>, is_readonly: bool) -> Self {
-        Self {
+        let mut doc = Self {
             lines: strings.into_iter().map(DocumentLine::new).collect(),
             file: None,
             canonicalized_file_path: name.into(),
@@ -77,11 +80,16 @@ impl Document {
             redo_stack: vec![],
             syntax: None,
             syntax_blocks: Default::default(),
+            vocabulary: DocumentVocabulary::default(),
             auto_inserted_whitespace_line: None,
             end_of_line_seq: "\n".to_owned(),
             last_save_time: SystemTime::now(),
             is_readonly,
-        }
+        };
+
+        doc.init_vocabulary();
+
+        doc
     }
 
     pub fn from_file(
@@ -115,6 +123,7 @@ impl Document {
             end_of_line_seq,
             syntax,
             syntax_blocks: Default::default(),
+            vocabulary: Default::default(),
             line_offsets,
             undo_stack: vec![],
             redo_stack: vec![],
@@ -124,6 +133,7 @@ impl Document {
         };
 
         doc.recompute_syntax_blocks();
+        doc.init_vocabulary();
 
         Ok(doc)
     }
