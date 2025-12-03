@@ -21,6 +21,22 @@ impl Editor {
         use CommandExecutionResult as R;
         use iedit_document::InverseStack as S;
 
+        let mut should_show_autocomplete = self.config.enable_autocomplete
+            && matches!(
+                command,
+                EditorCommand::AutocompleteDisplay
+                    | EditorCommand::AutocompletePrevious
+                    | EditorCommand::AutocompleteNext
+                    | EditorCommand::Edit(EditOperation::Insertion {
+                        text: Text::Char(_),
+                        ..
+                    })
+            );
+
+        if !should_show_autocomplete {
+            self.is_autocomplete_open = false;
+        }
+
         match command {
             EditorCommand::AutocompleteDisplay => {
                 self.is_autocomplete_open = true;
@@ -150,17 +166,9 @@ impl Editor {
                 self.search_item = None;
             }
             EditorCommand::Edit(op) => {
-                let mut is_typing = matches!(
-                    op,
-                    EditOperation::Insertion {
-                        text: Text::Char(_),
-                        ..
-                    }
-                );
-
                 if let Some(new_pos) = self.document.apply_edit(op, S::Undo) {
                     if new_pos.1 != self.cursor.cur_y {
-                        is_typing = false;
+                        should_show_autocomplete = false;
                     }
 
                     self.cursor.update_pos(new_pos, false);
@@ -168,7 +176,7 @@ impl Editor {
 
                 self.first_quit_sent = false;
                 self.cursor.selection_anchor = None;
-                if is_typing {
+                if should_show_autocomplete {
                     let word_boundaries = self.document.get_word_boundaries((
                         self.cursor.cur_x.saturating_sub(1),
                         self.cursor.cur_y,

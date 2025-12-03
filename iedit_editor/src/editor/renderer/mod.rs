@@ -86,6 +86,13 @@ impl<'term, Term: Write> Renderer<'term, Term> {
     }
 
     pub fn position_cursor(&mut self, editor: &Editor) -> std::io::Result<()> {
+        let should_display_cursor = editor.cursor.cur_y >= editor.viewport.top_line
+            && editor.cursor.cur_y < editor.viewport.top_line + self.ui.editor_lines as usize;
+
+        if !should_display_cursor {
+            return Ok(());
+        }
+
         let cursor_rel_y =
             (editor.cursor.cur_y - editor.viewport.top_line) as u16 + self.ui.ui_origin.1;
 
@@ -101,11 +108,34 @@ impl<'term, Term: Write> Renderer<'term, Term> {
             + (editor.get_line_number_gutter_width() + 2) as u16
                 * editor.config.show_line_numbers as u16;
 
-        if editor.cursor.cur_y >= editor.viewport.top_line
-            && editor.cursor.cur_y < editor.viewport.top_line + self.ui.editor_lines as usize
-        {
-            self.add(termion::cursor::Goto(cursor_rel_x, cursor_rel_y).to_string())?;
-            self.add(termion::cursor::Show)?;
+        self.add(termion::cursor::Goto(cursor_rel_x, cursor_rel_y).to_string())?;
+        self.add(termion::cursor::Show)?;
+
+        Ok(())
+    }
+
+    pub fn render_autocomplete<'editor>(&mut self, editor: &'editor Editor) -> std::io::Result<()> {
+        let adjusted_cursor_x = editor.cursor.cur_x
+            + editor.config.show_line_numbers as usize * editor.get_line_number_gutter_width();
+        let lines = editor
+            .autocomplete
+            .get_displayable_choices(editor.config.autocomplete_choices as usize);
+        let selected_idx = min(
+            editor.autocomplete.selected_idx,
+            editor.config.autocomplete_choices as usize - 1,
+        );
+
+        let origin_x = adjusted_cursor_x.saturating_sub(editor.viewport.left_col) + 1;
+        let mut origin_y = editor.cursor.cur_y.saturating_sub(editor.viewport.top_line) + 1;
+
+        if origin_y + lines.len() > self.ui.editor_lines as usize {
+            origin_y = origin_y.saturating_sub(lines.len() + 3);
+        }
+
+        let origin_pos = (origin_x as u16, origin_y as u16);
+
+        if !lines.is_empty() {
+            self.render_popup(lines, origin_pos, Some(selected_idx as u16))?;
         }
 
         Ok(())
@@ -126,20 +156,7 @@ impl<'term, Term: Write> Renderer<'term, Term> {
         }
 
         if editor.is_autocomplete_open {
-            let adjusted_cursor_x = editor.cursor.cur_x
-                + editor.config.show_line_numbers as usize * editor.get_line_number_gutter_width();
-            let lines = editor
-                .autocomplete
-                .get_displayable_choices(editor.config.autocomplete_choices as usize);
-            let selected_idx = min(
-                editor.autocomplete.selected_idx,
-                editor.config.autocomplete_choices as usize - 1,
-            );
-            let origin_pos = (adjusted_cursor_x as u16 + 1, editor.cursor.cur_y as u16 + 1);
-
-            if !lines.is_empty() {
-                self.render_popup(lines, origin_pos, Some(selected_idx as u16))?;
-            }
+            self.render_autocomplete(editor)?;
         }
 
         self.position_cursor(editor)?;
