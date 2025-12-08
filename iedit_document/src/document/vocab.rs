@@ -63,9 +63,19 @@ impl DocumentVocabulary {
 
 impl Document {
     pub fn init_vocabulary(&mut self) {
+        self.update_vocabulary((0, self.n_lines()));
+    }
+
+    pub fn update_vocabulary(&mut self, line_range: (usize, usize)) {
         let vocab = &mut self.vocabulary;
-        for line in &mut self.lines {
-            line.as_ref()
+        for line_idx in line_range.0..=line_range.1 {
+            let line = self.lines.get_mut(line_idx);
+            if line.is_none() {
+                return;
+            }
+
+            line.unwrap()
+                .as_ref()
                 .split(|ch: char| ch != '_' && !ch.is_alphabetic())
                 .filter(|word| word.len() >= 3)
                 .for_each(|word| vocab.register_word(word));

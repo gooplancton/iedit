@@ -84,6 +84,16 @@ pub enum EditOperation {
 }
 
 impl EditOperation {
+    fn is_just_deletion(&self) -> bool {
+        use EditOperation as Op;
+        use Text as T;
+
+        matches!(
+            self,
+            Op::Deletion { .. } | Op::LineRemoval { .. } | Op::Replacement { text: T::Empty, .. }
+        )
+    }
+
     fn get_affected_line_range(&self) -> (usize, usize) {
         match self {
             EditOperation::LineRemoval { idx } => (*idx, *idx),
@@ -141,11 +151,20 @@ impl Document {
         }
 
         let affected_range = op.get_affected_line_range();
+        let mut should_update_vocab = !op.is_just_deletion();
+        if let Op::Insertion {
+            text: T::Char(ch), ..
+        } = &op
+            && !ch.is_whitespace()
+        {
+            should_update_vocab = false;
+        }
+
         if !matches!(
             op,
             Op::Insertion {
-                pos: _,
-                text: T::Char('\n')
+                text: T::Char('\n'),
+                ..
             }
         ) {
             self.auto_inserted_whitespace_line = None;
@@ -323,6 +342,10 @@ impl Document {
 
         if self.should_recompute_syntax_blocks(affected_range) {
             self.recompute_syntax_blocks();
+        }
+
+        if should_update_vocab {
+            self.update_vocabulary(affected_range);
         }
 
         edit_result

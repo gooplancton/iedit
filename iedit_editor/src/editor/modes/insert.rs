@@ -270,10 +270,6 @@ impl Editor {
                 original_cursor_pos: self.cursor.pos(),
                 is_backwards: false,
             })),
-            Input::Keypress(Key::Ctrl('b')) => Some(C::SwitchMode(M::Search {
-                original_cursor_pos: self.cursor.pos(),
-                is_backwards: true,
-            })),
             Input::Keypress(Key::Ctrl('g')) => Some(C::SwitchMode(M::Goto {
                 original_cursor_pos: self.cursor.pos(),
             })),
@@ -333,7 +329,13 @@ impl Editor {
             Input::Keypress(Key::Ctrl('y')) => Some(C::YankSelection),
             Input::Keypress(Key::Ctrl('x')) => Some(C::CutSelection),
             Input::Keypress(Key::Ctrl('p')) => Some(C::Paste),
-            Input::Keypress(Key::Ctrl('m')) => Some(C::AutocompletePrevious),
+            Input::Keypress(Key::Ctrl('b')) => {
+                if self.is_autocomplete_open {
+                    Some(C::AutocompletePrevious)
+                } else {
+                    Some(C::AutocompleteDisplay)
+                }
+            }
             Input::Keypress(Key::Ctrl('n')) => {
                 if self.is_autocomplete_open {
                     Some(C::AutocompleteNext)
@@ -342,11 +344,12 @@ impl Editor {
                 }
             }
             Input::Keypress(Key::Char(ch)) => {
-                if ch == '\n' && self.is_autocomplete_open && !self.autocomplete.choices.is_empty()
+                if (ch == '\n' || ch == '\t')
+                    && self.is_autocomplete_open
+                    && !self.autocomplete.choices.is_empty()
                 {
                     return Some(C::AutocompleteInsert);
                 }
-
                 let text = if ch == '\t' && self.config.tab_emit_spaces {
                     let n_spaces = self.config.tab_size as usize
                         - (self.cursor.cur_x % self.config.tab_size as usize);
